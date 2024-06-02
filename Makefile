@@ -28,11 +28,19 @@ all:	$(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^
 
+
+ifeq ($(OS),Windows_NT)
 # Use Windows-compatible mkdir command
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cc $(DEPS)
 	@if not exist "$(OBJ_DIR)" mkdir "$(OBJ_DIR)"
 	@if not exist "$(dir $@)" mkdir "$(dir $@)"
 	$(CC) $(CFLAGS) -c $< -o $@
+else
+# Linux command
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cc $(DEPS)
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -c $< -o $@
+endif
 
 .PHONY: clean
 clean:

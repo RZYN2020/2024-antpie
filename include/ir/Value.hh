@@ -6,12 +6,19 @@
 #ifndef _VALUE_H_
 #define _VALUE_H_
 
+#include <iostream>
+#include <memory>
 #include <string>
+#include <vector>
 
-#include "Type.hh"
 #include "Use.hh"
-
+class Type;
+using std::make_unique;
+using std::ostream;
 using std::string;
+using std::unique_ptr;
+using std::vector;
+using std::endl;
 
 enum ValueTag {
   VT_VALUE,
@@ -20,7 +27,8 @@ enum ValueTag {
   VT_BOP,
   VT_BR,
   VT_CALL,
-  VT_CMP,
+  VT_ICMP,
+  VT_FCMP,
   VT_FPTOSI,
   VT_GEP,
   VT_JUMP,
@@ -29,7 +37,7 @@ enum ValueTag {
   VT_RET,
   VT_SITOFP,
   VT_STORE,
-  VT_UOP,
+  VT_ZEXT,
   VT_BB,
   VT_CONSTANT,
   VT_INTCONST,
@@ -55,10 +63,15 @@ class Value {
   Value(Type* vt, string vn, ValueTag vtag)
       : vType(vt), vName(vn), vTag(vtag){};
 
-  virtual void printIR() const {};
+  virtual void printIR(ostream& stream) const {};
   string getName() const { return vName; }
   ValueTag getValueTag() const { return vTag; }
   Type* getType() const { return vType; }
+};
+
+class GlobalValue : public Value {
+ public:
+  GlobalValue(Type* t, string name, ValueTag vt) : Value(t, name, vt) {}
 };
 
 #endif

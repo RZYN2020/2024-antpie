@@ -1,19 +1,43 @@
 /**
- * Instruction: subclass of value
+ * Instruction ir
  * Create by Zhang Junbin at 2024/6/1
  */
 
 #ifndef _INSTRUCTION_H_
 #define _INSTRUCTION_H_
 
-#include <memory>
-#include <vector>
-
 #include "Value.hh"
 
-using std::make_unique;
-using std::unique_ptr;
-using std::vector;
+class BasicBlock;
+class Function;
+
+enum OpTag {
+  ADD,
+  FADD,
+  SUB,
+  FSUB,
+  MUL,
+  FMUL,
+  SDIV,
+  FDIV,
+  SREM,
+  FREM,
+  AND,
+  OR,
+  XOR,
+  EQ,
+  NE,
+  SLE,
+  SLT,
+  SGE,
+  SGT,
+  OEQ,
+  ONE,
+  OGT,
+  OGE,
+  OLE,
+  OLT,
+};
 
 class Instruction : public Value {
  private:
@@ -21,86 +45,130 @@ class Instruction : public Value {
   unique_ptr<vector<Value*>> valueList;
 
  public:
-  Instruction() : Value(nullptr, VT_INSTR) {
-    useList = make_unique<vector<Use*>>();
-    valueList = make_unique<vector<Value*>>();
-  }
+  Instruction(ValueTag vtag);
+  Instruction(string name, ValueTag vTag);
+  Instruction(Type* t, string name, ValueTag vTag);
+  string getOpName(OpTag op) const;
+  void pushValue(Value* v);
 };
 
 class AllocaInst : public Instruction {
+ private:
+  Type* elemType;
+
  public:
-  AllocaInst(Type* type);
+  AllocaInst(Type* type, string name);
+  void printIR(ostream& stream) const override;
 };
 
 class BinaryOpInst : public Instruction {
  private:
-  // enum BinaryOp bOpType;
+  OpTag bOpType;
+
  public:
-  BinaryOpInst(int opType, Value* op1, Value* op2, string name);
+  BinaryOpInst(OpTag opType, Value* op1, Value* op2, string name);
+  void printIR(ostream& stream) const override;
 };
 
 class BranchInst : public Instruction {
  public:
-  // BranchInst(Value* cond, BasicBlock* trueBlock, BasicBlock* falseBlack);
+  BranchInst(Value* cond, BasicBlock* trueBlock, BasicBlock* falseBlock);
+  void printIR(ostream& stream) const override;
 };
 
 class CallInst : public Instruction {
+ private:
+  Function* function;
+
  public:
-  // CallInst(Function* func, vector<Value*>& params, string name);
+  CallInst(Function* func, vector<Value*>& params, string name);
+  void printIR(ostream& stream) const override;
 };
 
-class CmpInst : public Instruction {
+class IcmpInst : public Instruction {
  private:
-  // enum CmpOp cmpType;
+  OpTag icmpType;
+
  public:
-  CmpInst(int opType, Value* op1, Value* op2, string name);
+  IcmpInst(OpTag opType, Value* op1, Value* op2, string name);
+  void printIR(ostream& stream) const override;
+};
+
+class FcmpInst : public Instruction {
+ private:
+  OpTag fcmpType;
+
+ public:
+  FcmpInst(OpTag opType, Value* op1, Value* op2, string name);
+  void printIR(ostream& stream) const override;
 };
 
 class FptosiInst : public Instruction {
  public:
-  FptosiInst(Value* src);
+  FptosiInst(Value* src, string name);
+  void printIR(ostream& stream) const override;
 };
 
 class GetElemPtrInst : public Instruction {
+ private:
+  Type* ptrType;
+
  public:
-  GetElemPtrInst(Type* ptrType, Value* ptr, int idx1, int idx2);
+  GetElemPtrInst(Type* pType, Value* ptr, Value* idx1, Value* idx2,
+                 string name);
+  void printIR(ostream& stream) const override;
 };
 
 class JumpInst : public Instruction {
  public:
-  // JumpInst(BasicBlock* block);
+  JumpInst(BasicBlock* block);
+  void printIR(ostream& stream) const override;
 };
 
 class LoadInst : public Instruction {
  public:
   LoadInst(Value* addr, string name);
+  void printIR(ostream& stream) const override;
 };
 
 class PhiInst : public Instruction {
  public:
   PhiInst(string name);
+  void printIR(ostream& stream) const override;
 };
 
 class ReturnInst : public Instruction {
  public:
   ReturnInst(Value* retValue);
+  ReturnInst();
+  void printIR(ostream& stream) const override;
 };
 
 class SitofpInst : public Instruction {
  public:
-  SitofpInst(Value* src);
+  SitofpInst(Value* src, string name);
+  void printIR(ostream& stream) const override;
 };
 
 class StoreInst : public Instruction {
  public:
-  StoreInst(Value* value, Value* add);
+  StoreInst(Value* value, Value* addr);
+  void printIR(ostream& stream) const override;
 };
 
-class UnaryOpInst : public Instruction {
- private:
-  // enum UnaryOp uOpType;
+// class UnaryOpInst : public Instruction {
+//  private:
+//   OpTag uOpType;
+
+//  public:
+//   UnaryOpInst(OpTag opType, Value* op1, string name);
+//   void printIR(ostream& stream) const override;
+// };
+
+class ZextInst : public Instruction {
  public:
-  UnaryOpInst(int opType, Value* op1, string name);
+  ZextInst(Value* src, Type* dstType, string name);
+  void printIR(ostream& stream) const override;
 };
 
 #endif
