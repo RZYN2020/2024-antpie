@@ -23,13 +23,15 @@ DEPS = $(patsubst $(SRC_DIR)/%.cc,$(INC_DIR)/%.hh,$(SRCS))
 # Target
 TARGET = $(BIN_DIR)/compiler
 
-all: $(TARGET)
+all:	$(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^
 
+# Use Windows-compatible mkdir command
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cc $(DEPS)
-	@mkdir -p $(@D)
+	@if not exist "$(OBJ_DIR)" mkdir "$(OBJ_DIR)"
+	@if not exist "$(dir $@)" mkdir "$(dir $@)"
 	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean
