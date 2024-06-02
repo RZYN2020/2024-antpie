@@ -23,7 +23,7 @@ DEPS = $(patsubst $(SRC_DIR)/%.cc,$(INC_DIR)/%.hh,$(SRCS))
 # Target
 TARGET = $(BIN_DIR)/compiler
 
-all:	$(TARGET)
+all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $^
