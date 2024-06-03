@@ -7,6 +7,7 @@
 #define _CONSTANT_H_
 
 #include <map>
+
 #include "Value.hh"
 
 using std::map;
@@ -25,8 +26,10 @@ class IntegerConstant : public Constant {
   int value;
 
  public:
-  IntegerConstant() : Constant(true) {}
-  IntegerConstant(int v) : Constant(false), value(v) {}
+  IntegerConstant() : Constant(true, Type::getInt32Type(), VT_INTCONST) {}
+  IntegerConstant(int v)
+      : Constant(false, Type::getInt32Type(), VT_INTCONST), value(v) {}
+  string toString() const override { return std::to_string(value); }
 };
 
 class FloatConstant : public Constant {
@@ -34,8 +37,10 @@ class FloatConstant : public Constant {
   int value;
 
  public:
-  FloatConstant() : Constant(true) {}
-  FloatConstant(float v) : Constant(false), value(v) {}
+  FloatConstant() : Constant(true, Type::getFloatType(), VT_FLOATCONST) {}
+  FloatConstant(float v)
+      : Constant(false, Type::getFloatType(), VT_FLOATCONST), value(v) {}
+  string toString() const override { return std::to_string(value); }
 };
 
 class ArrayConstant : public Constant {
@@ -43,12 +48,10 @@ class ArrayConstant : public Constant {
   unique_ptr<map<int, Constant*>> elems;
 
  public:
-  ArrayConstant(Type* type) : Constant(true) {
+  ArrayConstant(Type* type) : Constant(true, type, VT_ARRCONST) {
     elems = make_unique<map<int, Constant*>>();
   }
   void put(int loc, Constant* v);
 };
-
-
 
 #endif

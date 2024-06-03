@@ -50,6 +50,8 @@ class Instruction : public Value {
   Instruction(Type* t, string name, ValueTag vTag);
   string getOpName(OpTag op) const;
   void pushValue(Value* v);
+  Value* getRValue(int idx) const;
+  int getRValueSize() const { return valueList->size(); }
 };
 
 class AllocaInst : public Instruction {
@@ -81,7 +83,9 @@ class CallInst : public Instruction {
   Function* function;
 
  public:
+  CallInst(Function* func, string name);
   CallInst(Function* func, vector<Value*>& params, string name);
+  void pushArgument(Value* value);
   void printIR(ostream& stream) const override;
 };
 
@@ -114,8 +118,9 @@ class GetElemPtrInst : public Instruction {
   Type* ptrType;
 
  public:
-  GetElemPtrInst(Type* pType, Value* ptr, Value* idx1, Value* idx2,
+  GetElemPtrInst(Value* ptr, Value* idx1, Value* idx2,
                  string name);
+  GetElemPtrInst(Value* ptr, Value* idx1, string name);
   void printIR(ostream& stream) const override;
 };
 
@@ -135,6 +140,7 @@ class PhiInst : public Instruction {
  public:
   PhiInst(string name);
   void printIR(ostream& stream) const override;
+  void pushIncoming(Value* v, BasicBlock* bb);
 };
 
 class ReturnInst : public Instruction {

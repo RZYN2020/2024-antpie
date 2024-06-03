@@ -1,4 +1,4 @@
-#include "../../include/ir/BasicBlock.hh"
+#include "ir/BasicBlock.hh"
 
 void BasicBlock::printIR(ostream& stream) const {
   stream << getName() << ":" << endl;

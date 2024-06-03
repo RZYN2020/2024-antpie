@@ -1,4 +1,4 @@
-#include "../../include/ir/Type.hh"
+#include "ir/Type.hh"
 
 Int1Type* Type::int1Type = new Int1Type();
 Int32Type* Type::int32Type = new Int32Type();
@@ -17,7 +17,7 @@ string ArrayType::toString() const {
   return "[" + std::to_string(len) + " x " + elemType->toString() + "]";
 }
 
-string PointerType::toString() const { return "ptr"; }
+string PointerType::toString() const { return elemType->toString() + "*"; }
 
 FuncType::FuncType(Type* rType) : Type(TT_FUNCTION), retType(rType) {
   arguments = make_unique<vector<unique_ptr<Argument>>>();

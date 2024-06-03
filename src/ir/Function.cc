@@ -1,4 +1,13 @@
-#include "../../include/ir/Function.hh"
+#include "ir/Function.hh"
+
+Function::Function(FuncType* fType, string name)
+    : GlobalValue(fType, name, VT_FUNC) {
+  basicBlocks = make_unique<vector<unique_ptr<BasicBlock>>>();
+}
+
+void Function::pushBasicBlock(BasicBlock* bb) {
+  basicBlocks->push_back(unique_ptr<BasicBlock>(bb));
+}
 
 // define dso_local i32 @foo(i32 %a, float %b) {
 // entry:
@@ -13,9 +22,10 @@ void Function::printIR(ostream& stream) const {
     if (i != 0) {
       stream << ", ";
     }
-    stream << funcType->getArgument(i)->toString();
+    stream << funcType->getArgument(i)->getType()->toString() << " "
+           << funcType->getArgument(i)->toString();
   }
-  stream << ") {";
+  stream << ") {" << endl;
   for (const auto& bb : *basicBlocks) {
     bb->printIR(stream);
     stream << endl;

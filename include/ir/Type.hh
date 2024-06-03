@@ -47,6 +47,7 @@ class Type {
   static inline Int32Type* getInt32Type() { return int32Type; }
   static inline FloatType* getFloatType() { return floatType; }
   static inline VoidType* getVoidType() { return voidType; }
+  TypeTag getTypeTag() const { return tTag; }
 };
 
 class VoidType : public Type {
@@ -81,6 +82,8 @@ class ArrayType : public Type {
  public:
   string toString() const override;
   ArrayType(int l, Type* eT) : Type(TT_ARRAY), len(l), elemType(eT) {}
+  int getLen() const { return len; }
+  Type* getElemType() const { return elemType; }
 };
 
 class FuncType : public Type {
@@ -103,6 +106,7 @@ class PointerType : public Type {
  public:
   string toString() const override;
   PointerType(Type* et) : Type(TT_POINTER), elemType(et) {}
+  Type* getElemType() const { return elemType; }
 };
 
 #endif

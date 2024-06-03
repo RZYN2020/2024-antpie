@@ -23,6 +23,9 @@ DEPS = $(patsubst $(SRC_DIR)/%.cc,$(INC_DIR)/%.hh,$(SRCS))
 # Target
 TARGET = $(BIN_DIR)/compiler
 
+# IR file
+IRFile = tests/test.ll
+
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
@@ -41,6 +44,15 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cc $(DEPS)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 endif
+
+run:
+	$(BIN_DIR)/compiler
+
+# Test llvm
+# Input: llvm ir
+# Output: return value
+llvm-test: run
+	tests/test_script.sh $(IRFile)
 
 .PHONY: clean
 clean:

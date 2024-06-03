@@ -1,14 +1,17 @@
-#include "../../include/ir/Instruction.hh"
+#include "ir/Instruction.hh"
 
-#include "../../include/ir/Type.hh"
+#include <cassert>
 
-Instruction::Instruction(ValueTag vTag) : Value(nullptr, vTag) {
+#include "ir/Function.hh"
+#include "ir/Type.hh"
+
+Instruction::Instruction(ValueTag vTag) : Value(Type::getVoidType(), vTag) {
   useList = make_unique<vector<Use*>>();
   valueList = make_unique<vector<Value*>>();
 }
 
 Instruction::Instruction(string name, ValueTag vTag)
-    : Value(nullptr, name, vTag) {
+    : Value(Type::getVoidType(), name, vTag) {
   useList = make_unique<vector<Use*>>();
   valueList = make_unique<vector<Value*>>();
 }
@@ -21,11 +24,17 @@ Instruction::Instruction(Type* t, string name, ValueTag vTag)
 
 void Instruction::pushValue(Value* v) { valueList->push_back(v); };
 
+Value* Instruction::getRValue(int idx) const {
+  assert(idx < valueList->size());
+  return valueList->at(idx);
+}
+
+// WARNING: Memory leak!!!
 AllocaInst::AllocaInst(Type* type, string name)
-    : Instruction(name, VT_ALLOCA), elemType(type) {}
+    : Instruction(new PointerType(type), name, VT_ALLOCA), elemType(type) {}
 
 BinaryOpInst::BinaryOpInst(OpTag opType, Value* op1, Value* op2, string name)
-    : Instruction(name, VT_BOP), bOpType(opType) {
+    : Instruction(op1->getType(), name, VT_BOP), bOpType(opType) {
   pushValue(op1);
   pushValue(op2);
 };
@@ -40,33 +49,51 @@ BranchInst::BranchInst(Value* cond, BasicBlock* trueBlock,
 
 CallInst::CallInst(Function* func, vector<Value*>& params, string name)
     : Instruction(name, VT_CALL), function(func) {
+  setType(((FuncType*)func->getType())->getRetType());
   for (Value* param : params) {
     pushValue(param);
   }
 }
 
+CallInst::CallInst(Function* func, string name)
+    : Instruction(name, VT_CALL), function(func) {
+  setType(((FuncType*)func->getType())->getRetType());
+}
+
+void CallInst::pushArgument(Value* value) { pushValue(value); }
+
 IcmpInst::IcmpInst(OpTag opType, Value* op1, Value* op2, string name)
-    : Instruction(name, VT_ICMP), icmpType(opType) {
+    : Instruction(Type::getInt1Type(), name, VT_ICMP), icmpType(opType) {
   pushValue(op1);
   pushValue(op2);
 }
 
 FcmpInst::FcmpInst(OpTag opType, Value* op1, Value* op2, string name)
-    : Instruction(name, VT_FCMP), fcmpType(opType) {
+    : Instruction(Type::getInt1Type(), name, VT_FCMP), fcmpType(opType) {
   pushValue(op1);
   pushValue(op2);
 }
 
-FptosiInst::FptosiInst(Value* src, string name) : Instruction(name, VT_FPTOSI) {
+FptosiInst::FptosiInst(Value* src, string name)
+    : Instruction(Type::getInt32Type(), name, VT_FPTOSI) {
   pushValue(src);
 }
 
-GetElemPtrInst::GetElemPtrInst(Type* pType, Value* ptr, Value* idx1,
-                               Value* idx2, string name)
-    : Instruction(name, VT_GEP), ptrType(pType) {
+// WARNING: Memory leak!!!
+GetElemPtrInst::GetElemPtrInst(Value* ptr, Value* idx1, Value* idx2,
+                               string name)
+    : Instruction(name, VT_GEP), ptrType(ptr->getType()) {
+  setType(new PointerType(
+      ((ArrayType*)((PointerType*)ptrType)->getElemType())->getElemType()));
   pushValue(ptr);
   pushValue(idx1);
   pushValue(idx2);
+}
+
+GetElemPtrInst::GetElemPtrInst(Value* ptr, Value* idx1, string name)
+    : Instruction(ptr->getType(), name, VT_GEP), ptrType(ptr->getType()) {
+  pushValue(ptr);
+  pushValue(idx1);
 }
 
 JumpInst::JumpInst(BasicBlock* block) : Instruction(VT_JUMP) {
@@ -74,10 +101,17 @@ JumpInst::JumpInst(BasicBlock* block) : Instruction(VT_JUMP) {
 }
 
 LoadInst::LoadInst(Value* addr, string name) : Instruction(name, VT_LOAD) {
+  setType(((PointerType*)addr->getType())->getElemType());
   pushValue(addr);
 }
 
 PhiInst::PhiInst(string name) : Instruction(name, VT_PHI) {}
+
+void PhiInst::pushIncoming(Value* v, BasicBlock* bb) {
+  pushValue(v);
+  pushValue((Value*)bb);
+  setType(v->getType());
+}
 
 ReturnInst::ReturnInst(Value* retValue) : Instruction(VT_RET) {
   pushValue(retValue);
@@ -85,7 +119,8 @@ ReturnInst::ReturnInst(Value* retValue) : Instruction(VT_RET) {
 
 ReturnInst::ReturnInst() : Instruction(VT_RET) {}
 
-SitofpInst::SitofpInst(Value* src, string name) : Instruction(name, VT_SITOFP) {
+SitofpInst::SitofpInst(Value* src, string name)
+    : Instruction(Type::getFloatType(), name, VT_SITOFP) {
   pushValue(src);
 }
 
@@ -111,30 +146,120 @@ string Instruction::getOpName(OpTag op) const {
   return opNames[op];
 }
 
-void BinaryOpInst::printIR(ostream& stream) const {}
+void BinaryOpInst::printIR(ostream& stream) const {
+  stream << toString() << " = " << getOpName(bOpType) << " "
+         << getType()->toString() << " " << getRValue(0)->toString() << ", "
+         << getRValue(1)->toString();
+}
 
-void BranchInst::printIR(ostream& stream) const {}
+// br i1 %cmp, label %if.then, label %if.else
+void BranchInst::printIR(ostream& stream) const {
+  Value* cond = getRValue(0);
+  stream << "br " << cond->getType()->toString() << " " << cond->toString()
+         << ", label " << getRValue(1)->toString() << ", label "
+         << getRValue(2)->toString();
+}
 
-void CallInst::printIR(ostream& stream) const {}
+// %call = call i32 @foo(i32 noundef 1, i32 noundef 2)
+void CallInst::printIR(ostream& stream) const {
+  Type* retType = ((FuncType*)function->getType())->getRetType();
+  if (retType->getTypeTag() != TT_VOID) {
+    stream << toString() << " = ";
+  }
+  stream << "call " << retType->toString() << " @" << function->getName()
+         << "(";
+  int vSize = getRValueSize();
+  for (int i = 0; i < vSize; i++) {
+    if (i != 0) {
+      stream << ", ";
+    }
+    Value* arg = getRValue(i);
+    stream << arg->getType()->toString() << " " << arg->toString();
+  }
+  stream << ")";
+}
 
-void IcmpInst::printIR(ostream& stream) const {}
+void IcmpInst::printIR(ostream& stream) const {
+  stream << toString() << " = icmp " << getOpName(icmpType) << " i32 "
+         << getRValue(0)->toString() << ", " << getRValue(1)->toString();
+}
 
-void FcmpInst::printIR(ostream& stream) const {}
+void FcmpInst::printIR(ostream& stream) const {
+  stream << toString() << " = fcmp " << getOpName(fcmpType) << " float "
+         << getRValue(0)->toString() << ", " << getRValue(1)->toString();
+}
+// %conv1 = fptosi float %add to i32
+void FptosiInst::printIR(ostream& stream) const {
+  Value* src = getRValue(0);
+  stream << toString() << " = fptosi " << src->getType()->toString() << " "
+         << src->toString() << " to i32";
+}
 
-void FptosiInst::printIR(ostream& stream) const {}
+// %arrayidx = getelementptr inbounds [5 x i32], ptr %arr, i32 0, i32 1
+void GetElemPtrInst::printIR(ostream& stream) const {
+  stream << toString() << " = getelementptr inbounds "
+         << ((PointerType*)ptrType)->getElemType()->toString();
+  int argSize = getRValueSize();
+  for (int i = 0; i < argSize; i++) {
+    Value* arg = getRValue(i);
+    stream << ", " << arg->getType()->toString() << " " << arg->toString();
+  }
+}
 
-void GetElemPtrInst::printIR(ostream& stream) const {}
+void JumpInst::printIR(ostream& stream) const {
+  stream << "br label " << getRValue(0)->toString();
+}
 
-void JumpInst::printIR(ostream& stream) const {}
+// %0 = load i32, ptr %a.addr
+void LoadInst::printIR(ostream& stream) const {
+  stream << toString() << " = load " << getType()->toString() << ", "
+         << getRValue(0)->getType()->toString() << " "
+         << getRValue(0)->toString();
+}
 
-void LoadInst::printIR(ostream& stream) const {}
+// %y = phi i32 [ %y.0, %if.then ], [ %neg, %if.else ]
+void PhiInst::printIR(ostream& stream) const {
+  int icSize = getRValueSize() / 2;
+  assert(icSize);
+  stream << toString() << " = phi " << getType()->toString();
+  for (int i = 0; i < icSize; i++) {
+    if (i != 0) {
+      stream << ", ";
+    }
+    stream << "[ " << getRValue(i * 2)->toString() << ", "
+           << getRValue(i * 2 + 1)->toString() << " ]";
+  }
+}
 
-void PhiInst::printIR(ostream& stream) const {}
+// ret i32 %conv1
+void ReturnInst::printIR(ostream& stream) const {
+  stream << "ret ";
+  if (getRValueSize() == 0) {
+    stream << "void";
+  } else {
+    Value* rValue = getRValue(0);
+    stream << rValue->getType()->toString() << " " << rValue->toString();
+  }
+}
 
-void ReturnInst::printIR(ostream& stream) const {}
+// %conv = sitofp i32 %1 to float
+void SitofpInst::printIR(ostream& stream) const {
+  Value* src = getRValue(0);
+  stream << toString() << " = sitofp " << src->getType()->toString() << " "
+         << src->toString() << " to float";
+}
 
-void SitofpInst::printIR(ostream& stream) const {}
+// store i32 %a, ptr %a.addr
+void StoreInst::printIR(ostream& stream) const {
+  Value* src = getRValue(0);
+  Value* dst = getRValue(1);
+  stream << "store " << src->getType()->toString() << " " << src->toString()
+         << ", " << dst->getType()->toString() << " " << dst->toString();
+}
 
-void StoreInst::printIR(ostream& stream) const {}
-
-void ZextInst::printIR(ostream& stream) const {}
+// %lnot.ext = zext i1 %lnot to i32
+void ZextInst::printIR(ostream& stream) const {
+  Value* src = getRValue(0);
+  stream << toString() << " = zext " << src->getType()->toString() << " "
+         << src->toString() << " to " << getType()->toString();
+}

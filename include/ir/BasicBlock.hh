@@ -16,8 +16,11 @@ class BasicBlock : public Value {
   BasicBlock(string name) : Value(nullptr, name, VT_BB) {
     instructions = make_unique<vector<unique_ptr<Instruction>>>();
   }
-  void pushInstr(Instruction* i) { instructions->push_back(unique_ptr<Instruction>(i)); }
+  void pushInstr(Instruction* i) {
+    instructions->push_back(unique_ptr<Instruction>(i));
+  }
   void printIR(ostream& stream) const override;
 };
+
 
 #endif

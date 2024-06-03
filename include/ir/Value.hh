@@ -13,12 +13,12 @@
 
 #include "Use.hh"
 class Type;
+using std::endl;
 using std::make_unique;
 using std::ostream;
 using std::string;
 using std::unique_ptr;
 using std::vector;
-using std::endl;
 
 enum ValueTag {
   VT_VALUE,
@@ -66,7 +66,9 @@ class Value {
   virtual void printIR(ostream& stream) const {};
   string getName() const { return vName; }
   ValueTag getValueTag() const { return vTag; }
+  void setType(Type* type) { vType = type; }
   Type* getType() const { return vType; }
+  virtual string toString() const { return "%" + vName; }
 };
 
 class GlobalValue : public Value {

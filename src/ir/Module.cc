@@ -1,4 +1,6 @@
-#include "../../include/ir/Module.hh"
+#include "ir/Module.hh"
+
+using ANTPIE::Module;
 
 Module::Module() {
   globalVariables = make_unique<vector<unique_ptr<GlobalVariable>>>();

@@ -7,17 +7,17 @@
 #define _FUNCTION_H_
 
 #include "BasicBlock.hh"
-#include "Value.hh"
 #include "Type.hh"
+#include "Value.hh"
 
 class Function : public GlobalValue {
  private:
-  unique_ptr<vector<BasicBlock*>> basicBlocks;
+  unique_ptr<vector<unique_ptr<BasicBlock>>> basicBlocks;
 
  public:
-  Function(FuncType* fType, string name) : GlobalValue(fType, name, VT_FUNC) {}
+  Function(FuncType* fType, string name);
+  void pushBasicBlock(BasicBlock* bb);
   void printIR(ostream& stream) const override;
 };
-
 
 #endif
