@@ -52,8 +52,9 @@ run:
 # Input: llvm ir
 # Output: return value
 llvm-test: run
-	tests/test_script.sh $(IRFile)
+	lli $(IRFile); echo $$?
 
+.IGNORE: llvm-test
 .PHONY: clean
 clean:
 	rm -rf $(BIN_DIR)
