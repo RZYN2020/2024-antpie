@@ -29,9 +29,8 @@ Value* Instruction::getRValue(int idx) const {
   return valueList->at(idx);
 }
 
-// WARNING: Memory leak!!!
 AllocaInst::AllocaInst(Type* type, string name)
-    : Instruction(new PointerType(type), name, VT_ALLOCA), elemType(type) {}
+    : Instruction(Type::getPointerType(type), name, VT_ALLOCA), elemType(type) {}
 
 BinaryOpInst::BinaryOpInst(OpTag opType, Value* op1, Value* op2, string name)
     : Instruction(op1->getType(), name, VT_BOP), bOpType(opType) {
@@ -79,11 +78,10 @@ FptosiInst::FptosiInst(Value* src, string name)
   pushValue(src);
 }
 
-// WARNING: Memory leak!!!
 GetElemPtrInst::GetElemPtrInst(Value* ptr, Value* idx1, Value* idx2,
                                string name)
     : Instruction(name, VT_GEP), ptrType(ptr->getType()) {
-  setType(new PointerType(
+  setType(Type::getPointerType(
       ((ArrayType*)((PointerType*)ptrType)->getElemType())->getElemType()));
   pushValue(ptr);
   pushValue(idx1);

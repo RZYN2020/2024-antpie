@@ -8,8 +8,8 @@
 
 #include <map>
 
+#include "Type.hh"
 #include "Value.hh"
-
 using std::map;
 
 class Constant : public Value {
@@ -19,28 +19,38 @@ class Constant : public Value {
  public:
   Constant(bool zI) : zeroInit(zI), Value(nullptr, VT_CONSTANT) {}
   Constant(bool zI, Type* t, ValueTag vt) : zeroInit(zI), Value(t, vt) {}
+  static Constant* getZeroConstant(Type* t);
+  bool isIntConst() const { return getValueTag() == VT_INTCONST; }
+  bool isFloatConst() const { return getValueTag() == VT_FLOATCONST; }
+  bool isArrayConst() const { return getValueTag() == VT_ARRCONST; }
+  bool isZeroInit() const { return zeroInit; }
+  void setZeroInit(bool zI) { zeroInit = zI; }
 };
 
 class IntegerConstant : public Constant {
  private:
-  int value;
+  int value = 0;
+  static map<int, IntegerConstant*> constBuffer;
 
  public:
   IntegerConstant() : Constant(true, Type::getInt32Type(), VT_INTCONST) {}
   IntegerConstant(int v)
       : Constant(false, Type::getInt32Type(), VT_INTCONST), value(v) {}
   string toString() const override { return std::to_string(value); }
+  static IntegerConstant* getConstInt(int num);
 };
 
 class FloatConstant : public Constant {
  private:
-  int value;
+  float value = 0;
+  static map<float, FloatConstant*> constBuffer;
 
  public:
   FloatConstant() : Constant(true, Type::getFloatType(), VT_FLOATCONST) {}
   FloatConstant(float v)
       : Constant(false, Type::getFloatType(), VT_FLOATCONST), value(v) {}
   string toString() const override { return std::to_string(value); }
+  static FloatConstant* getConstFloat(float num);
 };
 
 class ArrayConstant : public Constant {
@@ -51,7 +61,11 @@ class ArrayConstant : public Constant {
   ArrayConstant(Type* type) : Constant(true, type, VT_ARRCONST) {
     elems = make_unique<map<int, Constant*>>();
   }
+  string toString() const override;
   void put(int loc, Constant* v);
+  static ArrayConstant* getConstArray(ArrayType* arrType) {
+    return new ArrayConstant(arrType);
+  }
 };
 
 #endif

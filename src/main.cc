@@ -5,13 +5,15 @@
 #include "opt/example.hh"
 
 int main() {
-
-  // 以下代码仅为测试用，直接new对象容易内存泄漏，
-  // 还需要在Module封装一层接口
+  // ir使用示例，可以删除
 
   ANTPIE::Module* module = new ANTPIE::Module();
 
   /**
+   * int gx = 5;
+   * int garr[10] = {0, 0, 5, 3};
+   * int empty[10];
+   * float gf = 1.5;
    * int foo(int x) {
    *   int arr[10];
    *   arr[1] = x;
@@ -19,121 +21,127 @@ int main() {
    *   if (5 <= ret) {
    *     ret = 5;
    *   }
+   *   ret = ret + gx;
    *   return ret;
    * }
-  */
-  FuncType* fFuncType = new FuncType(Type::getInt32Type());
+   */
+
+  // add global variable
+  // @gx = dso_local global i32 0
+  GlobalVariable* gv = module->addGlobalVariable(Type::getInt32Type(), "gx");
+  // gloabl array
+  ArrayType* arrType = Type::getArrayType(10, Type::getInt32Type());
+  ArrayConstant* array = ArrayConstant::getConstArray(arrType);
+  array->put(2, new IntegerConstant(5));
+  array->put(3, new IntegerConstant(3));
+  // @garr = dso_local global [10 x i32] [i32 0, i32 0, i32 5, i32 3, i32 0, i32
+  // 0, i32 0, i32 0, i32 0, i32 0]
+  GlobalVariable* garr = module->addGlobalVariable(arrType, array, "garr");
+  // global empty array
+  // @empty = dso_local global [10 x i32] zeroinitializer
+  GlobalVariable* emptyArr = module->addGlobalVariable(arrType, "empty");
+  // @gf = dso_local global float 1.500000
+  GlobalVariable* gf = module->addGlobalVariable(
+      Type::getFloatType(), FloatConstant::getConstFloat(1.5), "gf");
+
+  vector<Argument*> args;
   Argument* argument = new Argument("x", Type::getInt32Type());
-  fFuncType->pushArgument(argument);
-  Function* fFunction = new Function(fFuncType, "foo");
-  BasicBlock* bb1 = new BasicBlock("foo.entry");
-  fFunction->pushBasicBlock(bb1);
+  args.push_back(argument);
+  FuncType* funcType = Type::getFuncType(Type::getInt32Type(), args);
+  // define dso_local i32 @foo(i32 %x) {
+  Function* fFunction = module->addFunction(funcType, "foo");
+  // foo.entry:
+  BasicBlock* bb1 = module->addBasicBlock(fFunction, "foo.entry");
   module->setCurrBasicBlock(bb1);
-  module->pushFunction(fFunction);
+  // %arr.addr = alloca [10 x i32]
+  AllocaInst* arrAlloc = module->addAllocaInst(arrType, "arr.addr");
+  // %arr1 = getelementptr inbounds [10 x i32], [10 x i32]* %arr.addr, i32 0, i32 1
+  GetElemPtrInst* gepInst =
+      module->addGetElemPtrInst(arrAlloc, IntegerConstant::getConstInt(0),
+                                IntegerConstant::getConstInt(1), "arr1");
+  // store i32 %x, i32* %arr1
+  StoreInst* arrStore = module->addStoreInst(argument, gepInst);
+  // %arr1.val = load i32, i32* %arr1
+  LoadInst* arrLoad = module->addLoadInst(gepInst, "arr1.val");
+  // %icmp.ret1 = icmp sle i32 5, %arr1.val
+  IcmpInst* icmp = module->addIcmpInst(SLE, IntegerConstant::getConstInt(5),
+                                       arrLoad, "icmp.ret1");
 
-  ArrayType* arrType = new ArrayType(10, Type::getInt32Type());
-  AllocaInst* arrAlloc = new AllocaInst(arrType, "arr.addr");
-  module->pushInstrution(arrAlloc);
-
-  GetElemPtrInst* gepInst = new GetElemPtrInst(arrAlloc, new IntegerConstant(0),
-                                               new IntegerConstant(1), "arr1");
-  module->pushInstrution(gepInst);
-
-  StoreInst* arrStore = new StoreInst(argument, gepInst);
-  module->pushInstrution(arrStore);
-
-  LoadInst* arrLoad = new LoadInst(gepInst, "arr1.val");
-  module->pushInstrution(arrLoad);
-
-  BasicBlock* ifThenBB = new BasicBlock("if.then");
-  BasicBlock* ifEndBB = new BasicBlock("if.end");
-  fFunction->pushBasicBlock(ifThenBB);
-  fFunction->pushBasicBlock(ifEndBB);
-
-  IcmpInst* icmp =
-      new IcmpInst(SLE, new IntegerConstant(5), arrLoad, "icmp.ret1");
-  module->pushInstrution(icmp);
-
-  BranchInst* br = new BranchInst(icmp, ifThenBB, ifEndBB);
-  module->pushInstrution(br);
+  BasicBlock* ifThenBB = module->addBasicBlock(fFunction, "if.then");
+  BasicBlock* ifEndBB = module->addBasicBlock(fFunction, "if.end");
+  // br i1 %icmp.ret1, label %if.then, label %if.end
+  BranchInst* br = module->addBranchInst(icmp, ifThenBB, ifEndBB);
 
   // In if.then block, let ret1 = 5
   module->setCurrBasicBlock(ifThenBB);
-  BinaryOpInst* ret1 = new BinaryOpInst(ADD, new IntegerConstant(5),
-                                       new IntegerConstant(0), "ret1");
-  module->pushInstrution(ret1);
-
-  JumpInst* jump = new JumpInst(ifEndBB);
-  module->pushInstrution(jump);
+  // %ret1 = add i32 5, 0
+  BinaryOpInst* ret1 =
+      module->addBinaryOpInst(ADD, IntegerConstant::getConstInt(5),
+                              IntegerConstant::getConstInt(0), "ret1");
+  // br label %if.end
+  JumpInst* jump = module->addJumpInst(ifEndBB);
 
   // In if.end block, let ret = phi [arrLoad entry], [ret1 if.then]
   module->setCurrBasicBlock(ifEndBB);
-  
-  PhiInst* phi = new PhiInst("ret");
-  phi->pushIncoming(arrLoad,bb1);
+  // %ret = phi i32[ %arr1.val, %foo.entry ], [ %ret1, %if.then ]
+  PhiInst* phi = module->addPhiInst("ret");
+  phi->pushIncoming(arrLoad, bb1);
   phi->pushIncoming(ret1, ifThenBB);
-  module->pushInstrution(phi);
-
-  ReturnInst* rInst = new ReturnInst(phi);
-  module->pushInstrution(rInst);
+  // %gv.val = load i32, i32* @gx
+  LoadInst* gxLoad = module->addLoadInst(gv, "gv.val");
+  // %ret2 = add i32 %ret, %gv.val
+  BinaryOpInst* retAddInstr = module->addBinaryOpInst(ADD, phi, gxLoad, "ret2");
+  // ret i32 %ret2
+  ReturnInst* rInst = module->addReturnInst(retAddInstr);
 
   // main function, call foo() at the end
-  FuncType* mFuncType = new FuncType(Type::getInt32Type());
-  Function* mFunction = new Function(mFuncType, "main");
-  BasicBlock* basicBlock = new BasicBlock("entry");
-  mFunction->pushBasicBlock(basicBlock);
-  module->pushFunction(mFunction);
+  FuncType* mFuncType = Type::getFuncType(Type::getInt32Type());
+  // define dso_local i32 @main() {
+  Function* mFunction = module->addFunction(mFuncType, "main");
+  BasicBlock* basicBlock = module->addBasicBlock(mFunction, "entry");
   module->setCurrBasicBlock(basicBlock);
+  // %a.addr = alloca i32
+  AllocaInst* allocaInst =
+      module->addAllocaInst(Type::getInt32Type(), "a.addr");
 
-  AllocaInst* allocaInst = new AllocaInst(Type::getInt32Type(), "a.addr");
-  module->pushInstrution(allocaInst);
-
-  IntegerConstant* intConstant = new IntegerConstant(10);
-
-  StoreInst* storeInst = new StoreInst(intConstant, allocaInst);
-  module->pushInstrution(storeInst);
-
-  LoadInst* LoadInst = new class LoadInst(allocaInst, "a");
-  module->pushInstrution(LoadInst);
-
+  IntegerConstant* intConstant = IntegerConstant::getConstInt(10);
+  // store i32 10, i32* %a.addr
+  StoreInst* storeInst = module->addStoreInst(intConstant, allocaInst);
+  // %a = load i32, i32* %a.addr
+  LoadInst* LoadInst = module->addLoadInst(allocaInst, "a");
+  // %addInstr = add i32 %a, 10
   BinaryOpInst* addInstr =
-      new BinaryOpInst(ADD, LoadInst, intConstant, "addInstr");
-  module->pushInstrution(addInstr);
+      module->addBinaryOpInst(ADD, LoadInst, intConstant, "addInstr");
 
-  BasicBlock* basicBlock2 = new BasicBlock("L1");
-  mFunction->pushBasicBlock(basicBlock2);
-
-  JumpInst* jumpInstr = new JumpInst(basicBlock2);
-  module->pushInstrution(jumpInstr);
-
+  BasicBlock* basicBlock2 = module->addBasicBlock(mFunction, "L1");
+  // br label %L1
+  JumpInst* jumpInstr = module->addJumpInst(basicBlock2);
+  // L1:
   module->setCurrBasicBlock(basicBlock2);
+  // %icmp.ret = icmp eq i32 %a, 10
+  IcmpInst* icmpInst =
+      module->addIcmpInst(EQ, LoadInst, intConstant, "icmp.ret");
 
-  IcmpInst* icmpInst = new IcmpInst(EQ, LoadInst, intConstant, "icmp.ret");
-  module->pushInstrution(icmpInst);
-
-  BasicBlock* basicBlock3 = new BasicBlock("L2");
-  mFunction->pushBasicBlock(basicBlock3);
-
-  BranchInst* brInstr = new BranchInst(icmpInst, basicBlock3, basicBlock2);
-  module->pushInstrution(brInstr);
-
+  BasicBlock* basicBlock3 = module->addBasicBlock(mFunction, "L2");
+  // br i1 %icmp.ret, label %L2, label %L1
+  BranchInst* brInstr =
+      module->addBranchInst(icmpInst, basicBlock3, basicBlock2);
+  // L2:
   module->setCurrBasicBlock(basicBlock3);
+  // %fp10 = sitofp i32 10 to float
+  SitofpInst* i2fInst = module->addSitofpInst(intConstant, "fp10");
+  // %fcmp.ret = fcmp ole float %fp10, %fp10
+  FcmpInst* fcmpInst = module->addFcmpInst(OLE, i2fInst, i2fInst, "fcmp.ret");
+  // %ext.ret = zext i1 %fcmp.ret to i32
+  ZextInst* zextInst =
+      module->addZextInst(fcmpInst, Type::getInt32Type(), "ext.ret");
 
-  SitofpInst* i2fInst = new SitofpInst(intConstant, "fp10");
-  module->pushInstrution(i2fInst);
-
-  FcmpInst* fcmpInst = new FcmpInst(OLE, i2fInst, i2fInst, "fcmp.ret");
-  module->pushInstrution(fcmpInst);
-
-  ZextInst* zextInst = new ZextInst(fcmpInst, Type::getInt32Type(), "ext.ret");
-  module->pushInstrution(zextInst);
-
-  CallInst* callInst = new CallInst(fFunction, "foo.ret");
-  callInst->pushArgument(new IntegerConstant(4));
-  module->pushInstrution(callInst);
-
-  ReturnInst* returnInst = new ReturnInst(callInst);
-  module->pushInstrution(returnInst);
+  vector<Value*> callArgs;
+  callArgs.push_back(IntegerConstant::getConstInt(4));
+  // %foo.ret = call i32 @foo(i32 4)
+  CallInst* callInst = module->addCallInst(fFunction, callArgs, "foo.ret");
+  // ret i32 %foo.ret
+  ReturnInst* returnInst = module->addReturnInst(callInst);
 
   std::ofstream out_file;
   out_file.open("tests/test.ll");

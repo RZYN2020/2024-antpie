@@ -29,6 +29,7 @@ class Int32Type;
 class FloatType;
 class ArrayType;
 class FuncType;
+class PointerType;
 
 class Type {
  private:
@@ -47,6 +48,10 @@ class Type {
   static inline Int32Type* getInt32Type() { return int32Type; }
   static inline FloatType* getFloatType() { return floatType; }
   static inline VoidType* getVoidType() { return voidType; }
+  static PointerType* getPointerType(Type* elemType);
+  static ArrayType* getArrayType(int n, Type* elemType);
+  static FuncType* getFuncType(Type* retType, vector<Argument*>& args);
+  static FuncType* getFuncType(Type* retType);
   TypeTag getTypeTag() const { return tTag; }
 };
 
