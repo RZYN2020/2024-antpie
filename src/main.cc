@@ -1,8 +1,15 @@
-#include "main.hh"
+#include "ir/Instruction.hh"
+#include "ir/Function.hh"
+#include "ir/BasicBlock.hh"
+#include "ir/Module.hh"
+#include "ir/Constant.hh"
+#include "asm/Machine.hh"
+#include "cgen/select_instruction.hh"
+#include "cgen/allocate_register.hh"
+#include "cgen/prelude_conclusion.hh"
 
+#include <fstream>
 #include <iostream>
-
-#include "opt/example.hh"
 
 int main() {
   // ir使用示例，可以删除
@@ -142,6 +149,18 @@ int main() {
   CallInst* callInst = module->addCallInst(fFunction, callArgs, "foo.ret");
   // ret i32 %foo.ret
   ReturnInst* returnInst = module->addReturnInst(callInst);
+
+
+//   MachineModule* mmodule = new MachineModule();
+  
+//   select_instruction(mmodule, module);
+//   mmodule->printASM(std::cout);
+
+//   allocate_register(mmodule);
+//   mmodule->printASM(std::cout);
+
+//   prelude_conclusion(mmodule);
+//   mmodule->printASM(std::cout);
 
   std::ofstream out_file;
   out_file.open("tests/test.ll");
