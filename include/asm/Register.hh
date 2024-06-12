@@ -20,7 +20,7 @@ public:
   enum RegTag {
     F_REGISTER,
     I_REGISTER,
-    V_REGISTER,
+    V_REGISTER, // virtual_register
   };
 
 private:

@@ -18,7 +18,7 @@ class MachineInstruction : public Register {
 public:
   enum MachineInstructionTag {
     // Beacuse we only have 32-bits interger and float in SysY, so we don't need
-    // word-wise instruction provided by RV64GC
+    // 64-bits-wise instruction provided by RV64GC
 
     PHI,
 

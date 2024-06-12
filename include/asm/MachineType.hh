@@ -22,7 +22,7 @@ using std::make_unique;
 enum MachineTypeTag {
   FLOAT,
   INT,
-  ARRARY,
+  ARRAY,
 };
 
 class MachineFloatType;
@@ -61,7 +61,7 @@ private:
 
 public:
   MachineArrayType(int l, MachineType *eT)
-      : MachineType(ARRARY), len(l), elemType(eT) {}
+      : MachineType(ARRAY), len(l), elemType(eT) {}
   int getLen() const { return len; }
   MachineType *getElemType() const { return elemType; }
 };
