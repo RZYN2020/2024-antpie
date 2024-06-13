@@ -1,18 +1,13 @@
 #ifndef _MACHINE_INSTRUCTION_H_
 #define _MACHINE_INSTRUCTION_H_
 
-#include "MachineType.hh"
 #include "Register.hh"
+#include <memory>
+#include <vector>
 
 using std::ostream;
-
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-///
-///             ASM Instructions
-///
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
+using std::unique_ptr;
+using std::vector;
 
 class MachineInstruction : public Register {
 public:
@@ -90,11 +85,14 @@ public:
   };
 
 private:
+  string name;
   MachineInstructionTag tag;
   unique_ptr<vector<Register *>> oprands;
   unique_ptr<Immediate> imm;
 
 public:
+  MachineInstruction(string name);
+  MachineInstruction();
   void pushReg(Register *r);
   void setImm(Immediate i);
   MachineInstructionTag getTag() const;

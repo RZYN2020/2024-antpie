@@ -1,14 +1,13 @@
 #include "asm/Machine.hh"
 
-
 /////////////////////////////////////////////////
 //
 //                MachineGlobal
 //
 /////////////////////////////////////////////////
 
-void MachineGlobal::printASM(ostream& stream) const {
-    // todo
+void MachineGlobal::printASM(ostream &stream) const {
+  // todo
 }
 
 /////////////////////////////////////////////////
@@ -17,10 +16,9 @@ void MachineGlobal::printASM(ostream& stream) const {
 //
 /////////////////////////////////////////////////
 
-
-void MachineBasicBlock::printASM(ostream& stream) const {
-    // do some thing
-    for (const auto& instr : *instructions) {
+void MachineBasicBlock::printASM(ostream &stream) const {
+  // do some thing
+  for (const auto &instr : *instructions) {
     stream << "  ";
     instr->printASM(stream);
     stream << endl;
@@ -33,22 +31,23 @@ void MachineBasicBlock::printASM(ostream& stream) const {
 //
 /////////////////////////////////////////////////
 
-MachineFunction::MachineFunction(FuncType* fType, string name) {
-  //todo
+MachineFunction::MachineFunction(FuncType *fType, string name_) {
+  type = fType;
+  name = name_;
+  basicBlocks = make_unique<vector<unique_ptr<MachineBasicBlock>>>();
 }
 
-void MachineFunction::pushBasicBlock(MachineBasicBlock* bb) {
-  //todo
+void MachineFunction::pushBasicBlock(MachineBasicBlock *bb) {
+  basicBlocks->push_back(unique_ptr<MachineBasicBlock>(bb));
 }
 
-void MachineFunction::printASM(ostream& stream) const {
-    // do some thing
-    for (const auto& bb : *basicBlocks) {
+void MachineFunction::printASM(ostream &stream) const {
+  // do some thing
+  for (const auto &bb : *basicBlocks) {
     bb->printASM(stream);
     stream << endl;
   }
 }
-
 
 /////////////////////////////////////////////////
 //
@@ -61,13 +60,31 @@ MachineModule::MachineModule() {
   functions = make_unique<vector<unique_ptr<MachineFunction>>>();
 }
 
-void MachineModule::printASM(ostream& stream) const {
-  for (const auto& gv : *globalVariables) {
+MachineFunction *MachineModule::addFunction(FuncType *funcType, string name) {
+  MachineFunction* func = new MachineFunction(funcType, name);
+  functions->push_back(unique_ptr<MachineFunction>(func));
+  return func;
+}
+
+MachineBasicBlock *MachineModule::addBasicBlock(MachineFunction *function,
+                                                string name) {
+  MachineBasicBlock* bb = new MachineBasicBlock(name);
+  function->pushBasicBlock(bb);
+  return bb;
+}
+
+MachineGlobal *MachineModule::addGlobalVariable(GlobalVariable *global) {
+  return new MachineGlobal(global);
+}
+
+void MachineModule::printASM(ostream &stream) const {
+  // todo
+  for (const auto &gv : *globalVariables) {
     gv->printASM(stream);
     stream << endl;
   }
   stream << endl;
-  for (const auto& f : *functions) {
+  for (const auto &f : *functions) {
     f->printASM(stream);
     stream << endl;
   }

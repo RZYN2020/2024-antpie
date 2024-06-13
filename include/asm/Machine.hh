@@ -2,32 +2,25 @@
 #define _MACHINE_H_
 
 #include "MachineInstruction.hh"
-
-
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-///
-///             ASM Program
-///
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
-
+#include "../ir/Type.hh"
 #include "../ir/Constant.hh"
+#include "../ir/GlobalVariable.hh"
 
 class MachineGlobal {
 private:
-  string name;
-  MachineType type;
-  Constant* init_val;
+  GlobalVariable* global;
 public:
+  MachineGlobal(GlobalVariable* global) : global(global) {}
   void printASM(ostream& stream) const;
 };
 
 class MachineBasicBlock {
  private:
+  string name;
   unique_ptr<vector<unique_ptr<MachineInstruction>>> instructions;
  public:
-  MachineBasicBlock() {
+  MachineBasicBlock(string name_) {
+    name = name_;
     instructions = make_unique<vector<unique_ptr<MachineInstruction>>>();
   }
   void pushInstr(MachineInstruction* i) {
@@ -38,6 +31,8 @@ class MachineBasicBlock {
 
 class MachineFunction {
 private:
+  FuncType* type;
+  string name;
   unique_ptr<vector<unique_ptr<MachineBasicBlock>>> basicBlocks;
  public:
   MachineFunction(FuncType* fType, string name);
@@ -55,6 +50,11 @@ private:
 public:
   MachineModule();
   void printASM(ostream& stream) const;
+  void setCurrBasicBlock(MachineBasicBlock* bb) { currBasicBlock = bb; }
+  MachineFunction* addFunction(FuncType* funcType, string name);
+  MachineBasicBlock* addBasicBlock(MachineFunction* function, string name);
+
+  MachineGlobal* addGlobalVariable(GlobalVariable* global);
 };
 
 #endif
