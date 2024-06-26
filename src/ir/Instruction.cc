@@ -1,4 +1,4 @@
-#include "ir/Instruction.hh"
+#include "Instruction.hh"
 
 #include <cassert>
 

@@ -1,8 +1,8 @@
 #ifndef _PRELUDE_CONCLUSION_H_
 #define _PRELUDE_CONCLUSION_H_
 
-#include "../asm/Machine.hh"
-#include "../ir/Module.hh"
+#include "Machine.hh"
+#include "Module.hh"
 
 void prelude_conclusion(MachineModule* mod);
 

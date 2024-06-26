@@ -1,4 +1,4 @@
-#include "ir/Function.hh"
+#include "Function.hh"
 
 Function::Function(FuncType* fType, string name)
     : GlobalValue(fType, name, VT_FUNC) {

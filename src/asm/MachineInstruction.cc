@@ -1,4 +1,4 @@
-#include "asm/MachineInstruction.hh"
+#include "MachineInstruction.hh"
 
 void MachineInstruction::pushReg(Register *r) {}
 

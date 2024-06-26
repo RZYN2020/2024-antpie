@@ -1,0 +1,11 @@
+add_library(
+    ir
+    Argument.cc
+    BasicBlock.cc
+    Constant.cc
+    Function.cc
+    GlobalVariable.cc
+    Instruction.cc
+    Module.cc
+    Type.cc
+)
