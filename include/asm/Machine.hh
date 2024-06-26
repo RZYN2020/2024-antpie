@@ -2,9 +2,9 @@
 #define _MACHINE_H_
 
 #include "MachineInstruction.hh"
-#include "../ir/Type.hh"
-#include "../ir/Constant.hh"
-#include "../ir/GlobalVariable.hh"
+#include "Type.hh"
+#include "Constant.hh"
+#include "GlobalVariable.hh"
 
 class MachineGlobal {
 private:

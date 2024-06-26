@@ -1,4 +1,4 @@
-#include "ir/Constant.hh"
+#include "Constant.hh"
 
 map<int, IntegerConstant*> IntegerConstant::constBuffer;
 map<float, FloatConstant*> FloatConstant::constBuffer;

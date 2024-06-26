@@ -1,4 +1,4 @@
-#include "cgen/allocate_register.hh"
+#include "allocate_register.hh"
 
 // Linear Scan Register Allocation on SSA Form
 void allocate_register(MachineModule *mod) {
