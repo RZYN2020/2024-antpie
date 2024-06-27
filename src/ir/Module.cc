@@ -1,4 +1,4 @@
-#include "ir/Module.hh"
+#include "Module.hh"
 
 using ANTPIE::Module;
 

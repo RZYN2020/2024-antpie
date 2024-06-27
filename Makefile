@@ -1,49 +1,13 @@
-# Makefile
+.IGNORE: llvm-test
+.PHONY: clean all
 
-# Compiler settings
-CC = clang++
 DEBUG ?= 0
-ifeq ($(DEBUG), 1)
-  CFLAGS = --std=c++17 -g  -I$(INC_DIR)
-else
-  CFLAGS = --std=c++17 -O2 -I$(INC_DIR)
-endif
+CMAKE_FLAGS := -DCMAKE_BUILD_TYPE=$(if $(DEBUG),Debug,Release)
 
-# Directories
-SRC_DIR = src
-INC_DIR = include
-BIN_DIR = bin
-OBJ_DIR = $(BIN_DIR)/obj
+all:
+	@cmake $(CMAKE_FLAGS) -B build
+	@cmake --build build
 
-# Source and header files
-SRCS = $(wildcard $(SRC_DIR)/*.cc  $(SRC_DIR)/**/*.cc)
-OBJS = $(patsubst $(SRC_DIR)/%.cc,$(OBJ_DIR)/%.o,$(SRCS))
-DEPS = $(patsubst $(SRC_DIR)/%.cc,$(INC_DIR)/%.hh,$(SRCS))
-
-# Target
-TARGET = $(BIN_DIR)/compiler
-
-# IR file
-IRFile = tests/test.ll
-
-all: $(TARGET)
-
-$(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $^
-
-
-ifeq ($(OS),Windows_NT)
-# Use Windows-compatible mkdir command
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cc $(DEPS)
-	@if not exist "$(OBJ_DIR)" mkdir "$(OBJ_DIR)"
-	@if not exist "$(dir $@)" mkdir "$(dir $@)"
-	$(CC) $(CFLAGS) -c $< -o $@
-else
-# Linux command
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cc $(DEPS)
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c $< -o $@
-endif
 
 run:
 	$(BIN_DIR)/compiler
@@ -54,7 +18,18 @@ run:
 llvm-test: run
 	lli $(IRFile); echo $$?
 
-.IGNORE: llvm-test
-.PHONY: clean
+EXE := tests/test
+INPUT := tests/test.in
+qemu-run:
+	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M $(EXE) < $(INPUT)
+
 clean:
-	rm -rf $(BIN_DIR)
+	rm -rf build
+
+SRC := tests/test.c
+RES := tests/test
+gcc-riscv64:
+	riscv64-linux-gnu-gcc-10 -o $(RES) $(SRC)
+
+# todo: official docker test
+# https://pan.educg.net/#/s/V2oiq?path=%2F

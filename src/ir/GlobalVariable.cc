@@ -1,4 +1,4 @@
-#include "ir/GlobalVariable.hh"
+#include "GlobalVariable.hh"
 
 GlobalVariable::GlobalVariable(Type* type, string name)
     : GlobalValue(Type::getPointerType(type), name, VT_GLOBALVAR) {

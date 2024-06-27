@@ -1,4 +1,4 @@
-#include "ir/Type.hh"
+#include "Type.hh"
 
 Int1Type* Type::int1Type = new Int1Type();
 Int32Type* Type::int32Type = new Int32Type();

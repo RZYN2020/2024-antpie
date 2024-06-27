@@ -1,4 +1,15 @@
-#include "main.hh"
+#include "Instruction.hh"
+#include "Function.hh"
+#include "BasicBlock.hh"
+#include "Module.hh"
+#include "Constant.hh"
+#include "Machine.hh"
+#include "select_instruction.hh"
+#include "allocate_register.hh"
+#include "prelude_conclusion.hh"
+
+#include <fstream>
+#include <iostream>
 
 int main() {
   // ir使用示例，可以删除
