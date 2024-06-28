@@ -20,6 +20,10 @@ class BasicBlock : public Value {
     instructions->push_back(unique_ptr<Instruction>(i));
   }
   void printIR(ostream& stream) const override;
+
+  const vector<std::unique_ptr<Instruction>>& getInstructions() const {
+    return *instructions;
+  }
 };
 
 

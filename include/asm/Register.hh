@@ -5,6 +5,7 @@
 #include <string>
 
 using std::string;
+using std::ostream;
 
 
 class Register {
@@ -16,28 +17,62 @@ public:
     V_REGISTER, // virtual_register
   };
 
-private:
+protected:
   RegTag tag;
   int id;
   string name;
 
 public:
-  Register(RegTag tt, int regId, const string &regName)
-      : tag(tt), id(regId), name(regName) {}
+  virtual void print(ostream& stream) const = 0;
+};
 
-  void printInfo() const {
-    std::cout << "Register ID: " << id << ", Name: " << name << std::endl;
+static int get_id() {
+    static int cnt = 0;
+    return cnt++;
+}
+
+class VRegister: public Register {
+public:
+
+  VRegister() {
+    tag = V_REGISTER;
+    id = get_id();
+    name = "t" + id;
+  }
+
+  VRegister(string n) {
+    tag = V_REGISTER;
+    id = get_id();
+    name = n;
+  }
+
+  void print(ostream& stream) const override {
+      stream << name;
   }
 };
 
 class IRegister : public Register {
 public:
-  IRegister(int id, std::string n) : Register(I_REGISTER, id, n) {}
+  IRegister(int id_, std::string n) {
+    tag = I_REGISTER;
+    id = id_;
+    name = n;
+  }
+  void print(ostream& stream) const override {
+      stream << name;
+  }
 };
 
 class FRegister : public Register {
 public:
-  FRegister(int id, std::string n) : Register(F_REGISTER, id, n) {}
+  FRegister(int id_, std::string n) {
+    tag = F_REGISTER;
+    id = id_;
+    name = n;
+  }
+  void print(ostream& stream) const override {
+      stream << name;
+  }
 };
 
 #define CONCAT(x, y) x##y
@@ -113,11 +148,13 @@ DEFINE_FREGISTER(ft10, 30);
 DEFINE_FREGISTER(ft11, 31);
 
 class Immediate {
+// only int_32 imm in riscv
+// allow f_32 imm in high level asm
 private:
-  int32_t val;
+  uint32_t val;
 
 public:
-  Immediate(int32_t val) : val(val) {}
+  Immediate(uint32_t val) : val(val) {}
 };
 
 #endif

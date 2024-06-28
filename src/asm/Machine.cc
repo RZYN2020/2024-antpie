@@ -74,7 +74,16 @@ MachineBasicBlock *MachineModule::addBasicBlock(MachineFunction *function,
 }
 
 MachineGlobal *MachineModule::addGlobalVariable(GlobalVariable *global) {
-  return new MachineGlobal(global);
+  auto g = new MachineGlobal(global);
+  globalVariables->push_back(unique_ptr<MachineGlobal>(g));
+  return g;
+}
+
+MachineGlobal *MachineModule::addGlobalFloat(FloatConstant *f) {
+  static int float_cnt = 0;
+  auto g = new MachineGlobal(new GlobalVariable(FloatType::getFloatType(), f, "fi" + float_cnt));
+  globalVariables->push_back(unique_ptr<MachineGlobal>(g));
+  return g;
 }
 
 void MachineModule::printASM(ostream &stream) const {

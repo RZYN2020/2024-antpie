@@ -46,6 +46,14 @@ class Module {
 
   GlobalVariable* addGlobalVariable(Type* type, string name);
   GlobalVariable* addGlobalVariable(Type* type, Constant* init, string name);
+
+  const vector<unique_ptr<GlobalVariable>>& getGlobalVariables() const {
+    return *globalVariables;
+  }
+
+  const vector<unique_ptr<Function>>& getFunctions() const {
+    return *functions;
+  }
 };
 }  // namespace ANTPIE
 

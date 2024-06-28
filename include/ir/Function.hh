@@ -18,6 +18,10 @@ class Function : public GlobalValue {
   Function(FuncType* fType, string name);
   void pushBasicBlock(BasicBlock* bb);
   void printIR(ostream& stream) const override;
+
+  const vector<std::unique_ptr<BasicBlock>>& getBasicBlocks() const {
+    return *basicBlocks;
+  }
 };
 
 #endif

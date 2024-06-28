@@ -38,6 +38,8 @@ class IntegerConstant : public Constant {
       : Constant(false, Type::getInt32Type(), VT_INTCONST), value(v) {}
   string toString() const override { return std::to_string(value); }
   static IntegerConstant* getConstInt(int num);
+
+  int getValue() const { return value; }
 };
 
 class FloatConstant : public Constant {

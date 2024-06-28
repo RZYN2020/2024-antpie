@@ -2,6 +2,7 @@
 #define _MACHINE_INSTRUCTION_H_
 
 #include "Register.hh"
+#include "GlobalVariable.hh"
 #include <memory>
 #include <vector>
 
@@ -9,7 +10,16 @@ using std::ostream;
 using std::unique_ptr;
 using std::vector;
 
-class MachineInstruction : public Register {
+class MachineGlobal {
+private:
+  GlobalVariable *global;
+
+public:
+  MachineGlobal(GlobalVariable *global) : global(global) {}
+  void printASM(ostream &stream) const;
+};
+
+class MachineInstruction : public VRegister {
 public:
   enum MachineInstructionTag {
     // Beacuse we only have 32-bits interger and float in SysY, so we don't need
@@ -19,6 +29,7 @@ public:
 
     // RV64I
     //// Integer Computation
+    ADDIW,
     ADDW,
     SUBW,
     AND,
@@ -89,15 +100,20 @@ private:
   MachineInstructionTag tag;
   unique_ptr<vector<Register *>> oprands;
   unique_ptr<Immediate> imm;
+  MachineGlobal* global; // for load golbal
+  // in normal address mode like 100(a), a is in oprands[0], 100 is in imm
 
 public:
-  MachineInstruction(string name);
-  MachineInstruction();
+  MachineInstruction(MachineInstructionTag tag, string name)
+      : VRegister(name), tag(tag) {}
+  MachineInstruction(MachineInstructionTag tag) : VRegister(), tag(tag) {}
   void pushReg(Register *r);
   void setImm(Immediate i);
+  void setGlobal(MachineGlobal* global);
   MachineInstructionTag getTag() const;
   Register *getReg(int idx) const;
   Immediate *getImm() const;
+  MachineGlobal* getGlobal() const;
   void printASM(ostream &stream) const;
 };
 

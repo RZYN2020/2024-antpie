@@ -151,13 +151,13 @@ int main() {
   ReturnInst* returnInst = module->addReturnInst(callInst);
 
 
-//   MachineModule* mmodule = new MachineModule();
+  MachineModule* mmodule = new MachineModule();
   
-//   select_instruction(mmodule, module);
-//   mmodule->printASM(std::cout);
+  select_instruction(mmodule, module);
+  mmodule->printASM(std::cout);
 
-//   allocate_register(mmodule);
-//   mmodule->printASM(std::cout);
+  allocate_register(mmodule);
+  mmodule->printASM(std::cout);
 
 //   prelude_conclusion(mmodule);
 //   mmodule->printASM(std::cout);

@@ -11,3 +11,7 @@ Register *MachineInstruction::getReg(int idx) const {}
 Immediate *MachineInstruction::getImm() const {}
 
 void MachineInstruction::printASM(ostream &stream) const {}
+
+void MachineInstruction::setGlobal(MachineGlobal *global) {}
+
+MachineGlobal *MachineInstruction::getGlobal() const {}
