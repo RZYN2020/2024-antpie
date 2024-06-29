@@ -156,8 +156,8 @@ int main() {
   select_instruction(mmodule, module);
   mmodule->printASM(std::cout);
 
-  allocate_register(mmodule);
-  mmodule->printASM(std::cout);
+//   allocate_register(mmodule);
+//   mmodule->printASM(std::cout);
 
 //   prelude_conclusion(mmodule);
 //   mmodule->printASM(std::cout);

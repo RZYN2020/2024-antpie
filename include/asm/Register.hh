@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <string>
+#include "Instruction.hh"
 
 using std::string;
 using std::ostream;
@@ -15,6 +16,7 @@ public:
     F_REGISTER,
     I_REGISTER,
     V_REGISTER, // virtual_register
+    IR_REGISTER, // to be resolved
   };
 
 protected:
@@ -24,6 +26,18 @@ protected:
 
 public:
   virtual void print(ostream& stream) const = 0;
+};
+
+class IRRegister: public Register {
+public:
+  Instruction *ir_reg;
+  IRRegister(Instruction* ins) {
+    tag = IR_REGISTER;
+    ir_reg = ins;
+  };
+    void print(ostream& stream) const override {
+      stream << "name";
+  }
 };
 
 static int get_id() {

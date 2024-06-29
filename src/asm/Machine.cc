@@ -10,20 +10,6 @@ void MachineGlobal::printASM(ostream &stream) const {
   // todo
 }
 
-/////////////////////////////////////////////////
-//
-//                MachineBasicBlock
-//
-/////////////////////////////////////////////////
-
-void MachineBasicBlock::printASM(ostream &stream) const {
-  // do some thing
-  for (const auto &instr : *instructions) {
-    stream << "  ";
-    instr->printASM(stream);
-    stream << endl;
-  }
-}
 
 /////////////////////////////////////////////////
 //
@@ -88,6 +74,7 @@ MachineGlobal *MachineModule::addGlobalFloat(FloatConstant *f) {
 
 void MachineModule::printASM(ostream &stream) const {
   // todo
+
   for (const auto &gv : *globalVariables) {
     gv->printASM(stream);
     stream << endl;

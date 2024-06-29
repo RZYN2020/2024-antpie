@@ -6,28 +6,6 @@
 #include "MachineInstruction.hh"
 #include "Type.hh"
 
-class MachineBasicBlock {
-private:
-  string name;
-  unique_ptr<vector<unique_ptr<MachineInstruction>>> instructions;
-
-public:
-  MachineBasicBlock(string name_) {
-    name = name_;
-    instructions = make_unique<vector<unique_ptr<MachineInstruction>>>();
-  }
-  void pushInstr(MachineInstruction *i) {
-    instructions->push_back(unique_ptr<MachineInstruction>(i));
-  }
-
-  void pushInstrs(vector<MachineInstruction *> is) {
-    for (auto i : is) {
-      instructions->push_back(unique_ptr<MachineInstruction>(i));
-    }
-  }
-
-  void printASM(ostream &stream) const;
-};
 
 class MachineFunction {
 private:
@@ -39,6 +17,10 @@ public:
   MachineFunction(FuncType *fType, string name);
   void pushBasicBlock(MachineBasicBlock *bb);
   void printASM(ostream &stream) const;
+
+  const vector<unique_ptr<MachineBasicBlock>>& getBasicBlocks() const {
+    return *basicBlocks;
+  }
 };
 
 class MachineModule {
@@ -56,6 +38,14 @@ public:
 
   MachineGlobal *addGlobalVariable(GlobalVariable *global);
   MachineGlobal *addGlobalFloat(FloatConstant *f);
+
+  const vector<unique_ptr<MachineGlobal>>& getGlobals() const {
+    return *globalVariables;
+  }
+
+  const vector<unique_ptr<MachineFunction>>& getFunctions() const {
+    return *functions;
+  }
 };
 
 #endif

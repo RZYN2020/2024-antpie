@@ -1,14 +1,44 @@
 #ifndef _MACHINE_INSTRUCTION_H_
 #define _MACHINE_INSTRUCTION_H_
 
-#include "Register.hh"
 #include "GlobalVariable.hh"
+#include "Register.hh"
+#include <cassert>
 #include <memory>
 #include <vector>
 
 using std::ostream;
 using std::unique_ptr;
 using std::vector;
+
+class MachineInstruction;
+
+class MachineBasicBlock {
+private:
+  string name;
+  unique_ptr<vector<unique_ptr<MachineInstruction>>> instructions;
+
+public:
+  MachineBasicBlock(string name_) {
+    name = name_;
+    instructions = make_unique<vector<unique_ptr<MachineInstruction>>>();
+  }
+  void pushInstr(MachineInstruction *i) {
+    instructions->push_back(unique_ptr<MachineInstruction>(i));
+  }
+
+  void pushInstrs(vector<MachineInstruction *> is) {
+    for (auto i : is) {
+      instructions->push_back(unique_ptr<MachineInstruction>(i));
+    }
+  }
+
+  void printASM(ostream &stream) const;
+
+  const vector<unique_ptr<MachineInstruction>>& getInstructions() const {
+    return *instructions;
+  }
+};
 
 class MachineGlobal {
 private:
@@ -46,6 +76,9 @@ public:
     SRLIW,
     LUI,
     AUIPC,
+    SLT,
+    SLTI,
+    SLTU,
     SLTIU,
     //// Loads and Stores
     LW,
@@ -57,6 +90,7 @@ public:
     BLT,
     BGEU,
     BLTU,
+    JAL,
     JALR,
 
     // RV64M
@@ -99,21 +133,45 @@ private:
   string name;
   MachineInstructionTag tag;
   unique_ptr<vector<Register *>> oprands;
+  unique_ptr<vector<MachineBasicBlock *>> targets;
   unique_ptr<Immediate> imm;
-  MachineGlobal* global; // for load golbal
+  MachineGlobal *global; // for load golbal
   // in normal address mode like 100(a), a is in oprands[0], 100 is in imm
 
 public:
   MachineInstruction(MachineInstructionTag tag, string name)
-      : VRegister(name), tag(tag) {}
-  MachineInstruction(MachineInstructionTag tag) : VRegister(), tag(tag) {}
+      : VRegister(name), tag(tag) {
+    oprands = unique_ptr<vector<Register *>>(new vector<Register *>());
+    targets = unique_ptr<vector<MachineBasicBlock *>>(new vector<MachineBasicBlock *>());
+  }
+  MachineInstruction(MachineInstructionTag tag) : VRegister(), tag(tag) {
+    oprands = unique_ptr<vector<Register *>>(new vector<Register *>());
+    targets = unique_ptr<vector<MachineBasicBlock *>>(new vector<MachineBasicBlock *>());
+  }
+  void replaceIRRegister(map<Instruction *, MachineInstruction *> instr_map) {
+    for (auto& opd : *oprands) {
+        if (IRRegister *irr = dynamic_cast<IRRegister *>(opd)) {
+            // 在映射中查找这个 Instruction 指针
+            Instruction* inst = irr->ir_reg;
+            auto it = instr_map.find(inst);
+            if (it != instr_map.end()) {
+                opd = it->second;
+            } else {
+              assert(0);
+            }
+        }
+    }
+  }
+
   void pushReg(Register *r);
+  void pushTarget(MachineBasicBlock *b);
   void setImm(Immediate i);
-  void setGlobal(MachineGlobal* global);
+  void setGlobal(MachineGlobal *global);
   MachineInstructionTag getTag() const;
   Register *getReg(int idx) const;
+  MachineBasicBlock *getTarget(int idx) const;
   Immediate *getImm() const;
-  MachineGlobal* getGlobal() const;
+  MachineGlobal *getGlobal() const;
   void printASM(ostream &stream) const;
 };
 
