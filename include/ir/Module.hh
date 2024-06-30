@@ -30,15 +30,13 @@ class Module {
   AllocaInst* addAllocaInst(Type* type, string name);
   BinaryOpInst* addBinaryOpInst(OpTag opType, Value* op1, Value* op2,
                                 string name);
-  BranchInst* addBranchInst(Value* cond, BasicBlock* trueBlock,
-                            BasicBlock* falseBlock);
+  BranchInst* addBranchInst(Value* cond, BasicBlock* trueBlock, BasicBlock* falseBlock);
   CallInst* addCallInst(Function* func, string name);
   CallInst* addCallInst(Function* func, vector<Value*>& params, string name);
   IcmpInst* addIcmpInst(OpTag opType, Value* op1, Value* op2, string name);
   FcmpInst* addFcmpInst(OpTag opType, Value* op1, Value* op2, string name);
   FptosiInst* addFptosiInst(Value* src, string name);
-  GetElemPtrInst* addGetElemPtrInst(Value* ptr, Value* idx1, Value* idx2,
-                                    string name);
+  GetElemPtrInst* addGetElemPtrInst(Value* ptr, Value* idx1, Value* idx2, string name);
   GetElemPtrInst* addGetElemPtrInst(Value* ptr, Value* idx1, string name);
   JumpInst* addJumpInst(BasicBlock* block);
   LoadInst* addLoadInst(Value* addr, string name);

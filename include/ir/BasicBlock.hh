@@ -5,8 +5,6 @@
 #ifndef _BASIC_BLOCK_H
 #define _BASIC_BLOCK_H
 
-#include <list>
-
 #include "Instruction.hh"
 #include "LinkedList.hh"
 #include "Value.hh"
