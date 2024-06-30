@@ -91,6 +91,10 @@ class CallInst : public Instruction {
   CallInst(Function* func, vector<Value*>& params, string name);
   void pushArgument(Value* value);
   void printIR(ostream& stream) const override;
+
+  Function* getFunction() const {
+    return function;
+  }
 };
 
 class IcmpInst : public Instruction {
@@ -100,6 +104,10 @@ class IcmpInst : public Instruction {
  public:
   IcmpInst(OpTag opType, Value* op1, Value* op2, string name);
   void printIR(ostream& stream) const override;
+
+  const OpTag getOpTag() const {
+    return icmpType;
+  }
 };
 
 class FcmpInst : public Instruction {
@@ -109,6 +117,10 @@ class FcmpInst : public Instruction {
  public:
   FcmpInst(OpTag opType, Value* op1, Value* op2, string name);
   void printIR(ostream& stream) const override;
+
+  const OpTag getOpTag() const {
+    return fcmpType;
+  }
 };
 
 class FptosiInst : public Instruction {

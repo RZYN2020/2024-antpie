@@ -1,13 +1,13 @@
 #ifndef _REGISTER_H_
 #define _REGISTER_H_
 
+#include "Instruction.hh"
+#include "Type.hh"
 #include <iostream>
 #include <string>
-#include "Instruction.hh"
 
-using std::string;
 using std::ostream;
-
+using std::string;
 
 class Register {
 
@@ -15,7 +15,7 @@ public:
   enum RegTag {
     F_REGISTER,
     I_REGISTER,
-    V_REGISTER, // virtual_register
+    V_REGISTER,  // virtual_register
     IR_REGISTER, // to be resolved
   };
 
@@ -25,29 +25,30 @@ protected:
   string name;
 
 public:
-  virtual void print(ostream& stream) const = 0;
+  virtual void print(ostream &stream) const = 0;
+  virtual bool is_float() const = 0;
 };
 
-class IRRegister: public Register {
+class IRRegister : public Register {
 public:
   Instruction *ir_reg;
-  IRRegister(Instruction* ins) {
+  IRRegister(Instruction *ins) {
     tag = IR_REGISTER;
     ir_reg = ins;
   };
-    void print(ostream& stream) const override {
-      stream << "name";
+  void print(ostream &stream) const override { stream << "name"; }
+  bool is_float() const override {
+    return ir_reg->getType() == FloatType::getFloatType();
   }
 };
 
 static int get_id() {
-    static int cnt = 0;
-    return cnt++;
+  static int cnt = 0;
+  return cnt++;
 }
 
-class VRegister: public Register {
+class VRegister : public Register {
 public:
-
   VRegister() {
     tag = V_REGISTER;
     id = get_id();
@@ -60,9 +61,7 @@ public:
     name = n;
   }
 
-  void print(ostream& stream) const override {
-      stream << name;
-  }
+  void print(ostream &stream) const override { stream << name; }
 };
 
 class IRegister : public Register {
@@ -72,9 +71,8 @@ public:
     id = id_;
     name = n;
   }
-  void print(ostream& stream) const override {
-      stream << name;
-  }
+  void print(ostream &stream) const override { stream << name; }
+  bool is_float() const override { return false; }
 };
 
 class FRegister : public Register {
@@ -84,9 +82,8 @@ public:
     id = id_;
     name = n;
   }
-  void print(ostream& stream) const override {
-      stream << name;
-  }
+  void print(ostream &stream) const override { stream << name; }
+  bool is_float() const override { return true; }
 };
 
 #define CONCAT(x, y) x##y
@@ -96,8 +93,8 @@ public:
   static FRegister CONCAT(reg_, regName)((regId), #regName)
 
 DEFINE_IREGISTER(zero, 0);
-DEFINE_IREGISTER(ra, 1);
-DEFINE_IREGISTER(sp, 2);
+DEFINE_IREGISTER(ra, 1); // saved
+DEFINE_IREGISTER(sp, 2); // saved
 DEFINE_IREGISTER(gp, 3);
 DEFINE_IREGISTER(tp, 4);
 DEFINE_IREGISTER(t0, 5);
@@ -127,6 +124,27 @@ DEFINE_IREGISTER(t3, 28);
 DEFINE_IREGISTER(t4, 29);
 DEFINE_IREGISTER(t5, 30);
 DEFINE_IREGISTER(t6, 31);
+
+static IRegister *iregisters[] = {
+    &CONCAT(reg_, zero), &CONCAT(reg_, ra), &CONCAT(reg_, sp),
+    &CONCAT(reg_, gp),   &CONCAT(reg_, tp), &CONCAT(reg_, t0),
+    &CONCAT(reg_, t1),   &CONCAT(reg_, t2), &CONCAT(reg_, s0),
+    &CONCAT(reg_, s1),   &CONCAT(reg_, a0), &CONCAT(reg_, a1),
+    &CONCAT(reg_, a2),   &CONCAT(reg_, a3), &CONCAT(reg_, a4),
+    &CONCAT(reg_, a5),   &CONCAT(reg_, a6), &CONCAT(reg_, a7),
+    &CONCAT(reg_, s2),   &CONCAT(reg_, s3), &CONCAT(reg_, s4),
+    &CONCAT(reg_, s5),   &CONCAT(reg_, s6), &CONCAT(reg_, s7),
+    &CONCAT(reg_, s8),   &CONCAT(reg_, s9), &CONCAT(reg_, s10),
+    &CONCAT(reg_, s11),  &CONCAT(reg_, t3), &CONCAT(reg_, t4),
+    &CONCAT(reg_, t5),   &CONCAT(reg_, t6),
+};
+
+static Register *getIRegister(int idx) {
+  if (idx < 0 || idx >= (sizeof(iregisters) / sizeof(iregisters[0]))) {
+    throw std::out_of_range("Index is out of the range of IRegister array.");
+  }
+  return iregisters[idx];
+}
 
 DEFINE_FREGISTER(ft0, 0);
 DEFINE_FREGISTER(ft1, 1);
@@ -161,9 +179,30 @@ DEFINE_FREGISTER(ft9, 29);
 DEFINE_FREGISTER(ft10, 30);
 DEFINE_FREGISTER(ft11, 31);
 
+static FRegister *fregisters[] = {
+    &CONCAT(reg_, ft0),  &CONCAT(reg_, ft1),  &CONCAT(reg_, ft2),
+    &CONCAT(reg_, ft3),  &CONCAT(reg_, ft4),  &CONCAT(reg_, ft5),
+    &CONCAT(reg_, ft6),  &CONCAT(reg_, ft7),  &CONCAT(reg_, fs0),
+    &CONCAT(reg_, fs1),  &CONCAT(reg_, fa0),  &CONCAT(reg_, fa1),
+    &CONCAT(reg_, fa2),  &CONCAT(reg_, fa3),  &CONCAT(reg_, fa4),
+    &CONCAT(reg_, fa5),  &CONCAT(reg_, fa6),  &CONCAT(reg_, fa7),
+    &CONCAT(reg_, fs2),  &CONCAT(reg_, fs3),  &CONCAT(reg_, fs4),
+    &CONCAT(reg_, fs5),  &CONCAT(reg_, fs6),  &CONCAT(reg_, fs7),
+    &CONCAT(reg_, fs8),  &CONCAT(reg_, fs9),  &CONCAT(reg_, fs10),
+    &CONCAT(reg_, fs11), &CONCAT(reg_, ft8),  &CONCAT(reg_, ft9),
+    &CONCAT(reg_, ft10), &CONCAT(reg_, ft11),
+};
+
+static Register *getFRegister(int idx) {
+  if (idx < 0 || idx >= (sizeof(fregisters) / sizeof(fregisters[0]))) {
+    throw std::out_of_range("Index is out of the range of FRegister array.");
+  }
+  return fregisters[idx];
+}
+
 class Immediate {
-// only int_32 imm in riscv
-// allow f_32 imm in high level asm
+  // only int_32 imm in riscv
+  // allow f_32 imm in high level asm
 private:
   uint32_t val;
 
