@@ -2,22 +2,25 @@
 
 using ANTPIE::Module;
 
-Module::Module() {
-  globalVariables = make_unique<vector<unique_ptr<GlobalVariable>>>();
-  functions = make_unique<vector<unique_ptr<Function>>>();
-}
+Module::Module() {}
 
-void Module::pushFunction(Function* function) {
-  functions->push_back(unique_ptr<Function>(function));
+Module::~Module() {
+  for (auto it = globalVariables.begin(); it != globalVariables.end(); ++it) {
+    delete *it;
+  }
+  for (auto it = functions.begin(); it != functions.end(); ++it) {
+    delete *it;
+  }
 }
+void Module::pushFunction(Function* function) { functions.pushBack(function); }
 
 void Module::pushGlobalVariable(GlobalVariable* globalVariable) {
-  globalVariables->push_back(unique_ptr<GlobalVariable>(globalVariable));
+  globalVariables.pushBack(globalVariable);
 }
 
 Function* Module::addFunction(FuncType* funcType, string name) {
   Function* func = new Function(funcType, name);
-  functions->push_back(unique_ptr<Function>(func));
+  functions.pushBack(func);
   return func;
 }
 
@@ -28,13 +31,14 @@ BasicBlock* Module::addBasicBlock(Function* function, string name) {
 }
 
 void Module::printIR(ostream& stream) const {
-  for (const auto& gv : *globalVariables) {
-    gv->printIR(stream);
+  for (auto gv = globalVariables.begin(); gv != globalVariables.end(); ++gv) {
+    (*gv)->printIR(stream);
     stream << endl;
   }
   stream << endl;
-  for (const auto& f : *functions) {
-    f->printIR(stream);
+
+  for (auto f = functions.begin(); f != functions.end(); ++f) {
+    (*f)->printIR(stream);
     stream << endl;
   }
 }
@@ -156,13 +160,19 @@ ZextInst* Module::addZextInst(Value* src, Type* dstType, string name) {
 
 GlobalVariable* Module::addGlobalVariable(Type* type, string name) {
   GlobalVariable* gv = new GlobalVariable(type, name);
-  globalVariables->push_back(unique_ptr<GlobalVariable>(gv));
+  globalVariables.pushBack(gv);
   return gv;
 }
 
 GlobalVariable* Module::addGlobalVariable(Type* type, Constant* init,
                                           string name) {
   GlobalVariable* gv = new GlobalVariable(type, init, name);
-  globalVariables->push_back(unique_ptr<GlobalVariable>(gv));
+  globalVariables.pushBack(gv);
   return gv;
+}
+
+void Module::buildCFG() {
+  for (auto it = functions.begin(); it != functions.end(); ++it) {
+    (*it)->buildCFG();
+  }
 }
