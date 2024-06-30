@@ -7,16 +7,18 @@
 
 #include "Function.hh"
 #include "GlobalVariable.hh"
+#include "LinkedList.hh"
 
 namespace ANTPIE {
 class Module {
  private:
-  unique_ptr<vector<unique_ptr<GlobalVariable>>> globalVariables;
-  unique_ptr<vector<unique_ptr<Function>>> functions;
+  LinkedList<GlobalVariable*> globalVariables;
+  LinkedList<Function*> functions;
   BasicBlock* currBasicBlock;
 
  public:
   Module();
+  ~Module();
   void pushFunction(Function* function);
   void pushGlobalVariable(GlobalVariable* globalVariable);
   void printIR(ostream& stream) const;
@@ -26,8 +28,9 @@ class Module {
   BasicBlock* addBasicBlock(Function* function, string name);
 
   AllocaInst* addAllocaInst(Type* type, string name);
-  BinaryOpInst* addBinaryOpInst(OpTag opType, Value* op1, Value* op2, string name);
-  BranchInst*  addBranchInst(Value* cond, BasicBlock* trueBlock, BasicBlock* falseBlock);
+  BinaryOpInst* addBinaryOpInst(OpTag opType, Value* op1, Value* op2,
+                                string name);
+  BranchInst* addBranchInst(Value* cond, BasicBlock* trueBlock, BasicBlock* falseBlock);
   CallInst* addCallInst(Function* func, string name);
   CallInst* addCallInst(Function* func, vector<Value*>& params, string name);
   IcmpInst* addIcmpInst(OpTag opType, Value* op1, Value* op2, string name);
@@ -46,6 +49,11 @@ class Module {
 
   GlobalVariable* addGlobalVariable(Type* type, string name);
   GlobalVariable* addGlobalVariable(Type* type, Constant* init, string name);
+
+  LinkedList<GlobalVariable*>* getGlobalVariables() { return &globalVariables; }
+  LinkedList<Function*>* getFunctions() { return &functions; }
+
+  void buildCFG();
 };
 }  // namespace ANTPIE
 

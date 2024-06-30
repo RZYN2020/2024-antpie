@@ -10,6 +10,7 @@ INCLUDE_DIRECTORIES(
     include/asm
     include/cgen
     include/opt
+    include/util
     include
 )
 
@@ -17,6 +18,7 @@ add_subdirectory(src/ir)
 add_subdirectory(src/asm)
 add_subdirectory(src/cgen)
 add_subdirectory(src/opt)
+add_subdirectory(src/util)
 
 add_executable(
         compiler
@@ -29,6 +31,7 @@ target_link_libraries(
         asm
         cgen
         opt
+        util
 )
 
 install(

@@ -8,7 +8,8 @@ all:
 	@cmake $(CMAKE_FLAGS) -B build
 	@cmake --build build
 
-
+BIN_DIR = build
+IRFile = tests/test.ll
 run:
 	$(BIN_DIR)/compiler
 
