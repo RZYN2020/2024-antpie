@@ -5,8 +5,8 @@ Function::Function(FuncType* fType, string name)
     : GlobalValue(fType, name, VT_FUNC) {}
 
 Function::~Function() {
-  for (auto it = basicBlocks.begin(); it != basicBlocks.end(); ++it) {
-    delete *it;
+  for (const auto& bb : basicBlocks) {
+    delete bb;
   }
   delete cfg;
 }
@@ -31,9 +31,9 @@ void Function::printIR(ostream& stream) const {
   }
   stream << ") {" << endl;
 
-  for (auto bb = basicBlocks.begin(); bb != basicBlocks.end(); ++bb) {
-    if ((*bb)->isEmpty()) continue;
-    (*bb)->printIR(stream);
+  for (const auto& bb : basicBlocks) {
+    if (bb->isEmpty()) continue;
+    bb->printIR(stream);
     stream << endl;
   }
   stream << "}" << endl;

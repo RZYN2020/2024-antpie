@@ -5,11 +5,11 @@ using ANTPIE::Module;
 Module::Module() {}
 
 Module::~Module() {
-  for (auto it = globalVariables.begin(); it != globalVariables.end(); ++it) {
-    delete *it;
+  for (const auto& gv : globalVariables) {
+    delete gv;
   }
-  for (auto it = functions.begin(); it != functions.end(); ++it) {
-    delete *it;
+  for (const auto& func: functions) {
+    delete func;
   }
 }
 void Module::pushFunction(Function* function) { functions.pushBack(function); }
@@ -31,14 +31,14 @@ BasicBlock* Module::addBasicBlock(Function* function, string name) {
 }
 
 void Module::printIR(ostream& stream) const {
-  for (auto gv = globalVariables.begin(); gv != globalVariables.end(); ++gv) {
-    (*gv)->printIR(stream);
+  for (const auto& gv : globalVariables) {
+    gv->printIR(stream);
     stream << endl;
   }
   stream << endl;
 
-  for (auto f = functions.begin(); f != functions.end(); ++f) {
-    (*f)->printIR(stream);
+  for (const auto f : functions) {
+    f->printIR(stream);
     stream << endl;
   }
 }
@@ -172,7 +172,7 @@ GlobalVariable* Module::addGlobalVariable(Type* type, Constant* init,
 }
 
 void Module::buildCFG() {
-  for (auto it = functions.begin(); it != functions.end(); ++it) {
-    (*it)->buildCFG();
+  for (const auto& func : functions) {
+    func->buildCFG();
   }
 }

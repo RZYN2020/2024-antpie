@@ -1,17 +1,16 @@
 #include "BasicBlock.hh"
 
 BasicBlock::~BasicBlock() {
-  for (auto it = instructions.begin(); it != instructions.end(); ++it) {
-    delete *it;
+  for (const auto& instr : instructions) {
+    delete instr;
   }
 }
 
 void BasicBlock::printIR(ostream& stream) const {
   stream << getName() << ":" << endl;
-  for (auto instr = instructions.begin(); instr != instructions.end();
-       ++instr) {
+  for (const auto& instr : instructions) {
     stream << "  ";
-    (*instr)->printIR(stream);
+    instr->printIR(stream);
     stream << endl;
   }
 }

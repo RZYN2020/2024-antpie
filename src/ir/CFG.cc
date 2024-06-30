@@ -10,13 +10,13 @@ CFG::CFG(Function* func) {
   entry = func->getEntry();
   exit = func->getExit();
 
-  auto bbList = func->getBasicBlocks();
-  for (auto bb = bbList->begin(); bb != bbList->end(); ++bb) {
-    blkPredMap[*bb] = new LinkedList<BasicBlock*>();
-    blkSuccMap[*bb] = new LinkedList<BasicBlock*>();
-    blocks.pushBack(*bb);
+  for (const auto& bb : *func->getBasicBlocks()) {
+    blkPredMap[bb] = new LinkedList<BasicBlock*>();
+    blkSuccMap[bb] = new LinkedList<BasicBlock*>();
+    blocks.pushBack(bb);
   }
 
+  auto bbList = func->getBasicBlocks();
   for (auto bb = bbList->begin(); bb != bbList->end(); ++bb) {
     if (*bb == exit) {
       continue;
@@ -47,16 +47,16 @@ CFG::CFG(Function* func) {
 }
 
 void CFG::debug() {
-  for (auto bb = blocks.begin(); bb != blocks.end(); ++bb) {
-    std::cout << (*bb)->getName() << ":" << std::endl;
-    BBListPtr preds = getPredOf(*bb);
-    BBListPtr succs = getSuccOf(*bb);
-    for (auto pbb = preds->begin(); pbb != preds->end(); ++pbb) {
-      std::cout << (*pbb)->getName() << " ";
+  for (const auto& bb : blocks) {
+    std::cout << bb->getName() << ":" << std::endl;
+    BBListPtr preds = getPredOf(bb);
+    BBListPtr succs = getSuccOf(bb);
+    for (const auto& pbb : *preds) {
+      std::cout << pbb->getName() << " ";
     }
     std::cout << std::endl;
-    for (auto sbb = succs->begin(); sbb != succs->end(); ++sbb) {
-      std::cout << (*sbb)->getName() << " ";
+    for (const auto& sbb : *succs) {
+      std::cout << sbb->getName() << " ";
     }
     std::cout << std::endl;
   }
