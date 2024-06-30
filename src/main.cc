@@ -150,6 +150,7 @@ int main() {
   // ret i32 %foo.ret
   ReturnInst* returnInst = module->addReturnInst(callInst);
 
+  // module->buildCFG();
 
 //   MachineModule* mmodule = new MachineModule();
   
