@@ -5,9 +5,18 @@ bool is_constant(Value *v) {
   return v->getValueTag() == VT_INTCONST || v->getValueTag() == VT_FLOATCONST;
 }
 
+// capture (res)
+#define ADD_INSTR(INSTR, CONS, ...)                                            \
+  auto INSTR = new CONS(__VA_ARGS__);                                          \
+  res.push_back(INSTR)
+
+// capture (m ,res, instr_map, current_function)
+#define GET_VREG(V) get_vreg(m, res, V, instr_map, current_function)
+
 Register *get_vreg(MachineModule *m, vector<MachineInstruction *> &res,
                    Value *v, map<Instruction *, Register *> &instr_map,
                    Function *current_function) {
+
   if (v->getValueTag() == VT_ARG) {
     auto tp = v->getType();
     auto func_tp = static_cast<FuncType *>(current_function->getType());
@@ -31,20 +40,15 @@ Register *get_vreg(MachineModule *m, vector<MachineInstruction *> &res,
   }
 
   if (v->getValueTag() == VT_INTCONST) {
-    auto constant_instr = new MachineInstruction(MachineInstruction::ADDIW);
-    constant_instr->pushReg(&reg_zero);
-    constant_instr->setImm(static_cast<IntegerConstant *>(v)->getValue());
-    res.push_back(constant_instr);
-    return constant_instr;
+    ADD_INSTR(i, MIli, static_cast<IntegerConstant *>(v)->getValue());
+    return i;
   }
 
   if (v->getValueTag() == VT_FLOATCONST) {
     auto fc = static_cast<FloatConstant *>(v);
     auto fg = m->addGlobalFloat(fc);
-    auto load_instr = new MachineInstruction(MachineInstruction::FLW);
-    res.push_back(load_instr);
-    load_instr->setGlobal(fg);
-    return load_instr;
+    ADD_INSTR(i, MIflw, fg);
+    return i;
   }
 
   auto ins = static_cast<Instruction *>(v);
@@ -56,7 +60,25 @@ Register *get_vreg(MachineModule *m, vector<MachineInstruction *> &res,
   }
 }
 
-uint32_t cal_size(const Type *tp) { return 0; }
+// in bytes
+uint32_t cal_size(const Type *tp) {
+  switch (tp->getTypeTag()) {
+  case TT_POINTER:
+  case TT_INT1:
+  case TT_INT32:
+  case TT_FLOAT:
+    return 4;
+  case TT_ARRAY: {
+    const ArrayType *atp = static_cast<const ArrayType *>(tp);
+    return atp->getLen() * cal_size(atp->getElemType());
+  }
+  case TT_FUNCTION:
+  case TT_VOID:
+  default:
+    assert(0);
+  }
+  return 0;
+}
 
 vector<MachineInstruction *>
 select_instruction(MachineModule *m, Instruction &ins,
@@ -68,119 +90,64 @@ select_instruction(MachineModule *m, Instruction &ins,
   auto res = vector<MachineInstruction *>();
   switch (ins.getValueTag()) {
 
-#define CREATE_CONSTANT_INTEGER_INSTR(opd, opdr)                               \
-  if (is_constant(opd)) {                                                      \
-    auto constant_instr = new MachineInstruction(MachineInstruction::ADDIW);   \
-    constant_instr->pushReg(&reg_zero);                                        \
-    constant_instr->setImm(static_cast<IntegerConstant *>(opd)->getValue());   \
-    res.push_back(constant_instr);                                             \
-    opdr = constant_instr;                                                     \
-  } else {                                                                     \
-    opdr = get_vreg(m, res, opd, instr_map, current_function);                 \
-  }
-
-#define CREATE_CONSTANT_FLOAT_INSTR(opd, opdr)                                 \
-  if (is_constant(opd)) {                                                      \
-    auto fc = static_cast<FloatConstant *>(opd);                               \
-    auto fg = m->addGlobalFloat(fc);                                           \
-    auto load_instr = new MachineInstruction(MachineInstruction::FLW);         \
-    res.push_back(load_instr);                                                 \
-    load_instr->setGlobal(fg);                                                 \
-    opdr = load_instr;                                                         \
-  } else {                                                                     \
-    opdr = get_vreg(m, res, opd, instr_map, current_function);                 \
-  }
-
-#define CREATE_BINARY_INTEGER_INSTR(bin_ins, op_type, opd1_, opd2_)            \
-  Register *opdr1;                                                             \
-  Register *opdr2;                                                             \
-  CREATE_CONSTANT_INTEGER_INSTR(opd1_, opdr1);                                 \
-  CREATE_CONSTANT_INTEGER_INSTR(opd2_, opdr2);                                 \
-  auto bin_ins = new MachineInstruction(op_type);                              \
-  bin_ins->pushReg(opdr1);                                                     \
-  bin_ins->pushReg(opdr2);                                                     \
-  res.push_back(bin_ins);
-
-#define CREATE_BINARY_FLOAT_INSTR(bin_ins, op_type, opd1_, opd2_)              \
-  Register *opdr1;                                                             \
-  Register *opdr2;                                                             \
-  CREATE_CONSTANT_FLOAT_INSTR(opd1, opdr1);                                    \
-  CREATE_CONSTANT_FLOAT_INSTR(opd2, opdr2);                                    \
-  auto bin_ins = new MachineInstruction(op_type);                              \
-  bin_ins->pushReg(opdr1);                                                     \
-  bin_ins->pushReg(opdr2);                                                     \
-  res.push_back(bin_ins);
-
-#define BINARY_INTEGER_INSTR_CASE(op_tag, op_type)                             \
-  case op_tag: {                                                               \
-    CREATE_BINARY_INTEGER_INSTR(binary_ins, op_type, opd1, opd2)               \
-    instr_map.insert({&ins, binary_ins});                                      \
-    break;                                                                     \
-  }
-
-#define BINARY_FLOAT_INSTR_CASE(op_tag, op_type)                               \
-  case op_tag: {                                                               \
-    CREATE_BINARY_FLOAT_INSTR(binary_ins, op_type, opd1, opd2)                 \
-    instr_map.insert({&ins, binary_ins});                                      \
-    break;                                                                     \
-  }
-
-#define BIN_IMM(bin_ins, opi_type, reg, imm)                                   \
-  auto bin_ins = new MachineInstruction(opi_type);                             \
-  bin_ins->pushReg(reg);                                                       \
-  bin_ins->setImm(static_cast<IntegerConstant *>(imm)->getValue());            \
-  res.push_back(bin_ins);
-
-#define CREATE_BINARY_INSTR_WITH_IMM(bin_ins, op_type, opi_type, opd1_, opd2_) \
-  MachineInstruction *bin_ins;                                                 \
-  auto o1c = is_constant(opd1_);                                               \
-  auto o2c = is_constant(opd2_);                                               \
+#define CREATE_BINARY_INSTR_WITH_IMM(BIN_INS, OP_CLASS, OPI_CLASS, OPD1, OPD2, \
+                                     CONST_TP)                                 \
+  MachineInstruction *BIN_INS;                                                 \
+  auto o1c = is_constant(OPD1);                                                \
+  auto o2c = is_constant(OPD2);                                                \
   if (o1c && o2c) {                                                            \
-    BIN_IMM(bin1, opi_type, &reg_zero, opd1_)                                  \
-    BIN_IMM(bin2, opi_type, &reg_zero, opd2_)                                  \
-    bin_ins = bin2;                                                            \
+    ADD_INSTR(bin, OP_CLASS, GET_VREG(OPD1), GET_VREG(OPD2));                  \
+    BIN_INS = bin;                                                             \
   } else if (o1c) {                                                            \
-    BIN_IMM(bin, opi_type,                                                     \
-            get_vreg(m, res, opd2, instr_map, current_function), opd1)         \
-    bin_ins = bin;                                                             \
+    auto imm = static_cast<CONST_TP *>(OPD1)->getValue();                      \
+    ADD_INSTR(bin, OPI_CLASS, GET_VREG(OPD2), imm);                            \
+    BIN_INS = bin;                                                             \
   } else if (o2c) {                                                            \
-    BIN_IMM(bin, opi_type,                                                     \
-            get_vreg(m, res, opd1, instr_map, current_function), opd2)         \
-    bin_ins = bin;                                                             \
+    auto imm = static_cast<CONST_TP *>(OPD2)->getValue();                      \
+    ADD_INSTR(bin, OPI_CLASS, GET_VREG(OPD1), imm);                            \
+    BIN_INS = bin;                                                             \
   } else {                                                                     \
-    auto bin = new MachineInstruction(op_type);                                \
-    bin->pushReg(get_vreg(m, res, opd1, instr_map, current_function));         \
-    bin->pushReg(get_vreg(m, res, opd2, instr_map, current_function));         \
-    res.push_back(bin);                                                        \
-    bin_ins = bin;                                                             \
+    ADD_INSTR(bin, OP_CLASS, GET_VREG(OPD1), GET_VREG(OPD2));                  \
+    BIN_INS = bin;                                                             \
   }
 
-#define BINARY_INSTR_WITH_IMM_CASE(op_tag, op_type, opi_type)                  \
+#define BINARY_INSTR_WITH_IMM_CASE(op_tag, op_class, opi_class, CONST_TP)      \
   case op_tag: {                                                               \
-    CREATE_BINARY_INSTR_WITH_IMM(bin, op_type, opi_type, opd1, opd2)           \
+    CREATE_BINARY_INSTR_WITH_IMM(bin, op_class, opi_class, opd1, opd2,         \
+                                 CONST_TP)                                     \
+    auto name = ins.getName();                                                 \
+    bin->setName(name);                                                        \
     instr_map.insert({&ins, bin});                                             \
+    break;                                                                     \
+  }
+
+#define BINARY_OP_CASE(OP, INSTR)                                              \
+  case OP: {                                                                   \
+    ADD_INSTR(i, INSTR, GET_VREG(opd1), GET_VREG(opd2), ins.getName());        \
+    instr_map.insert({&ins, i});                                               \
+    break;                                                                     \
+  }
+
+#define BINARY_OP_REVERSE(OP, INSTR)                                           \
+  case OP: {                                                                   \
+    ADD_INSTR(i, INSTR, GET_VREG(opd1), GET_VREG(opd2), ins.getName());        \
+    instr_map.insert({&ins, i});                                               \
     break;                                                                     \
   }
 
   case VT_JUMP: {
     JumpInst &jmp = static_cast<JumpInst &>(ins);
-    auto mjmp = new MachineInstruction(MachineInstruction::J);
-    mjmp->pushJTarget(bb_map.at(static_cast<BasicBlock *>(jmp.getRValue(0))));
-    res.push_back(mjmp);
+    auto mbb = bb_map.at(static_cast<BasicBlock *>(jmp.getRValue(0)));
+    ADD_INSTR(mjmp, MIj, mbb);
     break;
   }
   case VT_BR: {
     BranchInst &br = static_cast<BranchInst &>(ins);
-    auto beq = new MachineInstruction(MachineInstruction::BEQ);
-    beq->pushReg(&reg_zero);
-    beq->pushReg(
-        get_vreg(m, res, br.getRValue(0), instr_map, current_function));
-    beq->pushJTarget(bb_map.at(static_cast<BasicBlock *>(br.getRValue(2))));
-    res.push_back(beq);
-    JumpInst &jmp = static_cast<JumpInst &>(ins);
-    auto mjmp = new MachineInstruction(MachineInstruction::J);
-    mjmp->pushJTarget(bb_map.at(static_cast<BasicBlock *>(jmp.getRValue(1))));
-    res.push_back(mjmp);
+    auto cond = GET_VREG(br.getRValue(0));
+    auto if_true = bb_map.at(static_cast<BasicBlock *>(br.getRValue(2)));
+    auto if_false = bb_map.at(static_cast<BasicBlock *>(br.getRValue(2)));
+    ADD_INSTR(beq, MIbeq, &reg_zero, cond, if_false);
+    ADD_INSTR(jmp, MIj, if_true);
     break;
   }
   case VT_CALL: {
@@ -192,54 +159,41 @@ select_instruction(MachineModule *m, Instruction &ins,
     for (int i = 0; i < call.getRValueSize(); i++) {
       auto arg = call.getRValue(i);
       auto reg = get_vreg(m, res, arg, instr_map, current_function);
-      MachineInstruction *move;
       if (reg->is_float()) {
-        move = new MachineInstruction(MachineInstruction::FADD_S);
-        move->pushReg(getFRegister(float_cnt++));
+        ADD_INSTR(_, MIfmv_s, reg, getFRegister(float_cnt++));
       } else {
-        move = new MachineInstruction(MachineInstruction::ADDW);
-        move->pushReg(getIRegister(integer_cnt++));
+        ADD_INSTR(_, MImv, reg, getFRegister(integer_cnt++));
       }
-      move->pushReg(reg);
-      res.push_back(move);
     }
     // 2.Jump to the function (using presudo instruction call)..
-    // todo: maybe we should abstract all these things to Value like llvm IR
-    // todo: maybe an extended version of llvm IR is needed here
-    auto mcall = new MachineInstruction(MachineInstruction::CALL);
-    // todo: IR bug -> call Instr 不知道自己 call 谁
-    mcall->setFunction(func_map.at(call.getFunction()));
-    res.push_back(mcall);
+    auto func = func_map.at(call.getFunction());
+    ADD_INSTR(mcall, MIcall, func);
+
     if (static_cast<FuncType>(call.getType()).getRetType() ==
         Type::getFloatType()) {
-      instr_map.insert({&ins, getFRegister(10)});
+      ADD_INSTR(move, MIfmv_s, getFRegister(10), ins.getName());
+      instr_map.insert({&ins, move});
     } else {
-      instr_map.insert({&ins, getIRegister(10)});
+      ADD_INSTR(move, MImv, getIRegister(10), ins.getName());
+      instr_map.insert({&ins, move});
     }
     break;
   }
   case VT_RET: {
-    auto ret = new MachineInstruction(MachineInstruction::RET);
-    res.push_back(ret);
+    ADD_INSTR(_, MIret);
     break;
   }
   case VT_FPTOSI: {
     FptosiInst &i = static_cast<FptosiInst &>(ins);
-    auto fcvtw_s = new MachineInstruction(MachineInstruction::FCVTW_S);
-    Register *opdr;
-    CREATE_CONSTANT_FLOAT_INSTR(ins.getRValue(0), opdr);
-    fcvtw_s->pushReg(opdr);
-    res.push_back(fcvtw_s);
+    auto f = GET_VREG(i.getRValue(0));
+    ADD_INSTR(fcvtw_s, MIfcvtw_s, f, ins.getName());
     instr_map.insert({&ins, fcvtw_s});
     break;
   }
   case VT_SITOFP: {
     SitofpInst &i = static_cast<SitofpInst &>(ins);
-    auto fcvts_w = new MachineInstruction(MachineInstruction::FCVTS_W);
-    Register *opdr;
-    CREATE_CONSTANT_INTEGER_INSTR(ins.getRValue(0), opdr);
-    fcvts_w->pushReg(opdr);
-    res.push_back(fcvts_w);
+    auto s = GET_VREG(i.getRValue(0));
+    ADD_INSTR(fcvts_w, MIfcvts_w, s, ins.getName());
     instr_map.insert({&ins, fcvts_w});
     break;
   }
@@ -247,12 +201,9 @@ select_instruction(MachineModule *m, Instruction &ins,
     AllocaInst &alloca = static_cast<AllocaInst &>(ins);
     auto tp = alloca.getType();
     auto size = cal_size(tp);
-    auto push = new MachineInstruction(MachineInstruction::ADDIW);
-    push->pushReg(&reg_sp);
-    push->setImm(Immediate(size));
-    push->setTarget(&reg_sp);
-    res.push_back(push);
-    instr_map.insert({&ins, &reg_sp});
+    ADD_INSTR(_, MIaddiw, &reg_sp, size, &reg_sp);
+    ADD_INSTR(move, MImv, &reg_sp, ins.getName());
+    instr_map.insert({&ins, move});
     break;
   }
   case VT_LOAD: {
@@ -262,19 +213,26 @@ select_instruction(MachineModule *m, Instruction &ins,
     LoadInst &load = static_cast<LoadInst &>(ins);
     auto tp = load.getType();
     auto addr = load.getRValue(0);
-    MachineInstruction *mload;
-    if (tp == Type::getFloatType()) {
-      mload = new MachineInstruction(MachineInstruction::FLW);
-    } else {
-      mload = new MachineInstruction(MachineInstruction::LW);
-    }
     if (addr->getValueTag() == VT_GLOBALVAR) {
-      mload->setGlobal(global_map.at(static_cast<GlobalVariable *>(addr)));
+      auto g = global_map.at(static_cast<GlobalVariable *>(addr));
+      if (tp == Type::getFloatType()) {
+        ADD_INSTR(mload, MIflw, g);
+        instr_map.insert({&ins, mload});
+      } else {
+        ADD_INSTR(mload, MIlw, g);
+        instr_map.insert({&ins, mload});
+      }
     } else {
-      mload->pushReg(get_vreg(m, res, addr, instr_map, current_function));
+      auto a = GET_VREG(addr);
+      if (tp == Type::getFloatType()) {
+        ADD_INSTR(mload, MIflw, a, ins.getName());
+        instr_map.insert({&ins, mload});
+      } else {
+        ADD_INSTR(mload, MIlw, a, ins.getName());
+        instr_map.insert({&ins, mload});
+      }
     }
-    res.push_back(mload);
-    instr_map.insert({&ins, mload});
+
     break;
   }
   case VT_STORE: {
@@ -285,79 +243,69 @@ select_instruction(MachineModule *m, Instruction &ins,
     auto value = store.getRValue(0);
     auto addr = store.getRValue(1);
     MachineInstruction *mstore;
-    if (value->getType() == Type::getFloatType()) {
-      mstore = new MachineInstruction(MachineInstruction::FSW);
-    } else {
-      mstore = new MachineInstruction(MachineInstruction::SW);
-    }
+
+    auto v = GET_VREG(value);
     if (addr->getValueTag() == VT_GLOBALVAR) {
-      mstore->setGlobal(global_map.at(static_cast<GlobalVariable *>(addr)));
+      auto g = global_map.at(static_cast<GlobalVariable *>(addr));
+      if (value->getType() == Type::getFloatType()) {
+        ADD_INSTR(_, MIfsw, g, v);
+      } else {
+        ADD_INSTR(_, MIsw, g, v);
+      }
     } else {
-      // todo: get_vreg should handle the immidiet case!!!!
-      mstore->pushReg(get_vreg(m, res, addr, instr_map, current_function));
+      auto a = GET_VREG(addr);
+      if (value->getType() == Type::getFloatType()) {
+        ADD_INSTR(_, MIfsw, a, v);
+      } else {
+        ADD_INSTR(_, MIsw, a, v);
+      }
     }
-    mstore->pushReg(get_vreg(m, res, value, instr_map, current_function));
-    res.push_back(mstore);
     break;
   }
   case VT_GEP: {
     // calculate address
     GetElemPtrInst &gep = static_cast<GetElemPtrInst &>(ins);
 
-    Register *base =
-        get_vreg(m, res, gep.getRValue(0), instr_map, current_function);
+    Register *base = GET_VREG(gep.getRValue(0));
 
     const Type *current_type = gep.getPtrType();
     MachineInstruction *dest;
     for (unsigned i = 1; i < gep.getRValueSize(); i++) {
-      Register *index =
-          get_vreg(m, res, gep.getRValue(i), instr_map, current_function);
+      Register *index = GET_VREG(gep.getRValue(i));
 
-      MachineInstruction *elesz =
-          new MachineInstruction(MachineInstruction::ADDIW);
-      elesz->pushReg(&reg_zero);
-      elesz->setImm(Immediate(cal_size(current_type)));
+      ADD_INSTR(elesz, MIli, cal_size(current_type));
+      ADD_INSTR(offset, MImulw, index, elesz);
+      ADD_INSTR(addr, MIaddw, base, offset);
+
       if (i != gep.getRValueSize() - 1) {
         current_type =
             static_cast<const ArrayType *>(current_type)->getElemType();
       }
-      res.push_back(elesz);
-
-      MachineInstruction *offset =
-          new MachineInstruction(MachineInstruction::MULW);
-      offset->pushReg(index);
-      offset->pushReg(elesz);
-      res.push_back(offset);
-
-      MachineInstruction *add =
-          new MachineInstruction(MachineInstruction::ADDIW);
-      add->pushReg(base);
-      add->pushReg(offset);
-      res.push_back(add);
-      dest = add;
+      dest = addr;
     }
+    dest->setName(ins.getName());
     instr_map.insert({&ins, dest});
     break;
   }
   case VT_PHI: {
     PhiInst &phi = static_cast<PhiInst &>(ins);
     // 遍历 Phi 指令的所有操作数
-    MachineInstruction *mphi = new MachineInstruction(MachineInstruction::PHI);
+    ADD_INSTR(mphi, MIphi, phi.getName());
     for (int i = 0; i < phi.getRValueSize(); i += 2) {
-      // 获取操作数和对应的前驱基本块
-      Value *operand = phi.getRValue(i);
+      Value *opd = phi.getRValue(i);
       BasicBlock *pred_bb = static_cast<BasicBlock *>(phi.getRValue(i + 1));
-      mphi->pushReg(get_vreg(m, res, operand, instr_map, current_function));
-      mphi->pushJTarget(bb_map.at(pred_bb));
+      auto *mvreg = GET_VREG(opd);
+      auto *mbb = bb_map.at(pred_bb);
+      mphi->pushIncoming(mvreg, mbb);
     }
     instr_map.insert({&ins, mphi});
     break;
   }
   case VT_ZEXT: {
     ZextInst &zt = static_cast<ZextInst &>(ins);
-    Register *oprand =
-        get_vreg(m, res, zt.getRValue(0), instr_map, current_function);
-    instr_map.insert({&ins, oprand});
+    Register *oprand = GET_VREG(zt.getRValue(0));
+    ADD_INSTR(move, MImv, oprand, ins.getName());
+    instr_map.insert({&ins, move});
     break;
   }
   case VT_ICMP: {
@@ -366,49 +314,38 @@ select_instruction(MachineModule *m, Instruction &ins,
     auto opd2 = icmp.getRValue(1);
     switch (icmp.getOpTag()) {
     case EQ: {
-      CREATE_BINARY_INTEGER_INSTR(sub_ins, MachineInstruction::SUBW, opd1, opd2)
-      MachineInstruction *eq_zero =
-          new MachineInstruction(MachineInstruction::SLTIU);
-      eq_zero->setImm(Immediate(1));
-      eq_zero->pushReg(sub_ins);
-      res.push_back(eq_zero);
+      ADD_INSTR(sub_ins, MIsubw, GET_VREG(opd1), GET_VREG(opd2));
+      ADD_INSTR(eq_zero, MIsltiu, sub_ins, 1, ins.getName());
       instr_map.insert({&ins, eq_zero});
       break;
     }
     case NE: {
-      CREATE_BINARY_INTEGER_INSTR(sub_ins, MachineInstruction::SUBW, opd1, opd2)
-      MachineInstruction *sltu_ins =
-          new MachineInstruction(MachineInstruction::SLTU);
-      sltu_ins->pushReg(&reg_zero);
-      sltu_ins->pushReg(sub_ins);
-      res.push_back(sltu_ins);
+      ADD_INSTR(sub_ins, MIsubw, GET_VREG(opd1), GET_VREG(opd2));
+      ADD_INSTR(sltu_ins, MIsltu, &reg_zero, sub_ins, ins.getName());
       instr_map.insert({&ins, sltu_ins});
       break;
     }
     case SLE: {
-      CREATE_BINARY_INTEGER_INSTR(slt_ins, MachineInstruction::SLT, opd2, opd1)
-      MachineInstruction *sge_ins =
-          new MachineInstruction(MachineInstruction::XORI);
-      sge_ins->setImm(Immediate(1)); // 我们将使用XORI将SLT的结果取反
-      sge_ins->pushReg(slt_ins);     // SLT的结果作为第一个操作数
-      res.push_back(sge_ins);
-      instr_map.insert({&ins, sge_ins});
+      ADD_INSTR(slt_ins, MIslt, GET_VREG(opd2), GET_VREG(opd1));
+      ADD_INSTR(snot_ins, MInot, slt_ins, ins.getName());
+      instr_map.insert({&ins, snot_ins});
       break;
     }
-      BINARY_INTEGER_INSTR_CASE(SLT, MachineInstruction::SLT)
+
+      BINARY_INSTR_WITH_IMM_CASE(SLT, MIslt, MIslti, IntegerConstant)
+
     case SGE: {
-      CREATE_BINARY_INTEGER_INSTR(slt_ins, MachineInstruction::SLT, opd1, opd2)
-      MachineInstruction *sge_ins =
-          new MachineInstruction(MachineInstruction::XORI);
-      sge_ins->setImm(Immediate(1)); // 我们将使用XORI将SLT的结果取反
-      sge_ins->pushReg(slt_ins);     // SLT的结果作为第一个操作数
-      res.push_back(sge_ins);
+      CREATE_BINARY_INSTR_WITH_IMM(slt_ins, MIslt, MIslti, opd1, opd2,
+                                   IntegerConstant)
+      ADD_INSTR(sge_ins, MInot, slt_ins, ins.getName());
       instr_map.insert({&ins, sge_ins});
       break;
     }
     case SGT: {
       // 对于SGT（Signed Greater Than），我们可以使用SLT并交换操作数
-      CREATE_BINARY_INTEGER_INSTR(slt_ins, MachineInstruction::SLT, opd2, opd1)
+      CREATE_BINARY_INSTR_WITH_IMM(slt_ins, MIslt, MIslti, opd2, opd1,
+                                   IntegerConstant)
+      slt_ins->setName(ins.getName());
       instr_map.insert({&ins, slt_ins});
       break;
     }
@@ -422,29 +359,17 @@ select_instruction(MachineModule *m, Instruction &ins,
     auto opd1 = fcmp.getRValue(0);
     auto opd2 = fcmp.getRValue(1);
     switch (fcmp.getOpTag()) {
-      BINARY_FLOAT_INSTR_CASE(OEQ, MachineInstruction::FEQ_S)
+      BINARY_OP_CASE(OEQ, MIfeq_s)
     case ONE: {
-      CREATE_BINARY_FLOAT_INSTR(feq_ins, MachineInstruction::FEQ_S, opd2, opd1)
-      MachineInstruction *neq_ins =
-          new MachineInstruction(MachineInstruction::XORI);
-      neq_ins->setImm(Immediate(1));
-      neq_ins->pushReg(feq_ins);
-      res.push_back(neq_ins);
-      instr_map.insert({&ins, neq_ins});
+      ADD_INSTR(feq, MIfeq_s, GET_VREG(opd1), GET_VREG(opd2), ins.getName());
+      ADD_INSTR(ne, MInot, feq, ins.getName());
+      instr_map.insert({&ins, ne});
       break;
     }
-      BINARY_FLOAT_INSTR_CASE(OLT, MachineInstruction::FLT_S)
-      BINARY_FLOAT_INSTR_CASE(OLE, MachineInstruction::FLE_S)
-    case OGT: {
-      CREATE_BINARY_INTEGER_INSTR(olt_ins, MachineInstruction::SLT, opd2, opd1)
-      instr_map.insert({&ins, olt_ins});
-      break;
-    }
-    case OGE: {
-      CREATE_BINARY_INTEGER_INSTR(ole_ins, MachineInstruction::SLT, opd2, opd1)
-      instr_map.insert({&ins, ole_ins});
-      break;
-    }
+      BINARY_OP_CASE(OLT, MIflt_s)
+      BINARY_OP_CASE(OLE, MIfle_s)
+      BINARY_OP_REVERSE(OGT, MIflt_s)
+      BINARY_OP_REVERSE(OGE, MIfle_s)
     default:
       assert(0);
     }
@@ -456,24 +381,19 @@ select_instruction(MachineModule *m, Instruction &ins,
     auto opd2 = bins.getRValue(1);
     switch (bins.getOpTag()) {
 
-      BINARY_INSTR_WITH_IMM_CASE(ADD, MachineInstruction::ADDW,
-                                 MachineInstruction::ADDIW)
-      BINARY_INSTR_WITH_IMM_CASE(AND, MachineInstruction::AND,
-                                 MachineInstruction::ANDI)
-      BINARY_INSTR_WITH_IMM_CASE(OR, MachineInstruction::OR,
-                                 MachineInstruction::ORI)
-      BINARY_INSTR_WITH_IMM_CASE(XOR, MachineInstruction::XOR,
-                                 MachineInstruction::XORI)
+      BINARY_INSTR_WITH_IMM_CASE(ADD, MIaddw, MIaddiw, IntegerConstant)
+      BINARY_INSTR_WITH_IMM_CASE(AND, MIand, MIandi, IntegerConstant)
+      BINARY_INSTR_WITH_IMM_CASE(OR, MIor, MIori, IntegerConstant)
+      BINARY_INSTR_WITH_IMM_CASE(XOR, MIxor, MIxori, IntegerConstant)
+      BINARY_OP_CASE(SUB, MIsubw)
+      BINARY_OP_CASE(MUL, MImulw)
+      BINARY_OP_CASE(SDIV, MIdivw)
+      BINARY_OP_CASE(SREM, MIremw)
+      BINARY_OP_CASE(FADD, MIfadd_s)
+      BINARY_OP_CASE(FSUB, MIfsub_s)
+      BINARY_OP_CASE(FMUL, MIfmul_s)
+      BINARY_OP_CASE(FDIV, MIfdiv_s)
 
-      BINARY_INTEGER_INSTR_CASE(SUB, MachineInstruction::SUBW)
-      BINARY_INTEGER_INSTR_CASE(MUL, MachineInstruction::MULW)
-      BINARY_INTEGER_INSTR_CASE(SDIV, MachineInstruction::DIVW)
-      BINARY_INTEGER_INSTR_CASE(SREM, MachineInstruction::REMW)
-
-      BINARY_FLOAT_INSTR_CASE(FADD, MachineInstruction::FADD_S)
-      BINARY_FLOAT_INSTR_CASE(FSUB, MachineInstruction::FSUB_S)
-      BINARY_FLOAT_INSTR_CASE(FMUL, MachineInstruction::FMUL_S)
-      BINARY_FLOAT_INSTR_CASE(FDIV, MachineInstruction::FDIV_S)
     case FREM: {
       // todo
       // what si frem?
@@ -503,34 +423,26 @@ void select_instruction(MachineModule *res, ANTPIE::Module *ir) {
     global_map->insert({&*global, g});
   }
 
-  // create function relations
   for (const auto &func : ir->getFunctions()) {
     MachineFunction *mfunc = res->addFunction(
         static_cast<FuncType *>(func->getType()), func->getName());
+        
     func_map->insert({&*func, mfunc});
   }
 
   for (const auto &func : ir->getFunctions()) {
     MachineFunction *mfunc = func_map->at(&*func);
 
-    // create basicblock relations
     for (const auto &bb : func->getBasicBlocks()) {
       MachineBasicBlock *mbb = res->addBasicBlock(mfunc, bb->getName());
       bb_map->insert({&*bb, mbb});
     }
+
     for (const auto &bb : func->getBasicBlocks()) {
       MachineBasicBlock *mbb = bb_map->at(&*bb);
       for (const auto &i : bb->getInstructions()) {
-        std::cout << "select instruction for  ";
-        i->printIR(std::cout);
-        std::cout << std::endl;
         auto minstrs = select_instruction(res, *i, *instr_map, *bb_map,
-                                         *func_map, *global_map, &*func);
-        for (auto minstr : minstrs) {
-          std::cout << "  ins:";
-          minstr->printASM(std::cout);
-          std::cout << std::endl;
-        }
+                                          *func_map, *global_map, &*func);
         mbb->pushInstrs(minstrs);
       }
     }

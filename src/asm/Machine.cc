@@ -2,14 +2,56 @@
 
 /////////////////////////////////////////////////
 //
+//                MachineBasicBlocks
+//
+/////////////////////////////////////////////////
+
+string MachineBasicBlock::to_string() const {
+  string res = getName() + ":\n";
+  for (auto &ins : *instructions) {
+    res += "\t" +ins->to_string() + "\n";
+  }
+  res += "\n";
+  return res;
+}
+
+/////////////////////////////////////////////////
+//
 //                MachineGlobal
 //
 /////////////////////////////////////////////////
 
-void MachineGlobal::printASM(ostream &stream) const {
-  // todo
+static void add_decl(string& res, Constant* init, Type* tp) {
+  switch (tp->getTypeTag())
+  {
+  case TT_INT32:
+    res += "\t.word 0\n";
+    break;
+  case TT_INT1:
+    res +=  "\t.word 0\n";
+    break;
+  case TT_FLOAT:
+    res +=  "\t.word 0\n";
+    break;
+  case TT_ARRAY:
+    res +=  "\t.word 0\n";
+    break;
+  case TT_POINTER:
+    res +=  "\t.word 0\n";
+    break;
+    // return add_decl(res, init, static_cast<PointerType*>(tp)->getElemType());
+  default:
+    res +=  "\t.word 0\n";
+  }
 }
 
+string MachineGlobal::to_string() const { 
+  string res = getName() + ":\n"; 
+  auto tp = global->getType();
+  auto init = global->getInitValue();
+  add_decl(res, init, tp);
+  return res;
+}
 
 /////////////////////////////////////////////////
 //
@@ -27,12 +69,12 @@ void MachineFunction::pushBasicBlock(MachineBasicBlock *bb) {
   basicBlocks->push_back(unique_ptr<MachineBasicBlock>(bb));
 }
 
-void MachineFunction::printASM(ostream &stream) const {
-  // do some thing
+string MachineFunction::to_string() const {
+  string res = getName() + ":\n";
   for (const auto &bb : *basicBlocks) {
-    bb->printASM(stream);
-    stream << endl;
+    res += bb->to_string();
   }
+  return res;
 }
 
 /////////////////////////////////////////////////
@@ -47,14 +89,14 @@ MachineModule::MachineModule() {
 }
 
 MachineFunction *MachineModule::addFunction(FuncType *funcType, string name) {
-  MachineFunction* func = new MachineFunction(funcType, name);
+  MachineFunction *func = new MachineFunction(funcType, name);
   functions->push_back(unique_ptr<MachineFunction>(func));
   return func;
 }
 
 MachineBasicBlock *MachineModule::addBasicBlock(MachineFunction *function,
                                                 string name) {
-  MachineBasicBlock* bb = new MachineBasicBlock(name);
+  MachineBasicBlock *bb = new MachineBasicBlock(name);
   function->pushBasicBlock(bb);
   return bb;
 }
@@ -67,21 +109,19 @@ MachineGlobal *MachineModule::addGlobalVariable(GlobalVariable *global) {
 
 MachineGlobal *MachineModule::addGlobalFloat(FloatConstant *f) {
   static int float_cnt = 0;
-  auto g = new MachineGlobal(new GlobalVariable(FloatType::getFloatType(), f, "fi" + float_cnt));
+  auto g = new MachineGlobal(
+      new GlobalVariable(FloatType::getFloatType(), f, "fi" + float_cnt));
   globalVariables->push_back(unique_ptr<MachineGlobal>(g));
   return g;
 }
 
-void MachineModule::printASM(ostream &stream) const {
-  // todo
-
+string MachineModule::to_string() const {
+  string res = "";
   for (const auto &gv : *globalVariables) {
-    gv->printASM(stream);
-    stream << endl;
+    res += gv->to_string() + "\n";
   }
-  stream << endl;
   for (const auto &f : *functions) {
-    f->printASM(stream);
-    stream << endl;
+    res += f->to_string();
   }
+  return res;
 }

@@ -1,315 +1,432 @@
 #include "MachineInstruction.hh"
+#include "Machine.hh"
 
-/////////////////////////////////////////////////
-//
-//                MachineBasicBlock
-//
-/////////////////////////////////////////////////
+//////////////////////////////////////
+//////////////////////////////////////
+///      MachineInstruction        ///
+//////////////////////////////////////
+//////////////////////////////////////
 
-void MachineBasicBlock::printASM(ostream &stream) const {
-  // do some thing
-  for (const auto &instr : *instructions) {
-    stream << "  ";
-    instr->printASM(stream);
-    stream << endl;
+void MachineInstruction::replaceIRRegister(
+    map<Instruction *, Register *> instr_map) {
+  for (auto &opd : *oprands) {
+    if (IRRegister *irr = dynamic_cast<IRRegister *>(opd)) {
+      assert(irr->getTag() == IR_REGISTER);
+      Instruction *inst = irr->ir_reg;
+      auto it = instr_map.find(inst);
+      if (it != instr_map.end()) {
+        opd = it->second;
+      } else {
+        assert(0);
+      }
+    }
   }
 }
 
-/////////////////////////////////////////////////
-//
-//                MachineInstruction
-//
-/////////////////////////////////////////////////
-
 void MachineInstruction::pushReg(Register *r) { oprands->push_back(r); }
 
-void MachineInstruction::pushJTarget(MachineBasicBlock *b) {
-  j_targets->push_back(b);
+int MachineInstruction::getRegNum() const {
+  if (oprands == nullptr) {
+    return 0;
+  }
+  return oprands->size();
+}
+
+Register *MachineInstruction::getReg(int idx) const {
+  if (oprands == nullptr || idx < 0 || idx >= oprands->size()) {
+    return nullptr;
+  }
+  return (*oprands)[idx];
 }
 
 void MachineInstruction::setImm(Immediate i) {
-  imm = make_unique<Immediate>(i);
+  if (imm == nullptr) {
+    imm = make_unique<Immediate>(i);
+  } else {
+    *imm = i;
+  }
 }
 
-void MachineInstruction::setFunction(MachineFunction *fun_) { fun = fun_; }
+Immediate *MachineInstruction::getImm() const { return imm.get(); }
+
+void MachineInstruction::setTarget(Register *reg) { target = reg; }
+
+Register *MachineInstruction::getTarget() const { return target; }
+
+string MachineInstruction::getTargetName() const {
+  if (target == nullptr) {
+    return getName();
+  } else {
+    return target->getName();
+  }
+}
+
+// string MachineInstruction::getName() const { return to_string(); }
 
 MachineInstruction::MachineInstructionTag MachineInstruction::getTag() const {
   return tag;
 }
-
-Register *MachineInstruction::getReg(int idx) const { return oprands->at(idx); }
-
-MachineBasicBlock *MachineInstruction::getJTarget(int idx) const {
-  return j_targets->at(idx);
-}
-
-Immediate *MachineInstruction::getImm() const { return &*imm; }
-
-void MachineInstruction::printASM(std::ostream &stream) const {
+bool MachineInstruction::is_float() const {
   switch (tag) {
-    case MachineInstruction::PHI: {
-      stream << "phi";
-      break;
-    }
-    case MachineInstruction::ADDIW: {
-      stream << "addiw";
-      break;
-    }
-    case MachineInstruction::ADDW: {
-      stream << "addw";
-      break;
-    }
-    case MachineInstruction::SUBW: {
-      stream << "subw";
-      break;
-    }
-    case MachineInstruction::AND: {
-      stream << "and";
-      break;
-    }
-    case MachineInstruction::OR: {
-      stream << "or";
-      break;
-    }
-    case MachineInstruction::XOR: {
-      stream << "xor";
-      break;
-    }
-    case MachineInstruction::ANDI: {
-      stream << "andi";
-      break;
-    }
-    case MachineInstruction::ORI: {
-      stream << "ori";
-      break;
-    }
-    case MachineInstruction::XORI: {
-      stream << "xori";
-      break;
-    }
-    case MachineInstruction::SLLW: {
-      stream << "sllw";
-      break;
-    }
-    case MachineInstruction::SRAW: {
-      stream << "sraw";
-      break;
-    }
-    case MachineInstruction::SRLW: {
-      stream << "srlw";
-      break;
-    }
-    case MachineInstruction::SLLIW: {
-      stream << "slliw";
-      break;
-    }
-    case MachineInstruction::SRAIW: {
-      stream << "sraiw";
-      break;
-    }
-    case MachineInstruction::SRLIW: {
-      stream << "srliw";
-      break;
-    }
-    case MachineInstruction::LUI: {
-      stream << "lui";
-      break;
-    }
-    case MachineInstruction::AUIPC: {
-      stream << "auipc";
-      break;
-    }
-    case MachineInstruction::SLT: {
-      stream << "slt";
-      break;
-    }
-    case MachineInstruction::SLTI: {
-      stream << "slti";
-      break;
-    }
-    case MachineInstruction::SLTU: {
-      stream << "sltu";
-      break;
-    }
-    case MachineInstruction::SLTIU: {
-      stream << "sltiu";
-      break;
-    }
-    case MachineInstruction::LW: {
-      stream << "lw";
-      break;
-    }
-    case MachineInstruction::SW: {
-      stream << "sw";
-      break;
-    }
-    case MachineInstruction::BEQ: {
-      stream << "beq";
-      break;
-    }
-    case MachineInstruction::BNE: {
-      stream << "bne";
-      break;
-    }
-    case MachineInstruction::BGE: {
-      stream << "bge";
-      break;
-    }
-    case MachineInstruction::BLT: {
-      stream << "blt";
-      break;
-    }
-    case MachineInstruction::BGEU: {
-      stream << "bgeu";
-      break;
-    }
-    case MachineInstruction::BLTU: {
-      stream << "bltu";
-      break;
-    }
-    case MachineInstruction::JAL: {
-      stream << "jal";
-      break;
-    }
-    case MachineInstruction::JALR: {
-      stream << "jalr";
-      break;
-    }
-    case MachineInstruction::CALL: {
-      stream << "call";
-      break;
-    }
-    case MachineInstruction::J: {
-      stream << "j";
-      break;
-    }
-    case MachineInstruction::RET: {
-      stream << "ret";
-      break;
-    }
-    case MachineInstruction::MULW: {
-      stream << "mulw";
-      break;
-    }
-    case MachineInstruction::MULHU: {
-      stream << "mulhu";
-      break;
-    }
-    case MachineInstruction::MULHSU: {
-      stream << "mulhsu";
-      break;
-    }
-    case MachineInstruction::DIVW: {
-      stream << "divw";
-      break;
-    }
-    case MachineInstruction::REMW: {
-      stream << "remw";
-      break;
-    }
-    case MachineInstruction::DIVUW: {
-      stream << "divuw";
-      break;
-    }
-    case MachineInstruction::REMUW: {
-      stream << "remuw";
-      break;
-    }
-    case MachineInstruction::FADD_S: {
-      stream << "fadd.s";
-      break;
-    }
-    case MachineInstruction::FSUB_S: {
-      stream << "fsub.s";
-      break;
-    }
-    case MachineInstruction::FMUL_S: {
-      stream << "fmul.s";
-      break;
-    }
-    case MachineInstruction::FDIV_S: {
-      stream << "fdiv.s";
-      break;
-    }
-    case MachineInstruction::FSQRT_S: {
-      stream << "fsqrt.s";
-      break;
-    }
-    case MachineInstruction::FMIN_S: {
-      stream << "fmin.s";
-      break;
-    }
-    case MachineInstruction::FMAX_S: {
-      stream << "fmax.s";
-      break;
-    }
-    case MachineInstruction::FNMADD_S: {
-      stream << "fnmadd.s";
-      break;
-    }
-    case MachineInstruction::FNMSUB_S: {
-      stream << "fnmsub.s";
-      break;
-    }
-    case MachineInstruction::FMV_S_X: {
-      stream << "fmv.s.x";
-      break;
-    }
-    case MachineInstruction::FMV_X_S: {
-      stream << "fmv.x.s";
-      break;
-    }
-    case MachineInstruction::FLW: {
-      stream << "flw";
-      break;
-    }
-    case MachineInstruction::FSW: {
-      stream << "fsw";
-      break;
-    }
-    case MachineInstruction::FCVTS_W: {
-      stream << "fcvt.s.w";
-      break;
-    }
-    case MachineInstruction::FCVTS_WU: {
-      stream << "fcvt.s.wu";
-      break;
-    }
-    case MachineInstruction::FCVTW_S: {
-      stream << "fcvt.w.s";
-      break;
-    }
-    case MachineInstruction::FCVTWU_S: {
-      stream << "fcvt.wu.s";
-      break;
-    }
-    case MachineInstruction::FEQ_S: {
-      stream << "feq.s";
-      break;
-    }
-    case MachineInstruction::FLT_S: {
-      stream << "flt.s";
-      break;
-    }
-    case MachineInstruction::FLE_S: {
-      stream << "fle.s";
-      break;
-    }
+  case FADD_S:
+  case FSUB_S:
+  case FMUL_S:
+  case FDIV_S:
+  // case FSQRT_S:
+  // case FMIN_S:
+  // case FMAX_S:
+  // case FNMADD_S:
+  // case FNMSUB_S:
+  // case FMV_S_X:
+  // case FMV_X_S:
+  case FLW:
+  case FSW:
+  case FCVTS_W:
+  // case FCVTS_WU:
+  case FCVTW_S:
+  // case FCVTWU_S:
+  case FEQ_S:
+  case FLT_S:
+  case FLE_S:
+    return true;
+  default:
+    return false;
   }
 }
 
-void MachineInstruction::setGlobal(MachineGlobal *global_) { global = global_; }
+//////////////////////////////////////
+//////////////////////////////////////
+///  Concrete MachineInstructions  ///
+//////////////////////////////////////
+//////////////////////////////////////
 
-MachineGlobal *MachineInstruction::getGlobal() const { return global; }
+////////////////////////////////////////////
+MIphi::MIphi(string name)
+    : MachineInstruction(MachineInstruction::MachineInstructionTag::PHI, name) {
+  incoming = make_unique<vector<MachineBasicBlock *>>();
+}
 
-MachineFunction *MachineInstruction::getFunction() const { return fun; }
+string MIphi::to_string() const {
+  string s = this->getName() + " = ";
+  for (int i = 0; i < this->getRegNum(); i++) {
+    s += "[" + this->getReg(i)->getName() + "," +
+         this->getIncomingBlock(i)->getName() + "]";
+    if (i < this->getRegNum() - 1) {
+      s += ", ";
+    }
+  }
+  return s;
+}
 
-void MachineInstruction::setTarget(Register *reg) { target = reg; }
+void MIphi::pushIncoming(Register *reg, MachineBasicBlock *bb) {
+  this->pushReg(reg);
+  incoming->push_back(bb);
+}
 
-Register *MachineInstruction::getTarget(Register *reg) {
-  if (target == nullptr) {
-    return this;
+MachineBasicBlock *MIphi::getIncomingBlock(int idx) const {
+  if (idx < 0 || idx >= incoming->size()) {
+    return nullptr;
+  }
+  return (*incoming)[idx];
+}
+
+////////////////////////////////////////////
+
+#define DEFINE_MI_IMM_CLASS_IMPL(NAME, TAG, ASM_NAME)                          \
+  MI##NAME::MI##NAME(Register *reg, Immediate imm)                             \
+      : MachineInstruction(MachineInstruction::TAG) {                          \
+    this->pushReg(reg);                                                        \
+    this->setImm(imm);                                                         \
+  }                                                                            \
+  MI##NAME::MI##NAME(Register *reg, Immediate imm, std::string name)           \
+      : MachineInstruction(MachineInstruction::TAG, name) {                    \
+    this->pushReg(reg);                                                        \
+    this->setImm(imm);                                                         \
+  }                                                                            \
+  MI##NAME::MI##NAME(Register *reg, Immediate imm, Register *target)           \
+      : MachineInstruction(MachineInstruction::TAG) {                          \
+    this->pushReg(reg);                                                        \
+    this->setImm(imm);                                                         \
+    this->setTarget(target);                                                   \
+  }                                                                            \
+  std::string MI##NAME::to_string() const {                                    \
+    std::string target = this->getTargetName();                                \
+    auto reg = this->getReg(0)->getName();                                   \
+    auto imm = this->getImm()->to_string();                                    \
+    return #ASM_NAME " " + target + ", " + reg + ", " + imm;                     \
+  }
+
+#define DEFINE_MI_BIN_CLASS_IMPL(NAME, TAG, ASM_NAME)                          \
+  MI##NAME::MI##NAME(Register *reg1, Register *reg2)                           \
+      : MachineInstruction(MachineInstruction::TAG) {                          \
+    this->pushReg(reg1);                                                       \
+    this->pushReg(reg2);                                                       \
+  }                                                                            \
+  MI##NAME::MI##NAME(Register *reg1, Register *reg2, Register *target)         \
+      : MachineInstruction(MachineInstruction::TAG) {                          \
+    this->pushReg(reg1);                                                       \
+    this->pushReg(reg2);                                                       \
+    this->setTarget(target);                                                   \
+  }                                                                            \
+  MI##NAME::MI##NAME(Register *reg1, Register *reg2, std::string name)         \
+      : MachineInstruction(MachineInstruction::TAG, name) {                    \
+    this->pushReg(reg1);                                                       \
+    this->pushReg(reg2);                                                       \
+  }                                                                            \
+  std::string MI##NAME::to_string() const {                                    \
+    std::string target = this->getTargetName();                                \
+    auto reg1 = this->getReg(0)->getName();                                  \
+    auto reg2 = this->getReg(1)->getName();                                  \
+    return #ASM_NAME " " + target + ", " + reg1 + ", " + reg2;                   \
+  }
+
+#define DEFINE_MI_UNA_CLASS_IMPL(NAME, TAG, ASM_NAME)                          \
+  MI##NAME::MI##NAME(Register *reg)                                            \
+      : MachineInstruction(MachineInstruction::TAG) {                          \
+    this->pushReg(reg);                                                        \
+  }                                                                            \
+  MI##NAME::MI##NAME(Register *reg, Register *target)                          \
+      : MachineInstruction(MachineInstruction::TAG) {                          \
+    this->pushReg(reg);                                                        \
+    this->setTarget(target);                                                   \
+  }                                                                            \
+  MI##NAME::MI##NAME(Register *reg, std::string name)                          \
+      : MachineInstruction(MachineInstruction::TAG, name) {                    \
+    this->pushReg(reg);                                                        \
+  }                                                                            \
+  std::string MI##NAME::to_string() const {                                    \
+    std::string target = this->getTargetName();                                \
+    auto reg = this->getReg(0)->getName();                                   \
+    return #ASM_NAME " " + target + " " + reg;                                 \
+  }
+
+DEFINE_MI_IMM_CLASS_IMPL(addiw, ADDIW, addiw)
+DEFINE_MI_BIN_CLASS_IMPL(addw, ADDW, addw)
+DEFINE_MI_BIN_CLASS_IMPL(subw, SUBW, subw)
+DEFINE_MI_BIN_CLASS_IMPL(and, AND, and)
+DEFINE_MI_IMM_CLASS_IMPL(andi, ANDI, andi)
+DEFINE_MI_BIN_CLASS_IMPL(or, OR, or)
+DEFINE_MI_IMM_CLASS_IMPL(ori, ORI, ori)
+DEFINE_MI_BIN_CLASS_IMPL(xor, XOR, xor)
+DEFINE_MI_IMM_CLASS_IMPL(xori, XORI, xori)
+DEFINE_MI_BIN_CLASS_IMPL(slt, SLT, slt)
+DEFINE_MI_IMM_CLASS_IMPL(slti, SLTI, slti)
+DEFINE_MI_BIN_CLASS_IMPL(sltu, SLTU, sltu)
+DEFINE_MI_IMM_CLASS_IMPL(sltiu, SLTIU, sltiu)
+
+// MIlw
+MIlw::MIlw(MachineGlobal *global)
+    : MachineInstruction(MachineInstruction::LW), global(global) {}
+
+MIlw::MIlw(MachineGlobal *global, string name)
+    : MachineInstruction(MachineInstruction::LW, name), global(global) {}
+
+MIlw::MIlw(MachineGlobal *global, Register *target)
+    : MachineInstruction(MachineInstruction::LW), global(global) {
+  this->setTarget(target);
+}
+
+MIlw::MIlw(Register *addr) : MachineInstruction(MachineInstruction::LW) {
+  this->pushReg(addr);
+}
+
+MIlw::MIlw(Register *addr, string name)
+    : MachineInstruction(MachineInstruction::LW, name) {
+  this->pushReg(addr);
+}
+
+MIlw::MIlw(Register *addr, Register *target)
+    : MachineInstruction(MachineInstruction::LW) {
+  this->pushReg(addr);
+  this->setTarget(target);
+}
+
+MachineGlobal *MIlw::getGlobal() { return this->global; }
+
+std::string MIlw::to_string() const {
+  if (this->global) {
+    return "lw " + this->getTargetName() + ", " + this->global->getName();
   } else {
-    return target;
+    return "lw " + this->getTargetName() + ", 0(" +
+           this->getReg(0)->getName() + ")";
   }
 }
+
+// MIsw
+MIsw::MIsw(MachineGlobal *global, Register *val)
+    : MachineInstruction(MachineInstruction::SW), global(global) {
+  this->pushReg(val);
+}
+
+MIsw::MIsw(Register *addr, Register *val)
+    : MachineInstruction(MachineInstruction::SW) {
+  this->pushReg(addr);
+  this->pushReg(val);
+}
+
+std::string MIsw::to_string() const {
+  if (this->global) {
+    return "sw " + this->getReg(0)->getName() + ", " +
+           this->global->getName();
+  } else {
+    return "sw " + this->getReg(1)->getName() + ", 0(" +
+           this->getReg(0)->getName() + ")";
+  }
+}
+
+// MIbeq
+MIbeq::MIbeq(Register *reg1, Register *reg2, MachineBasicBlock *targetBB)
+    : MachineInstruction(MachineInstruction::BEQ), targetBB(targetBB) {
+  this->pushReg(reg1);
+  this->pushReg(reg2);
+}
+
+MachineBasicBlock *MIbeq::getTargetBB() { return this->targetBB; }
+
+std::string MIbeq::to_string() const {
+  return "beq " + this->getReg(0)->getName() + ", " +
+         this->getReg(1)->getName() + ", " + this->targetBB->getName();
+}
+
+DEFINE_MI_BIN_CLASS_IMPL(mulw, MULW, mulw)
+DEFINE_MI_BIN_CLASS_IMPL(divw, DIVW, divw)
+DEFINE_MI_BIN_CLASS_IMPL(remw, REMW, remw)
+
+DEFINE_MI_BIN_CLASS_IMPL(fadd_s, FADD_S, fadd.s)
+DEFINE_MI_BIN_CLASS_IMPL(fsub_s, FSUB_S, fsub.s)
+DEFINE_MI_BIN_CLASS_IMPL(fmul_s, FMUL_S, fmul.s)
+DEFINE_MI_BIN_CLASS_IMPL(fdiv_s, FDIV_S, fdiv.s)
+
+MIflw::MIflw(MachineGlobal *global)
+    : MachineInstruction(MachineInstruction::FLW), global(global) {}
+
+MIflw::MIflw(MachineGlobal *global, string name)
+    : MachineInstruction(MachineInstruction::FLW, name), global(global) {}
+
+MIflw::MIflw(MachineGlobal *global, Register *target)
+    : MachineInstruction(MachineInstruction::FLW), global(global) {
+  this->setTarget(target);
+}
+
+MIflw::MIflw(Register *addr) : MachineInstruction(MachineInstruction::FLW) {
+  this->pushReg(addr);
+}
+
+MIflw::MIflw(Register *addr, string name)
+    : MachineInstruction(MachineInstruction::FLW, name) {
+  this->pushReg(addr);
+}
+
+MIflw::MIflw(Register *addr, Register *target)
+    : MachineInstruction(MachineInstruction::FLW) {
+  this->pushReg(addr);
+  this->setTarget(target);
+}
+
+MachineGlobal *MIflw::getGlobal() { return this->global; }
+
+std::string MIflw::to_string() const {
+  if (this->global) {
+    return "flw " + this->getTargetName() + ", " + this->global->getName();
+  } else {
+    return "flw " + this->getTargetName() + ", 0(" +
+           this->getReg(0)->getName() + ")";
+  }
+}
+
+// MIfsw
+MIfsw::MIfsw(MachineGlobal *global, Register *val)
+    : MachineInstruction(MachineInstruction::FSW), global(global) {
+  this->pushReg(val);
+}
+
+MIfsw::MIfsw(Register *addr, Register *val)
+    : MachineInstruction(MachineInstruction::FSW) {
+  this->pushReg(addr);
+  this->pushReg(val);
+}
+
+std::string MIfsw::to_string() const {
+  if (this->global) {
+    return "fsw " + this->getReg(0)->getName() + ", " +
+           this->global->getName();
+  } else {
+    return "fsw " + this->getReg(1)->getName() + ", 0(" +
+           this->getReg(0)->getName() + ")";
+  }
+}
+
+DEFINE_MI_UNA_CLASS_IMPL(fcvts_w, FCVTS_W, fcvts.w)
+DEFINE_MI_UNA_CLASS_IMPL(fcvtw_s, FCVTW_S, fcvtw.s)
+
+DEFINE_MI_BIN_CLASS_IMPL(feq_s, FEQ_S, feq.s)
+DEFINE_MI_BIN_CLASS_IMPL(flt_s, FLT_S, flt.s)
+DEFINE_MI_BIN_CLASS_IMPL(fle_s, FLE_S, fle.s)
+
+// MIcall
+MIcall::MIcall(MachineFunction *func)
+    : MachineInstruction(MachineInstruction::CALL), func(func) {}
+
+MachineFunction *MIcall::getFunc() { return this->func; }
+
+std::string MIcall::to_string() const {
+  return "call " + this->func->getName();
+}
+
+// MIj
+MIj::MIj(MachineBasicBlock *targetBB)
+    : MachineInstruction(MachineInstruction::J), targetBB(targetBB) {}
+
+MachineBasicBlock *MIj::getTargetBB() { return this->targetBB; }
+
+std::string MIj::to_string() const { return "j " + this->targetBB->getName(); }
+
+// MIret
+MIret::MIret() : MachineInstruction(MachineInstruction::RET) {}
+
+std::string MIret::to_string() const { return "ret"; }
+
+// MIli
+MIli::MIli(Immediate imm) : MachineInstruction(MachineInstruction::LI) {
+  this->setImm(imm);
+}
+
+MIli::MIli(Immediate imm, string name)
+    : MachineInstruction(MachineInstruction::LI, name) {
+  this->setImm(imm);
+}
+
+MIli::MIli(Immediate imm, Register *target)
+    : MachineInstruction(MachineInstruction::LI, name) {
+  this->setImm(imm);
+  this->setTarget(target);
+}
+
+std::string MIli::to_string() const {
+  return "li " + this->getTargetName() + ", " + this->getImm()->to_string();
+}
+
+// DEFINE_MI_UNA_CLASS_IMPL(mv, MV, mv)
+
+MImv::MImv(Register *reg) : MachineInstruction(MachineInstruction::MV) {
+  this->pushReg(reg);
+}
+MImv::MImv(Register *reg, Register *target)
+    : MachineInstruction(MachineInstruction::MV) {
+  this->pushReg(reg);
+  this->setTarget(target);
+}
+MImv::MImv(Register *reg, std::string name)
+    : MachineInstruction(MachineInstruction::MV, name) {
+  this->pushReg(reg);
+}
+std::string MImv::to_string() const {
+  std::string target = this->getTargetName();
+  auto reg = this->getReg(0)->getName();
+  return "mv"
+         " " +
+         target + ", " + reg;
+}
+
+DEFINE_MI_UNA_CLASS_IMPL(not, NOT, not )
+DEFINE_MI_UNA_CLASS_IMPL(fmv_s, FMV_S, fmv.s)

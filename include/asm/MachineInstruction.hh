@@ -13,41 +13,9 @@ using std::vector;
 
 class MachineInstruction;
 
-class MachineBasicBlock {
-private:
-  string name;
-  unique_ptr<vector<unique_ptr<MachineInstruction>>> instructions;
+class MachineBasicBlock;
 
-public:
-  MachineBasicBlock(string name_) {
-    name = name_;
-    instructions = make_unique<vector<unique_ptr<MachineInstruction>>>();
-  }
-  void pushInstr(MachineInstruction *i) {
-    instructions->push_back(unique_ptr<MachineInstruction>(i));
-  }
-
-  void pushInstrs(vector<MachineInstruction *> is) {
-    for (auto i : is) {
-      instructions->push_back(unique_ptr<MachineInstruction>(i));
-    }
-  }
-
-  void printASM(ostream &stream) const;
-
-  const vector<unique_ptr<MachineInstruction>> &getInstructions() const {
-    return *instructions;
-  }
-};
-
-class MachineGlobal {
-private:
-  GlobalVariable *global;
-
-public:
-  MachineGlobal(GlobalVariable *global) : global(global) {}
-  void printASM(ostream &stream) const;
-};
+class MachineGlobal;
 
 class MachineFunction;
 
@@ -70,14 +38,14 @@ public:
     ANDI,
     ORI,
     XORI,
-    SLLW,
-    SRAW,
-    SRLW,
-    SLLIW,
-    SRAIW,
-    SRLIW,
-    LUI,
-    AUIPC,
+    // SLLW,
+    // SRAW,
+    // SRLW,
+    // SLLIW,
+    // SRAIW,
+    // SRLIW,
+    // LUI,
+    // AUIPC,
     SLT,
     SLTI,
     SLTU,
@@ -87,24 +55,22 @@ public:
     SW,
     //// Control transfer
     BEQ,
-    BNE,
-    BGE,
-    BLT,
-    BGEU,
-    BLTU,
-    JAL,
-    JALR,
-    CALL, // presudo instruction
-    J, // presudo instruction
-    RET, // a user defined preduo instruction which should be replaced in prelude_conlusion pass
+    // BNE,
+    // BGE,
+    // BLT,
+    // BGEU,
+    // BLTU,
+    // JAL,
+    // JALR,
+
     // RV64M
     MULW,
-    MULHU,
-    MULHSU,
+    // MULHU,
+    // MULHSU,
     DIVW,
     REMW,
-    DIVUW,
-    REMUW,
+    // DIVUW,
+    // REMUW,
 
     // RV64F and RV64D
     //// Floating-Point Computation
@@ -112,106 +78,239 @@ public:
     FSUB_S,
     FMUL_S,
     FDIV_S,
-    FSQRT_S,
-    FMIN_S,
-    FMAX_S,
-    FNMADD_S,
-    FNMSUB_S,
-    FMV_S_X,
-    FMV_X_S,
+    // FSQRT_S,
+    // FMIN_S,
+    // FMAX_S,
+    // FNMADD_S,
+    // FNMSUB_S,
+    // FMV_S_X,
+    // FMV_X_S,
     //// Load and Store
     FLW,
     FSW,
     //// Conversion
     FCVTS_W,
-    FCVTS_WU,
+    // FCVTS_WU,
     FCVTW_S,
-    FCVTWU_S,
+    // FCVTWU_S,
     //// Comparison
     FEQ_S,
     FLT_S,
     FLE_S,
+
+    // presudo instruction: https://michaeljclark.github.io/asm.html
+    CALL,
+    J,
+    RET,
+    LI,
+    MV,
+    NOT,
+    FMV_S,
   };
 
 private:
-  string name;
   MachineInstructionTag tag;
+  Register *target; // target in non-SSA version
   unique_ptr<vector<Register *>> oprands;
-  unique_ptr<vector<MachineBasicBlock *>> j_targets;
-  MachineFunction* fun;
   unique_ptr<Immediate> imm;
-  MachineGlobal *global; // for load golbal
-  Register* target;
-  // in normal address mode like 100(a), a is in oprands[0], 100 is in imm
 
 public:
   MachineInstruction(MachineInstructionTag tag, string name)
       : VRegister(name), tag(tag) {
     oprands = unique_ptr<vector<Register *>>(new vector<Register *>());
-    j_targets = unique_ptr<vector<MachineBasicBlock *>>(
-        new vector<MachineBasicBlock *>());
   }
   MachineInstruction(MachineInstructionTag tag) : VRegister(), tag(tag) {
     oprands = unique_ptr<vector<Register *>>(new vector<Register *>());
-    j_targets = unique_ptr<vector<MachineBasicBlock *>>(
-        new vector<MachineBasicBlock *>());
-  }
-  void replaceIRRegister(map<Instruction *, Register *> instr_map) {
-    for (auto &opd : *oprands) {
-      if (IRRegister *irr = dynamic_cast<IRRegister *>(opd)) {
-        assert(irr->getTag() == IR_REGISTER);
-        Instruction *inst = irr->ir_reg;
-        auto it = instr_map.find(inst);
-        if (it != instr_map.end()) {
-          opd = it->second;
-        } else {
-          assert(0);
-        }
-      }
-    }
   }
 
+  virtual string to_string() const = 0;
+
+  void replaceIRRegister(map<Instruction *, Register *> instr_map);
+
   void pushReg(Register *r);
-  void pushJTarget(MachineBasicBlock *b);
-  void setImm(Immediate i);
-  void setGlobal(MachineGlobal *global);
-  void setTarget(Register* reg);
-  void setFunction(MachineFunction *func);
-  MachineInstructionTag getTag() const;
+  int getRegNum() const;
   Register *getReg(int idx) const;
-  MachineBasicBlock *getJTarget(int idx) const;
+
+  void setImm(Immediate i);
   Immediate *getImm() const;
-  MachineGlobal *getGlobal() const;
-  Register* getTarget(Register* reg);
-  MachineFunction *getFunction() const;
-  void printASM(ostream &stream) const;
-  bool is_float() const override {
-    switch (tag) {
-    case FADD_S:
-    case FSUB_S:
-    case FMUL_S:
-    case FDIV_S:
-    case FSQRT_S:
-    case FMIN_S:
-    case FMAX_S:
-    case FNMADD_S:
-    case FNMSUB_S:
-    case FMV_S_X:
-    case FMV_X_S:
-    case FLW:
-    case FSW:
-    case FCVTS_W:
-    case FCVTS_WU:
-    case FCVTW_S:
-    case FCVTWU_S:
-    case FEQ_S:
-    case FLT_S:
-    case FLE_S:
-      return true;
-    default:
-      return false; // 所有未列出的枚举值都返回 false
-    }
-  }
+
+  void setTarget(Register *reg);
+  Register *getTarget() const;
+  string getTargetName() const;
+
+  // string getName() const;
+
+  MachineInstructionTag getTag() const;
+
+  bool is_float() const override;
 };
+
+class MIphi : public MachineInstruction {
+private:
+  unique_ptr<vector<MachineBasicBlock *>> incoming;
+
+public:
+  MIphi(string name);
+  string to_string() const override;
+  void pushIncoming(Register *reg, MachineBasicBlock *bb);
+  MachineBasicBlock *getIncomingBlock(int idx) const;
+};
+
+#define DEFINE_MI_BIN_CLASS(NAME)                                              \
+  class MI##NAME : public MachineInstruction {                                 \
+  public:                                                                      \
+    MI##NAME(Register *reg1, Register *reg2);                                  \
+    MI##NAME(Register *reg1, Register *reg2, Register *target);                \
+    MI##NAME(Register *reg1, Register *reg2, std::string name);                \
+    string to_string() const override;                                         \
+  };
+
+#define DEFINE_MI_IMM_CLASS(NAME)                                              \
+  class MI##NAME : public MachineInstruction {                                 \
+  public:                                                                      \
+    MI##NAME(Register *reg, Immediate imm);                                    \
+    MI##NAME(Register *reg, Immediate imm, Register *target);                  \
+    MI##NAME(Register *reg, Immediate imm, std::string name);                  \
+    string to_string() const override;                                         \
+  };
+
+#define DEFINE_MIN_UNA_CLASS(NAME)                                             \
+  class MI##NAME : public MachineInstruction {                                 \
+  public:                                                                      \
+    MI##NAME(Register *reg);                                                   \
+    MI##NAME(Register *reg, Register *target);                                 \
+    MI##NAME(Register *reg, std::string name);                                 \
+    string to_string() const override;                                         \
+  };
+
+DEFINE_MI_IMM_CLASS(addiw)
+DEFINE_MI_BIN_CLASS(addw)
+DEFINE_MI_BIN_CLASS(subw)
+DEFINE_MI_BIN_CLASS(and)
+DEFINE_MI_IMM_CLASS(andi)
+DEFINE_MI_BIN_CLASS(or)
+DEFINE_MI_IMM_CLASS(ori)
+DEFINE_MI_BIN_CLASS(xor)
+DEFINE_MI_IMM_CLASS(xori)
+DEFINE_MI_BIN_CLASS(slt)
+DEFINE_MI_IMM_CLASS(slti)
+DEFINE_MI_BIN_CLASS(sltu)
+DEFINE_MI_IMM_CLASS(sltiu)
+
+class MIlw : public MachineInstruction {
+private:
+  MachineGlobal *global;
+
+public:
+  MIlw(MachineGlobal *global);
+  MIlw(MachineGlobal *global, string name);
+  MIlw(MachineGlobal *global, Register *target);
+  MIlw(Register *addr);
+  MIlw(Register *addr, string name);
+  MIlw(Register *addr, Register *target);
+  MachineGlobal *getGlobal();
+  string to_string() const override;
+};
+
+class MIsw : public MachineInstruction {
+private:
+  MachineGlobal *global;
+
+public:
+  MIsw(MachineGlobal *global, Register *val);
+  MIsw(Register *addr, Register *val);
+  string to_string() const override;
+};
+
+class MIbeq : public MachineInstruction {
+private:
+  MachineBasicBlock *targetBB;
+
+public:
+  MIbeq(Register *reg1, Register *reg2, MachineBasicBlock *targetBB);
+  MachineBasicBlock *getTargetBB();
+  string to_string() const override;
+};
+
+DEFINE_MI_BIN_CLASS(mulw);
+DEFINE_MI_BIN_CLASS(divw);
+DEFINE_MI_BIN_CLASS(remw);
+
+DEFINE_MI_BIN_CLASS(fadd_s);
+DEFINE_MI_BIN_CLASS(fsub_s);
+DEFINE_MI_BIN_CLASS(fmul_s);
+DEFINE_MI_BIN_CLASS(fdiv_s);
+
+class MIflw : public MachineInstruction {
+private:
+  MachineGlobal *global;
+
+public:
+  MIflw(MachineGlobal *global);
+  MIflw(MachineGlobal *global, string name);
+  MIflw(MachineGlobal *global, Register *target);
+  MIflw(Register *addr);
+  MIflw(Register *addr, string name);
+  MIflw(Register *addr, Register *target);
+  MachineGlobal *getGlobal();
+  string to_string() const override;
+};
+
+class MIfsw : public MachineInstruction {
+private:
+  MachineGlobal *global;
+
+public:
+  MIfsw(MachineGlobal *global, Register *val);
+  MIfsw(Register *addr, Register *val);
+  string to_string() const override;
+};
+
+
+DEFINE_MIN_UNA_CLASS(fcvts_w)
+DEFINE_MIN_UNA_CLASS(fcvtw_s)
+
+
+DEFINE_MI_BIN_CLASS(feq_s);
+DEFINE_MI_BIN_CLASS(flt_s);
+DEFINE_MI_BIN_CLASS(fle_s);
+
+class MIcall : public MachineInstruction { // presudo
+private:
+  MachineFunction *func;
+
+public:
+  MIcall(MachineFunction *func);
+  MachineFunction *getFunc();
+  string to_string() const override;
+};
+
+class MIj : public MachineInstruction { // presudo
+private:
+  MachineBasicBlock *targetBB;
+
+public:
+  MIj(MachineBasicBlock *targetBB);
+  MachineBasicBlock *getTargetBB();
+  string to_string() const override;
+};
+class MIret : public MachineInstruction { // presudo
+public:
+  MIret();
+  string to_string() const override;
+};
+
+class MIli : public MachineInstruction { // presudo
+public:
+  MIli(Immediate imm);
+  MIli(Immediate imm, string name);
+  MIli(Immediate imm, Register *target);
+  string to_string() const override;
+};
+
+
+DEFINE_MIN_UNA_CLASS(mv)
+DEFINE_MIN_UNA_CLASS(not)
+DEFINE_MIN_UNA_CLASS(fmv_s)
 
 #endif

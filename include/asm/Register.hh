@@ -25,7 +25,7 @@ protected:
   string name;
 
 public:
-  virtual void print(ostream &stream) const = 0;
+  virtual string getName() const = 0;
   virtual bool is_float() const = 0;
   RegTag getTag() {return tag;}
 };
@@ -37,10 +37,8 @@ public:
     tag = IR_REGISTER;
     ir_reg = ins;
   };
-  void print(ostream &stream) const override { 
-    stream << "ir register from"; 
-    ir_reg->printIR(stream);
-    stream << std::endl;
+  string getName() const override { 
+    return ir_reg->getName();
   }
   bool is_float() const override {
     return ir_reg->getType() == FloatType::getFloatType();
@@ -57,7 +55,7 @@ public:
   VRegister() {
     tag = V_REGISTER;
     id = get_id();
-    name = "t" + id;
+    name = "t" + std::to_string(id);
   }
 
   VRegister(string n) {
@@ -66,7 +64,13 @@ public:
     name = n;
   }
 
-  void print(ostream &stream) const override { stream << name; }
+  void setName(string name_) {
+    name = name_;
+  }
+
+  string getName() const override { 
+      return name;
+  }
 };
 
 class IRegister : public Register {
@@ -76,7 +80,9 @@ public:
     id = id_;
     name = n;
   }
-  void print(ostream &stream) const override { stream << name; }
+  string getName() const override { 
+    return name;
+  }
   bool is_float() const override { return false; }
 };
 
@@ -87,7 +93,9 @@ public:
     id = id_;
     name = n;
   }
-  void print(ostream &stream) const override { stream << name; }
+  string getName() const override { 
+    return name;
+  }
   bool is_float() const override { return true; }
 };
 
@@ -206,13 +214,14 @@ static Register *getFRegister(int idx) {
 }
 
 class Immediate {
-  // only int_32 imm in riscv
-  // allow f_32 imm in high level asm
 private:
-  uint32_t val;
+  int32_t val;
 
 public:
-  Immediate(uint32_t val) : val(val) {}
+  Immediate(int32_t val) : val(val) {}
+  string to_string() const {
+    return std::to_string(val);
+  }
 };
 
 #endif
