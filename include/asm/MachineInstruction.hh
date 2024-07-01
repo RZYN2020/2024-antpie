@@ -159,7 +159,7 @@ public:
   void replaceIRRegister(map<Instruction *, Register *> instr_map) {
     for (auto &opd : *oprands) {
       if (IRRegister *irr = dynamic_cast<IRRegister *>(opd)) {
-        // 在映射中查找这个 Instruction 指针
+        assert(irr->getTag() == IR_REGISTER);
         Instruction *inst = irr->ir_reg;
         auto it = instr_map.find(inst);
         if (it != instr_map.end()) {

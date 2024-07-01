@@ -138,6 +138,10 @@ class GetElemPtrInst : public Instruction {
                  string name);
   GetElemPtrInst(Value* ptr, Value* idx1, string name);
   void printIR(ostream& stream) const override;
+
+  const Type* getPtrType() const {
+    return ptrType;
+  }
 };
 
 class JumpInst : public Instruction {

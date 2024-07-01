@@ -27,6 +27,7 @@ protected:
 public:
   virtual void print(ostream &stream) const = 0;
   virtual bool is_float() const = 0;
+  RegTag getTag() {return tag;}
 };
 
 class IRRegister : public Register {
@@ -36,7 +37,11 @@ public:
     tag = IR_REGISTER;
     ir_reg = ins;
   };
-  void print(ostream &stream) const override { stream << "name"; }
+  void print(ostream &stream) const override { 
+    stream << "ir register from"; 
+    ir_reg->printIR(stream);
+    stream << std::endl;
+  }
   bool is_float() const override {
     return ir_reg->getType() == FloatType::getFloatType();
   }
