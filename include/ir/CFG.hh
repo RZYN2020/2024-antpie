@@ -23,7 +23,8 @@ class CFG {
   BBListPtr getPredOf(BasicBlock* bb) { return blkPredMap[bb]; }
   BBListPtr getSuccOf(BasicBlock* bb) { return blkSuccMap[bb]; }
   BBListPtr getBlocks() { return &blocks; }
-
+  BasicBlock* getEntry() { return entry; }
+  BasicBlock* getExit() { return exit; }
   void debug();
 };
 
