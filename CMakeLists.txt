@@ -12,6 +12,7 @@ INCLUDE_DIRECTORIES(
     include/opt
     include/util
     include
+    parser
 )
 
 add_subdirectory(src/ir)
@@ -19,6 +20,7 @@ add_subdirectory(src/asm)
 add_subdirectory(src/cgen)
 add_subdirectory(src/opt)
 add_subdirectory(src/util)
+add_subdirectory(parser)
 
 add_executable(
         compiler
@@ -32,6 +34,7 @@ target_link_libraries(
         cgen
         opt
         util
+        parser
 )
 
 install(

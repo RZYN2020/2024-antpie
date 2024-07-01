@@ -3,6 +3,10 @@
 
 DEBUG ?= 0
 CMAKE_FLAGS := -DCMAKE_BUILD_TYPE=$(if $(DEBUG),Debug,Release)
+ANTLR_PATH = $(shell find /usr/local/lib -name "antlr-*-complete.jar")
+ANTLR = java -jar $(ANTLR_PATH) -listener -visitor -long-messages
+PFILE = $(shell find . -name "SysYParser.g4")
+LFILE = $(shell find . -name "SysYLexer.g4")
 
 all:
 	@cmake $(CMAKE_FLAGS) -B build
@@ -26,6 +30,14 @@ qemu-run:
 
 clean:
 	rm -rf build
+	rm -rf ./parser/antlr4/*.cpp
+	rm -rf ./parser/antlr4/*.h
+	rm -rf ./parser/antlr4/*.tokens
+	rm -rf ./parser/antlr4/*.interp
+
+antlr: $(LFILE) $(PFILE)
+	$(ANTLR) -Dlanguage=Cpp $(PFILE) $(LFILE)
+
 
 SRC := tests/test.c
 RES := tests/test
