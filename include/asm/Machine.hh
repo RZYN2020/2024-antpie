@@ -37,6 +37,8 @@ public:
 };
 
 
+uint32_t cal_size(const Type *tp);
+
 class MachineGlobal {
 private:
   GlobalVariable *global;

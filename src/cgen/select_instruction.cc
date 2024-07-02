@@ -60,26 +60,6 @@ Register *get_vreg(MachineModule *m, vector<MachineInstruction *> &res,
   }
 }
 
-// in bytes
-uint32_t cal_size(const Type *tp) {
-  switch (tp->getTypeTag()) {
-  case TT_POINTER:
-  case TT_INT1:
-  case TT_INT32:
-  case TT_FLOAT:
-    return 4;
-  case TT_ARRAY: {
-    const ArrayType *atp = static_cast<const ArrayType *>(tp);
-    return atp->getLen() * cal_size(atp->getElemType());
-  }
-  case TT_FUNCTION:
-  case TT_VOID:
-  default:
-    assert(0);
-  }
-  return 0;
-}
-
 vector<MachineInstruction *>
 select_instruction(MachineModule *m, Instruction &ins,
                    map<Instruction *, Register *> &instr_map,
