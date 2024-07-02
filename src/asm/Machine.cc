@@ -141,6 +141,7 @@ string MachineFunction::to_string() const {
 MachineModule::MachineModule() {
   globalVariables = make_unique<vector<unique_ptr<MachineGlobal>>>();
   functions = make_unique<vector<unique_ptr<MachineFunction>>>();
+  reg_pool = make_unique<vector<unique_ptr<VRegister>>>();
 }
 
 MachineFunction *MachineModule::addFunction(FuncType *funcType, string name) {

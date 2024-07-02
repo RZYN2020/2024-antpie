@@ -107,7 +107,7 @@ MIphi::MIphi(string name)
 }
 
 string MIphi::to_string() const {
-  string s = this->getName() + " = ";
+  string s = this->getName() + " = phi ";
   for (int i = 0; i < this->getRegNum(); i++) {
     s += "[" + this->getReg(i)->getName() + "," +
          this->getIncomingBlock(i)->getName() + "]";

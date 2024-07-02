@@ -6,7 +6,6 @@
 #include "MachineInstruction.hh"
 #include "Type.hh"
 
-
 class MachineBasicBlock {
 private:
   string name;
@@ -34,8 +33,20 @@ public:
   const vector<unique_ptr<MachineInstruction>> &getInstructions() const {
     return *instructions;
   }
-};
 
+  unique_ptr<MachineInstruction> removeInstruction(MachineInstruction *ins) {
+    for (auto it = instructions->begin(); it != instructions->end();) {
+      if (it->get() == ins) {
+        unique_ptr<MachineInstruction> removed = std::move(*it);
+        it = instructions->erase(it);
+        return removed;
+      } else {
+        ++it;
+      }
+    }
+    return nullptr;
+  }
+};
 
 uint32_t cal_size(const Type *tp);
 
@@ -46,9 +57,7 @@ private:
 public:
   MachineGlobal(GlobalVariable *global) : global(global) {}
   string to_string() const;
-  string getName() const {
-    return global->getName();
-  }
+  string getName() const { return global->getName(); }
 };
 
 class MachineFunction {
@@ -61,11 +70,9 @@ public:
   MachineFunction(FuncType *fType, string name);
   void pushBasicBlock(MachineBasicBlock *bb);
   string to_string() const;
-  string getName() const {
-    return name;
-  }
+  string getName() const { return name; }
 
-  const vector<unique_ptr<MachineBasicBlock>>& getBasicBlocks() const {
+  const vector<unique_ptr<MachineBasicBlock>> &getBasicBlocks() const {
     return *basicBlocks;
   }
 };
@@ -75,6 +82,7 @@ private:
   unique_ptr<vector<unique_ptr<MachineGlobal>>> globalVariables;
   unique_ptr<vector<unique_ptr<MachineFunction>>> functions;
   MachineBasicBlock *currBasicBlock;
+  unique_ptr<vector<unique_ptr<VRegister>>> reg_pool;
 
 public:
   MachineModule();
@@ -86,11 +94,15 @@ public:
   MachineGlobal *addGlobalVariable(GlobalVariable *global);
   MachineGlobal *addGlobalFloat(FloatConstant *f);
 
-  const vector<unique_ptr<MachineGlobal>>& getGlobals() const {
+  void pushIntoRegPool(VRegister *reg) {
+    reg_pool->push_back(unique_ptr<VRegister>(reg));
+  }
+
+  const vector<unique_ptr<MachineGlobal>> &getGlobals() const {
     return *globalVariables;
   }
 
-  const vector<unique_ptr<MachineFunction>>& getFunctions() const {
+  const vector<unique_ptr<MachineFunction>> &getFunctions() const {
     return *functions;
   }
 };

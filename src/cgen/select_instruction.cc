@@ -160,6 +160,14 @@ select_instruction(MachineModule *m, Instruction &ins,
     break;
   }
   case VT_RET: {
+    ReturnInst &ret = static_cast<ReturnInst &>(ins);
+    auto ret_val = ret.getRValue(0);
+    auto ret_val_reg = GET_VREG(ret_val);
+    if (ret_val->getType() == Type::getFloatType()) {
+      ADD_INSTR(move, MIfmv_s, ret_val_reg, getFRegister(10));
+    } else {
+      ADD_INSTR(move, MImv, ret_val_reg, getIRegister(10));
+    }
     ADD_INSTR(_, MIret);
     break;
   }
