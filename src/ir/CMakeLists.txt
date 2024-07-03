@@ -3,6 +3,7 @@ add_library(
     Argument.cc
     BasicBlock.cc
     Constant.cc
+    CFG.cc
     Function.cc
     GlobalVariable.cc
     Instruction.cc

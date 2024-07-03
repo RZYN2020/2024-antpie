@@ -1,18 +1,22 @@
 #include "Function.hh"
+#include "CFG.hh"
 
 Function::Function(FuncType* fType, string name)
-    : GlobalValue(fType, name, VT_FUNC) {
-  basicBlocks = make_unique<vector<unique_ptr<BasicBlock>>>();
+    : GlobalValue(fType, name, VT_FUNC) {}
+
+Function::~Function() {
+  for (const auto& bb : basicBlocks) {
+    delete bb;
+  }
+  delete cfg;
 }
 
-void Function::pushBasicBlock(BasicBlock* bb) {
-  basicBlocks->push_back(unique_ptr<BasicBlock>(bb));
+void Function::pushBasicBlock(BasicBlock* bb) { basicBlocks.pushBack(bb); }
+
+void Function::pushBasicBlockAtHead(BasicBlock* bb) {
+  basicBlocks.pushFront(bb);
 }
 
-// define dso_local i32 @foo(i32 %a, float %b) {
-// entry:
-//   ret i32 1
-// }
 void Function::printIR(ostream& stream) const {
   FuncType* funcType = dynamic_cast<FuncType*>(getType());
   stream << "define dso_local " << funcType->getRetType()->toString() << " @"
@@ -26,9 +30,21 @@ void Function::printIR(ostream& stream) const {
            << funcType->getArgument(i)->toString();
   }
   stream << ") {" << endl;
-  for (const auto& bb : *basicBlocks) {
+
+  for (const auto& bb : basicBlocks) {
+    if (bb->isEmpty()) continue;
     bb->printIR(stream);
     stream << endl;
   }
   stream << "}" << endl;
+}
+
+CFG* Function::buildCFG() {
+
+  entry = new BasicBlock(getName() + "_entry", true);
+  exit = new BasicBlock(getName() + "_exit", true);
+  pushBasicBlock(exit);
+  pushBasicBlockAtHead(entry);
+  cfg = new CFG(this);
+  return cfg;
 }

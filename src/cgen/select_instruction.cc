@@ -78,7 +78,7 @@ select_instruction(MachineModule *m, Instruction &ins,
   auto o2c = is_constant(OPD2);                                                \
   if (o1c && o2c) {                                                            \
     auto imm = static_cast<CONST_TP *>(OPD2)->getValue();                      \
-    ADD_INSTR(_bin, OPI_CLASS, GET_VREG(OPD1), imm);                 \
+    ADD_INSTR(_bin, OPI_CLASS, GET_VREG(OPD1), imm);                           \
     BIN_INS = _bin;                                                            \
   } else if (o1c) {                                                            \
     auto imm = static_cast<CONST_TP *>(OPD1)->getValue();                      \
@@ -413,29 +413,39 @@ void select_instruction(MachineModule *res, ANTPIE::Module *ir) {
   auto func_map = new map<Function *, MachineFunction *>();
   auto global_map = new map<GlobalVariable *, MachineGlobal *>();
 
-  for (const auto &global : ir->getGlobalVariables()) {
-    MachineGlobal *g = res->addGlobalVariable(&*global);
-    global_map->insert({&*global, g});
+  auto globalVars = ir->getGlobalVariables();
+  for (auto it = globalVars->begin(); it != globalVars->end(); ++it) {
+    MachineGlobal *g = res->addGlobalVariable(&**it);
+    global_map->insert({&**it, g});
   }
 
-  for (const auto &func : ir->getFunctions()) {
+  auto functions = ir->getFunctions();
+  for (auto it = functions->begin(); it != functions->end(); ++it) {
+    auto func = *it;
     MachineFunction *mfunc = res->addFunction(
         static_cast<FuncType *>(func->getType()), func->getName());
 
-    func_map->insert({&*func, mfunc});
+    func_map->insert({func, mfunc});
   }
 
-  for (const auto &func : ir->getFunctions()) {
-    MachineFunction *mfunc = func_map->at(&*func);
+  for (auto it = functions->begin(); it != functions->end(); ++it) {
+    auto func = *it;
+    MachineFunction *mfunc = func_map->at(func);
 
-    for (const auto &bb : func->getBasicBlocks()) {
+    auto basicBlocks = func->getBasicBlocks();
+    for (auto it = basicBlocks->begin(); it != basicBlocks->end(); ++it) {
+      auto bb = *it;
       MachineBasicBlock *mbb = res->addBasicBlock(mfunc, bb->getName());
-      bb_map->insert({&*bb, mbb});
+      bb_map->insert({bb, mbb});
     }
 
-    for (const auto &bb : func->getBasicBlocks()) {
-      MachineBasicBlock *mbb = bb_map->at(&*bb);
-      for (const auto &i : bb->getInstructions()) {
+    for (auto it = basicBlocks->begin(); it != basicBlocks->end(); ++it) {
+      auto bb = *it;
+      MachineBasicBlock *mbb = bb_map->at(bb);
+
+      auto instrs = bb->getInstructions();
+      for (auto it = instrs->begin(); it != instrs->end(); ++it) {
+        auto i = *it;
         // std::cout << "select for ";
         // i->printIR(std::cout);
         // std::cout << std::endl;

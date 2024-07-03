@@ -159,6 +159,7 @@ int main() {
   out_file0 << mmodule->to_string() << std::endl;
 //   std::cout <<" mmodule->to_string() "<< std::endl;
 
+  // module->buildCFG();
 
   allocate_register(mmodule);
   std::ofstream out_file1;
