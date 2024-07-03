@@ -113,14 +113,14 @@ private:
   MachineInstructionTag tag;
   Register *target; // target in non-SSA version
   unique_ptr<vector<Register *>> oprands;
-  unique_ptr<Immediate> imm;
+  int32_t imm;
   MachineBasicBlock *bb;
 
 public:
   MachineInstruction(MachineInstructionTag tag, string name)
       : VRegister(name), tag(tag) {
     oprands = unique_ptr<vector<Register *>>(new vector<Register *>());
-    imm = make_unique<Immediate>(0);
+    imm = 0;
     switch (tag) {
     case SW:
     case BEQ:
@@ -135,7 +135,7 @@ public:
   }
   MachineInstruction(MachineInstructionTag tag) : VRegister(), tag(tag) {
     oprands = unique_ptr<vector<Register *>>(new vector<Register *>());
-    imm = make_unique<Immediate>(0);
+    imm = 0;
     switch (tag) {
     case SW:
     case BEQ:
@@ -169,13 +169,14 @@ public:
   void insertAfter(vector<MachineInstruction *> instrs);
 
   void setBasicBlock(MachineBasicBlock *bb);
+  MachineBasicBlock * getBasicBlock() const {return bb;}
 
   void pushReg(Register *r);
   int getRegNum() const;
   Register *getReg(int idx) const;
 
-  void setImm(Immediate i);
-  Immediate *getImm() const;
+  void setImm(int32_t i);
+  int32_t getImm() const;
 
   void setTarget(Register *reg);
   Register *getTarget();
@@ -222,9 +223,9 @@ public:
 #define DEFINE_MI_IMM_CLASS(NAME)                                              \
   class MI##NAME : public MachineInstruction {                                 \
   public:                                                                      \
-    MI##NAME(Register *reg, Immediate imm);                                    \
-    MI##NAME(Register *reg, Immediate imm, Register *target);                  \
-    MI##NAME(Register *reg, Immediate imm, std::string name);                  \
+    MI##NAME(Register *reg, int32_t imm);                                     \
+    MI##NAME(Register *reg, int32_t imm, Register *target);                   \
+    MI##NAME(Register *reg, int32_t imm, std::string name);                   \
     string to_string() const override;                                         \
   };
 
@@ -236,6 +237,7 @@ public:
     MI##NAME(Register *reg, std::string name);                                 \
     string to_string() const override;                                         \
   };
+
 
 DEFINE_MI_IMM_CLASS(addiw)
 DEFINE_MI_BIN_CLASS(addw)
@@ -354,9 +356,9 @@ public:
 
 class MIli : public MachineInstruction { // presudo
 public:
-  MIli(Immediate imm);
-  MIli(Immediate imm, string name);
-  MIli(Immediate imm, Register *target);
+  MIli(int32_t imm);
+  MIli(int32_t imm, string name);
+  MIli(int32_t imm, Register *target);
   string to_string() const override;
 };
 

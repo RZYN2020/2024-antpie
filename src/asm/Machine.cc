@@ -120,10 +120,12 @@ MachineFunction::MachineFunction(FuncType *fType, string name_) {
   name = name_;
   basicBlocks = make_unique<vector<unique_ptr<MachineBasicBlock>>>();
   reg_pool = make_unique<vector<unique_ptr<MachineInstruction>>>();
+  saved_registers = make_unique<vector<Register *>>();
 }
 
 void MachineFunction::pushBasicBlock(MachineBasicBlock *bb) {
   basicBlocks->push_back(unique_ptr<MachineBasicBlock>(bb));
+  bb->setFunction(this);
 }
 
 string MachineFunction::to_string() const {

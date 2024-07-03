@@ -70,15 +70,9 @@ Register *MachineInstruction::getReg(int idx) const {
   return (*oprands)[idx];
 }
 
-void MachineInstruction::setImm(Immediate i) {
-  if (imm == nullptr) {
-    imm = make_unique<Immediate>(i);
-  } else {
-    *imm = i;
-  }
-}
+void MachineInstruction::setImm(int32_t i) { imm = i; }
 
-Immediate *MachineInstruction::getImm() const { return imm.get(); }
+int32_t MachineInstruction::getImm() const { return imm; }
 
 void MachineInstruction::setTarget(Register *reg) {
   if (target != nullptr) {
@@ -178,17 +172,17 @@ MachineBasicBlock *MIphi::getIncomingBlock(int idx) const {
 ////////////////////////////////////////////
 
 #define DEFINE_MI_IMM_CLASS_IMPL(NAME, TAG, ASM_NAME)                          \
-  MI##NAME::MI##NAME(Register *reg, Immediate imm)                             \
+  MI##NAME::MI##NAME(Register *reg, int32_t imm)                               \
       : MachineInstruction(MachineInstruction::TAG) {                          \
     this->pushReg(reg);                                                        \
     this->setImm(imm);                                                         \
   }                                                                            \
-  MI##NAME::MI##NAME(Register *reg, Immediate imm, std::string name)           \
+  MI##NAME::MI##NAME(Register *reg, int32_t imm, std::string name)             \
       : MachineInstruction(MachineInstruction::TAG, name) {                    \
     this->pushReg(reg);                                                        \
     this->setImm(imm);                                                         \
   }                                                                            \
-  MI##NAME::MI##NAME(Register *reg, Immediate imm, Register *target)           \
+  MI##NAME::MI##NAME(Register *reg, int32_t imm, Register *target)             \
       : MachineInstruction(MachineInstruction::TAG) {                          \
     this->pushReg(reg);                                                        \
     this->setImm(imm);                                                         \
@@ -197,7 +191,7 @@ MachineBasicBlock *MIphi::getIncomingBlock(int idx) const {
   std::string MI##NAME::to_string() const {                                    \
     std::string target = this->getTargetName();                                \
     auto reg = this->getReg(0)->getName();                                     \
-    auto imm = this->getImm()->to_string();                                    \
+    auto imm = std::to_string(this->getImm());                                 \
     return #ASM_NAME " " + target + ", " + reg + ", " + imm;                   \
   }
 
@@ -292,7 +286,9 @@ std::string MIlw::to_string() const {
   if (this->global) {
     return "lw " + this->getTargetName() + ", " + this->global->getName();
   } else {
-    return "lw " + this->getTargetName() + ", " + getImm()->to_string() + "(" +
+    auto offset = getBasicBlock()->getFunction()->getSavedSize();
+    return "lw " + this->getTargetName() + ", " +
+           std::to_string(getImm() + offset) + "(" +
            this->getReg(0)->getName() + ")";
   }
 }
@@ -313,8 +309,10 @@ std::string MIsw::to_string() const {
   if (this->global) {
     return "sw " + this->getReg(0)->getName() + ", " + this->global->getName();
   } else {
-    return "sw " + this->getReg(1)->getName() + ", " + getImm()->to_string() +
-           "(" + this->getReg(0)->getName() + ")";
+    auto offset = getBasicBlock()->getFunction()->getSavedSize();
+    return "sw " + this->getReg(1)->getName() + ", " +
+           std::to_string(getImm() + offset) + "(" +
+           this->getReg(0)->getName() + ")";
   }
 }
 
@@ -373,7 +371,9 @@ std::string MIflw::to_string() const {
   if (this->global) {
     return "flw " + this->getTargetName() + ", " + this->global->getName();
   } else {
-    return "flw " + this->getTargetName() + ", " + getImm()->to_string() + "(" +
+    auto offset = getBasicBlock()->getFunction()->getSavedSize();
+    return "flw " + this->getTargetName() + ", " +
+           std::to_string(getImm() + offset) + "(" +
            this->getReg(0)->getName() + ")";
   }
 }
@@ -394,8 +394,10 @@ std::string MIfsw::to_string() const {
   if (this->global) {
     return "fsw " + this->getReg(0)->getName() + ", " + this->global->getName();
   } else {
-    return "fsw " + this->getReg(1)->getName() + ", " + this->getImm()->to_string() +
-           "(" + this->getReg(0)->getName() + ")";
+    auto offset = getBasicBlock()->getFunction()->getSavedSize();
+    return "fsw " + this->getReg(1)->getName() + ", " +
+           std::to_string(getImm() + offset) + "(" +
+           this->getReg(0)->getName() + ")";
   }
 }
 
@@ -430,23 +432,23 @@ MIret::MIret() : MachineInstruction(MachineInstruction::RET) {}
 std::string MIret::to_string() const { return "ret"; }
 
 // MIli
-MIli::MIli(Immediate imm) : MachineInstruction(MachineInstruction::LI) {
+MIli::MIli(int32_t imm) : MachineInstruction(MachineInstruction::LI) {
   this->setImm(imm);
 }
 
-MIli::MIli(Immediate imm, string name)
+MIli::MIli(int32_t imm, string name)
     : MachineInstruction(MachineInstruction::LI, name) {
   this->setImm(imm);
 }
 
-MIli::MIli(Immediate imm, Register *target)
+MIli::MIli(int32_t imm, Register *target)
     : MachineInstruction(MachineInstruction::LI, name) {
   this->setImm(imm);
   this->setTarget(target);
 }
 
 std::string MIli::to_string() const {
-  return "li " + this->getTargetName() + ", " + this->getImm()->to_string();
+  return "li " + this->getTargetName() + ", " + std::to_string(getImm());
 }
 
 DEFINE_MI_UNA_CLASS_IMPL(mv, MV, mv)

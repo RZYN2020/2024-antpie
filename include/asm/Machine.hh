@@ -10,6 +10,7 @@ class MachineBasicBlock {
 private:
   string name;
   unique_ptr<vector<unique_ptr<MachineInstruction>>> instructions;
+  MachineFunction *function;
 
 public:
   MachineBasicBlock(string name_) {
@@ -31,6 +32,10 @@ public:
   string getName() const { return "." + name; }
 
   string to_string() const;
+
+  void setFunction(MachineFunction *function) { this->function = function; }
+
+  MachineFunction *getFunction() { return function; }
 
   const vector<unique_ptr<MachineInstruction>> &getInstructions() const {
     return *instructions;
@@ -125,6 +130,9 @@ public:
   void pushBasicBlock(MachineBasicBlock *bb);
   string to_string() const;
   string getName() const { return name; }
+  uint32_t getSavedSize() const {
+    return saved_registers->size() + 4 * 2; // with ra, fp
+  }
   uint32_t getSpilledSize() const { return spilled_size; }
   void incSpilledSize(uint32_t sz) { spilled_size += sz; }
 

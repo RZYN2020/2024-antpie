@@ -226,13 +226,4 @@ static Register *getFRegister(int idx) {
   return fregisters[idx];
 }
 
-class Immediate {
-private:
-  int32_t val;
-
-public:
-  Immediate(int32_t val) : val(val) {}
-  string to_string() const { return std::to_string(val); }
-};
-
 #endif
