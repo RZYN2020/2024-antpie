@@ -52,10 +52,10 @@ static bool check_avalibale(Register *reg, MachineInstruction *ins) {
   return true;
 }
 
-static Register *find_avaliable_register(MachineInstruction *ins) {
+static Register *find_avaliable_register(MachineInstruction *ins, Register* reg) {
   int reg_cnt = 0;
   vector<Register *> attempts;
-  if (ins->is_float()) {
+  if (reg->is_float()) {
     attempts = {&reg_ft0, &reg_ft1, &reg_ft2};
 
   } else {
@@ -66,6 +66,7 @@ static Register *find_avaliable_register(MachineInstruction *ins) {
       return attempt;
     }
   }
+  assert(0);
 }
 
 void spill_register(MachineFunction *func, Register *reg) {
@@ -74,7 +75,7 @@ void spill_register(MachineFunction *func, Register *reg) {
 
   // std::cout << "   Who use " + ins->getName() + ":" << std::endl;
   for (auto use : ins->getUses()) {
-    Register *new_reg = find_avaliable_register(use);
+    Register *new_reg = find_avaliable_register(use, ins);
     // std::cout << "    " + use_instr->to_string() << std::endl;
     if (ins == use->getTarget()) {
       // std::cout << "      try store" << std::endl;

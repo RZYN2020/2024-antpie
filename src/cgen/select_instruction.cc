@@ -144,7 +144,7 @@ select_instruction(MachineModule *m, Instruction &ins,
       if (reg->is_float()) {
         ADD_INSTR(_, MIfmv_s, reg, getFRegister(float_cnt++));
       } else {
-        ADD_INSTR(_, MImv, reg, getFRegister(integer_cnt++));
+        ADD_INSTR(_, MImv, reg, getIRegister(integer_cnt++));
       }
     }
     // 2.Jump to the function (using presudo instruction call)..

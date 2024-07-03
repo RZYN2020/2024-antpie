@@ -178,7 +178,7 @@ MachineGlobal *MachineModule::addGlobalFloat(FloatConstant *f) {
 }
 
 string MachineModule::to_string() const {
-  string res = "";
+  string res = ".globl main\n";
   for (const auto &gv : *globalVariables) {
     res += gv->to_string() + "\n";
   }

@@ -39,7 +39,7 @@ antlr: $(LFILE) $(PFILE)
 	$(ANTLR) -Dlanguage=Cpp $(PFILE) $(LFILE)
 
 
-SRC := tests/test.c
+SRC := tests/test.s
 RES := tests/test
 gcc-riscv64:
 	riscv64-linux-gnu-gcc-10 -o $(RES) $(SRC)

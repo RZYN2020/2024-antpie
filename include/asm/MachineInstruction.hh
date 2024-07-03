@@ -24,7 +24,6 @@ public:
   enum MachineInstructionTag {
     // Beacuse we only have 32-bits interger and float in SysY, so we don't need
     // 64-bits-wise instruction provided by RV64GC
-
     PHI,
     ALLOCA,
 
@@ -32,6 +31,7 @@ public:
     //// Integer Computation
     ADDIW,
     ADDW,
+    
     SUBW,
     AND,
     OR,
@@ -54,6 +54,8 @@ public:
     //// Loads and Stores
     LW,
     SW,
+    LD, // to store/load ra/sp
+    SD,
     //// Control transfer
     BEQ,
     // BNE,
@@ -275,6 +277,19 @@ private:
 public:
   MIsw(MachineGlobal *global, Register *val);
   MIsw(Register *addr, Register *val);
+  string to_string() const override;
+};
+
+class MIld : public MachineInstruction {
+private:
+public:
+  MIld(Register *addr, uint32_t offset, Register *target);
+  string to_string() const override;
+};
+
+class MIsd : public MachineInstruction {
+public:
+  MIsd(Register *addr,  uint32_t offset, Register *val);
   string to_string() const override;
 };
 

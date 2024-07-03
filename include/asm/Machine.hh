@@ -29,6 +29,18 @@ public:
     }
   }
 
+  void pushInstrAtHead(MachineInstruction *i) {
+    instructions->insert(instructions->begin(),
+                         unique_ptr<MachineInstruction>(i));
+    i->setBasicBlock(this);
+  }
+
+  void pushInstrsAtHead(vector<MachineInstruction *> is) {
+    for (auto i : is) {
+      pushInstrAtHead(i);
+    }
+  }
+
   string getName() const { return "." + name; }
 
   string to_string() const;
@@ -131,7 +143,7 @@ public:
   string to_string() const;
   string getName() const { return name; }
   uint32_t getSavedSize() const {
-    return saved_registers->size() + 4 * 2; // with ra, fp
+    return saved_registers->size() * 4 + 2 * 8; // with ra, fp
   }
   uint32_t getSpilledSize() const { return spilled_size; }
   void incSpilledSize(uint32_t sz) { spilled_size += sz; }

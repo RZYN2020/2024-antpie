@@ -153,23 +153,22 @@ int main() {
 
   MachineModule *mmodule = new MachineModule();
 
+  // module->buildCFG();
+
   select_instruction(mmodule, module);
   std::ofstream out_file0;
   out_file0.open("tests/test.phi.s");
   out_file0 << mmodule->to_string() << std::endl;
-//   std::cout <<" mmodule->to_string() "<< std::endl;
-
-  // module->buildCFG();
 
   allocate_register(mmodule);
   std::ofstream out_file1;
-// //   std::cout << " NEXTNEXTNEXT1" << std::endl;
-  out_file1.open("tests/test.s");
+  out_file1.open("tests/test.h.s");
   out_file1 << mmodule->to_string() << std::endl;
-//   std::cout << " NEXTNEXTNEXT2" << std::endl;
 
-  //   prelude_conclusion(mmodule);
-  //   mmodule->printASM(std::cout);
+  prelude_conclusion(mmodule);
+  std::ofstream out_file3;
+  out_file3.open("tests/test.s");
+  out_file3 << mmodule->to_string() << std::endl;
 
   std::ofstream out_file;
   out_file.open("tests/test.ll");

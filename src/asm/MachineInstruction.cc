@@ -109,11 +109,11 @@ bool MachineInstruction::is_float() const {
   case FSW:
   case FCVTS_W:
   // case FCVTS_WU:
-  case FCVTW_S:
+  // case FCVTW_S:
   // case FCVTWU_S:
-  case FEQ_S:
-  case FLT_S:
-  case FLE_S:
+  // case FEQ_S:
+  // case FLT_S:
+  // case FLE_S:
     return true;
   default:
     return false;
@@ -236,7 +236,7 @@ MachineBasicBlock *MIphi::getIncomingBlock(int idx) const {
   std::string MI##NAME::to_string() const {                                    \
     std::string target = this->getTargetName();                                \
     auto reg = this->getReg(0)->getName();                                     \
-    return #ASM_NAME " " + target + " " + reg;                                 \
+    return #ASM_NAME " " + target + ", " + reg;                                 \
   }
 
 DEFINE_MI_IMM_CLASS_IMPL(addiw, ADDIW, addiw)
@@ -314,6 +314,32 @@ std::string MIsw::to_string() const {
            std::to_string(getImm() + offset) + "(" +
            this->getReg(0)->getName() + ")";
   }
+}
+
+// MIsd
+MIsd::MIsd(Register *addr, uint32_t offset, Register *val)
+    : MachineInstruction(MachineInstruction::SD) {
+  this->pushReg(addr);
+  this->pushReg(val);
+  this->setImm(offset);
+}
+
+std::string MIsd::to_string() const {
+  return "sd " + this->getReg(1)->getName() + ", " + std::to_string(getImm()) +
+         "(" + this->getReg(0)->getName() + ")";
+}
+
+// MIld
+MIld::MIld(Register *addr, uint32_t offset, Register *target)
+    : MachineInstruction(MachineInstruction::LD) {
+  this->pushReg(addr);
+  this->pushReg(target);
+  this->setImm(offset);
+}
+
+std::string MIld::to_string() const {
+  return "ld " + this->getReg(1)->getName() + ", " + std::to_string(getImm()) +
+         "(" + this->getReg(0)->getName() + ")";
 }
 
 // MIbeq
@@ -401,8 +427,8 @@ std::string MIfsw::to_string() const {
   }
 }
 
-DEFINE_MI_UNA_CLASS_IMPL(fcvts_w, FCVTS_W, fcvts.w)
-DEFINE_MI_UNA_CLASS_IMPL(fcvtw_s, FCVTW_S, fcvtw.s)
+DEFINE_MI_UNA_CLASS_IMPL(fcvts_w, FCVTS_W, fcvt.s.w)
+DEFINE_MI_UNA_CLASS_IMPL(fcvtw_s, FCVTW_S, fcvt.w.s)
 
 DEFINE_MI_BIN_CLASS_IMPL(feq_s, FEQ_S, feq.s)
 DEFINE_MI_BIN_CLASS_IMPL(flt_s, FLT_S, flt.s)
