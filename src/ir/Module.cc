@@ -8,7 +8,7 @@ Module::~Module() {
   for (const auto& gv : globalVariables) {
     delete gv;
   }
-  for (const auto& func: functions) {
+  for (const auto& func : functions) {
     delete func;
   }
 }
@@ -45,7 +45,7 @@ void Module::printIR(ostream& stream) const {
 
 AllocaInst* Module::addAllocaInst(Type* type, string name) {
   AllocaInst* instr = new AllocaInst(type, name);
-  currBasicBlock->pushInstr(instr);
+  functions.back()->getEntry()->pushInstrAtHead(instr);
   return instr;
 }
 
@@ -174,5 +174,16 @@ GlobalVariable* Module::addGlobalVariable(Type* type, Constant* init,
 void Module::buildCFG() {
   for (const auto& func : functions) {
     func->buildCFG();
+  }
+}
+
+void Module::irOptimize() {
+
+  // Mem2reg Pass
+  for (Function* func : functions) {
+    func->buildCFG();
+    func->buildDT();
+    func->getDT()->calculateDF();
+    MemToReg MemToReg(func);
   }
 }

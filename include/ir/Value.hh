@@ -55,7 +55,7 @@ class Value {
   Type* vType{nullptr};
   // Record subclass types
   ValueTag vTag{VT_VALUE};
-  Use* useHead;
+  Use* useHead = 0;
 
  public:
   Value(){};
@@ -69,6 +69,9 @@ class Value {
   void setType(Type* type) { vType = type; }
   Type* getType() const { return vType; }
   virtual string toString() const { return "%" + vName; }
+  void addUser(Use* use) { use->next = useHead; useHead = use; }
+  Use* getUseHead() const { return useHead; }
+  bool isa(ValueTag vt_) { return vt_ == vTag; }
 };
 
 class GlobalValue : public Value {

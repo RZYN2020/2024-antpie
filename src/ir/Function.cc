@@ -1,8 +1,12 @@
 #include "Function.hh"
+
 #include "CFG.hh"
 
 Function::Function(FuncType* fType, string name)
-    : GlobalValue(fType, name, VT_FUNC) {}
+    : GlobalValue(fType, name, VT_FUNC) {
+  entry = new BasicBlock(name + "_entry");
+  basicBlocks.pushBack(entry);
+}
 
 Function::~Function() {
   for (const auto& bb : basicBlocks) {
@@ -11,9 +15,16 @@ Function::~Function() {
   delete cfg;
 }
 
-void Function::pushBasicBlock(BasicBlock* bb) { basicBlocks.pushBack(bb); }
+void Function::pushBasicBlock(BasicBlock* bb) {
+  bb->setParent(this);
+  if (basicBlocks.getSize() == 1) {
+    entry->pushInstr(new JumpInst(bb));
+  }
+  basicBlocks.pushBack(bb);
+}
 
 void Function::pushBasicBlockAtHead(BasicBlock* bb) {
+  bb->setParent(this);
   basicBlocks.pushFront(bb);
 }
 
@@ -40,11 +51,14 @@ void Function::printIR(ostream& stream) const {
 }
 
 CFG* Function::buildCFG() {
-
-  entry = new BasicBlock(getName() + "_entry", true);
   exit = new BasicBlock(getName() + "_exit", true);
   pushBasicBlock(exit);
-  pushBasicBlockAtHead(entry);
   cfg = new CFG(this);
   return cfg;
+}
+
+DomTree* Function::buildDT() {
+  dt = new DomTree(this);
+  dt->buildDomTree();
+  dt->calculateDF();
 }

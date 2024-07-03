@@ -1,4 +1,5 @@
 add_library(
     opt
-    example.cc
+    DomTree.cc
+    MemToReg.cc
 )

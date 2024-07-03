@@ -2,35 +2,48 @@
 
 #include <cassert>
 
-#include "ir/Function.hh"
-#include "ir/Type.hh"
+#include "Function.hh"
+#include "Type.hh"
 
 Instruction::Instruction(ValueTag vTag) : Value(Type::getVoidType(), vTag) {
   useList = make_unique<vector<Use*>>();
-  valueList = make_unique<vector<Value*>>();
 }
 
 Instruction::Instruction(string name, ValueTag vTag)
     : Value(Type::getVoidType(), name, vTag) {
   useList = make_unique<vector<Use*>>();
-  valueList = make_unique<vector<Value*>>();
 }
 
 Instruction::Instruction(Type* t, string name, ValueTag vTag)
     : Value(t, name, vTag) {
   useList = make_unique<vector<Use*>>();
-  valueList = make_unique<vector<Value*>>();
 }
 
-void Instruction::pushValue(Value* v) { valueList->push_back(v); };
+void Instruction::pushValue(Value* v) {
+  Use* use = new Use(this, v);
+  useList->push_back(use);
+  v->addUser(use);
+}
 
 Value* Instruction::getRValue(int idx) const {
-  assert(idx < valueList->size());
-  return valueList->at(idx);
+  assert(idx < useList->size());
+  return useList->at(idx)->value;
 }
 
+void Instruction::replaceAllUsesWith(Value* value) {
+  for (Use* use = getUseHead(); use; use = use->next) {
+    use->value = value;
+  }
+}
+
+void Instruction::eraseFromParent() {
+  getParent()->getInstructions()->remove(this);
+}
+
+
 AllocaInst::AllocaInst(Type* type, string name)
-    : Instruction(Type::getPointerType(type), name, VT_ALLOCA), elemType(type) {}
+    : Instruction(Type::getPointerType(type), name, VT_ALLOCA),
+      elemType(type) {}
 
 BinaryOpInst::BinaryOpInst(OpTag opType, Value* op1, Value* op2, string name)
     : Instruction(op1->getType(), name, VT_BOP), bOpType(opType) {

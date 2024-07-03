@@ -21,6 +21,7 @@ bool isTail(Instruction* instr) {
 }
 
 void BasicBlock::pushInstr(Instruction* instr) {
+  instr->setParent(this);
   instructions.pushBack(instr);
   if (isTail(instr)) {
     if (tail) {
@@ -29,5 +30,7 @@ void BasicBlock::pushInstr(Instruction* instr) {
     tail = instr;
   }
 }
-
-
+void BasicBlock::pushInstrAtHead(Instruction* instr) {
+  instr->setParent(this);
+  instructions.pushFront(instr);
+}

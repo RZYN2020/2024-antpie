@@ -17,6 +17,10 @@ IRFile = tests/test.ll
 run:
 	$(BIN_DIR)/compiler
 
+debug:
+	@cmake $(CMAKE_FLAGS) -DCMAKE_CXX_FLAGS="-DDEBUG_MODE" -B build
+	@cmake --build build
+
 # Test llvm
 # Input: llvm ir
 # Output: return value

@@ -42,7 +42,7 @@ enum OpTag {
 class Instruction : public Value {
  private:
   unique_ptr<vector<Use*>> useList;
-  unique_ptr<vector<Value*>> valueList;
+  BasicBlock* block;
 
  public:
   Instruction(ValueTag vtag);
@@ -51,7 +51,11 @@ class Instruction : public Value {
   string getOpName(OpTag op) const;
   void pushValue(Value* v);
   Value* getRValue(int idx) const;
-  int getRValueSize() const { return valueList->size(); }
+  int getRValueSize() const { return useList->size(); }
+  BasicBlock* getParent() { return block; }
+  void setParent(BasicBlock* bb) { block = bb; }
+  void replaceAllUsesWith(Value* value);
+  void eraseFromParent();
 };
 
 class AllocaInst : public Instruction {
@@ -118,8 +122,7 @@ class GetElemPtrInst : public Instruction {
   Type* ptrType;
 
  public:
-  GetElemPtrInst(Value* ptr, Value* idx1, Value* idx2,
-                 string name);
+  GetElemPtrInst(Value* ptr, Value* idx1, Value* idx2, string name);
   GetElemPtrInst(Value* ptr, Value* idx1, string name);
   void printIR(ostream& stream) const override;
 };

@@ -6,6 +6,15 @@
 #ifndef _USE_H_
 #define _USE_H_
 
-class Use {};
+class Value;
+class Instruction;
+
+struct Use {
+  Value* value;
+  Instruction* instr;
+  Use* next;
+
+  Use(Instruction* instr_, Value* value_) : value(value_), instr(instr_), next(0) {}
+};
 
 #endif

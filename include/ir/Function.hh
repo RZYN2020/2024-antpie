@@ -7,7 +7,7 @@
 #define _FUNCTION_H_
 
 #include "BasicBlock.hh"
-#include "LinkedList.hh"
+#include "DomTree.hh"
 #include "Type.hh"
 #include "Value.hh"
 
@@ -16,9 +16,9 @@ class CFG;
 class Function : public GlobalValue {
  private:
   LinkedList<BasicBlock*> basicBlocks;
-  CFG* cfg;
+  CFG* cfg = 0;
+  DomTree* dt = 0;
   BasicBlock *entry, *exit;
-
 
  public:
   Function(FuncType* fType, string name);
@@ -33,6 +33,10 @@ class Function : public GlobalValue {
   BasicBlock* getExit() const { return exit; }
 
   CFG* buildCFG();
+  CFG* getCFG() { assert(cfg); return cfg; }
+
+  DomTree* buildDT();
+  DomTree* getDT() { assert(dt); return dt; }
 };
 
 #endif

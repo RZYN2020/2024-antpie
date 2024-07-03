@@ -16,9 +16,10 @@ class LinkedList {
  private:
   Node<T>* head;
   Node<T>* tail;
+  int size;
 
  public:
-  LinkedList() : head(nullptr), tail(nullptr) {}
+  LinkedList() : head(nullptr), tail(nullptr), size(0) {}
   ~LinkedList() {
     Node<T>* current = head;
     Node<T>* next;
@@ -42,6 +43,7 @@ class LinkedList {
     if (tail == nullptr) {
       tail = newNode;
     }
+    size++;
   }
   void pushBack(const T& data) {
     Node<T>* newNode = new Node<T>(data);
@@ -52,6 +54,7 @@ class LinkedList {
       tail->next = newNode;
       tail = newNode;
     }
+    size++;
   }
   void remove(const T& data) {
     Node<T>* current = head;
@@ -77,9 +80,26 @@ class LinkedList {
     }
 
     delete current;
+    size--;
   }
 
-  void isEmpty() { return head == nullptr; }
+  // it is better not use this function
+  // It's O(n), but popFront() is O(1)
+  T popBack() {
+    T old = tail->data;
+    remove(old);
+    return old;
+  }
+
+  T popFront() {
+    T old = head->data;
+    remove(old);
+    return old;
+  } 
+
+  bool isEmpty() const { return head == nullptr; }
+
+  int getSize() const { return size; }
 
   // 定义迭代器类
   class Iterator : public std::iterator<std::forward_iterator_tag, T> {

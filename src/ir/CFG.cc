@@ -1,5 +1,11 @@
 #include "CFG.hh"
+#include "Function.hh"
 
+void CFG::addNode(BasicBlock* bb) {
+  blocks.pushBack(bb);
+  blkPredMap[bb] = new LinkedList<BasicBlock*>();
+  blkSuccMap[bb] = new LinkedList<BasicBlock*>();
+}
 void CFG::addEdge(BasicBlock* src, BasicBlock* dest) {
   blkPredMap[dest]->pushBack(src);
   blkSuccMap[src]->pushBack(dest);
@@ -13,7 +19,7 @@ CFG::CFG(Function* func) {
   for (const auto& bb : *func->getBasicBlocks()) {
     blkPredMap[bb] = new LinkedList<BasicBlock*>();
     blkSuccMap[bb] = new LinkedList<BasicBlock*>();
-    blocks.pushBack(bb);
+    addNode(bb);
   }
 
   auto bbList = func->getBasicBlocks();
@@ -60,4 +66,15 @@ void CFG::debug() {
     }
     std::cout << std::endl;
   }
+}
+
+void CFG::draw() {
+  vector<std::pair<string, string>> edges;
+  for (auto& item : blkSuccMap) {
+    string src = item.first->getName();
+    for (auto& dItem : *item.second) {
+      edges.push_back({src, dItem->getName()});
+    }
+  }
+  visualizeGraph(edges);
 }
