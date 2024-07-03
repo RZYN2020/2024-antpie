@@ -9,7 +9,12 @@
 using std::ostream;
 using std::string;
 
+class MachineInstruction;
+
 class Register {
+
+private:
+  std::vector<MachineInstruction *> uses;
 
 public:
   enum RegTag {
@@ -28,6 +33,21 @@ public:
   virtual string getName() const = 0;
   virtual bool is_float() const = 0;
   RegTag getTag() { return tag; }
+
+  void addUse(MachineInstruction *use) { uses.push_back(use); }
+  virtual void replaceRegisterUsers(Register *newReg) = 0;
+
+  void removeUse(MachineInstruction *use) {
+    for (auto it = uses.begin(); it != uses.end(); ++it) {
+      if (*it == use) {
+        uses.erase(it);
+        break;
+      }
+    }
+  }
+
+  std::vector<MachineInstruction *> getUses() { return uses; }
+  void clearUses() {uses.clear();}
 };
 
 class IRRegister : public Register {
@@ -41,6 +61,7 @@ public:
   bool is_float() const override {
     return ir_reg->getType() == FloatType::getFloatType();
   }
+  void replaceRegisterUsers(Register *newReg) override {}
 };
 
 static int get_id() {
@@ -48,12 +69,7 @@ static int get_id() {
   return cnt++;
 }
 
-class MachineInstruction;
-
 class VRegister : public Register {
-private:
-  std::vector<VRegister *> uses;
-
 public:
   VRegister() {
     tag = V_REGISTER;
@@ -70,21 +86,6 @@ public:
   void setName(string name_) { name = name_; }
 
   string getName() const override { return name; }
-
-  void addUse(VRegister *use) { uses.push_back(use); }
-
-  void removeUse(VRegister *use) {
-    for (auto it = uses.begin(); it != uses.end(); ++it) {
-      if (*it == use) {
-        uses.erase(it);
-        break;
-      }
-    }
-  }
-
-  std::vector<VRegister *> getUses() { return uses; }
-
-  void replaceVRegisterUsers(VRegister *newVReg);
 };
 
 class IRegister : public Register {
@@ -96,6 +97,7 @@ public:
   }
   string getName() const override { return name; }
   bool is_float() const override { return false; }
+  void replaceRegisterUsers(Register *newReg) override {}
 };
 
 class FRegister : public Register {
@@ -107,6 +109,7 @@ public:
   }
   string getName() const override { return name; }
   bool is_float() const override { return true; }
+  void replaceRegisterUsers(Register *newReg) override {}
 };
 
 #define CONCAT(x, y) x##y

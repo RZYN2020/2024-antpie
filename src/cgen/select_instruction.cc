@@ -77,19 +77,20 @@ select_instruction(MachineModule *m, Instruction &ins,
   auto o1c = is_constant(OPD1);                                                \
   auto o2c = is_constant(OPD2);                                                \
   if (o1c && o2c) {                                                            \
-    ADD_INSTR(bin, OP_CLASS, GET_VREG(OPD1), GET_VREG(OPD2));                  \
-    BIN_INS = bin;                                                             \
+    auto imm = static_cast<CONST_TP *>(OPD2)->getValue();                      \
+    ADD_INSTR(_bin, OPI_CLASS, GET_VREG(OPD1), imm);                 \
+    BIN_INS = _bin;                                                            \
   } else if (o1c) {                                                            \
     auto imm = static_cast<CONST_TP *>(OPD1)->getValue();                      \
-    ADD_INSTR(bin, OPI_CLASS, GET_VREG(OPD2), imm);                            \
-    BIN_INS = bin;                                                             \
+    ADD_INSTR(_bin, OPI_CLASS, GET_VREG(OPD2), imm);                           \
+    BIN_INS = _bin;                                                            \
   } else if (o2c) {                                                            \
     auto imm = static_cast<CONST_TP *>(OPD2)->getValue();                      \
-    ADD_INSTR(bin, OPI_CLASS, GET_VREG(OPD1), imm);                            \
-    BIN_INS = bin;                                                             \
+    ADD_INSTR(_bin, OPI_CLASS, GET_VREG(OPD1), imm);                           \
+    BIN_INS = _bin;                                                            \
   } else {                                                                     \
-    ADD_INSTR(bin, OP_CLASS, GET_VREG(OPD1), GET_VREG(OPD2));                  \
-    BIN_INS = bin;                                                             \
+    ADD_INSTR(_bin, OP_CLASS, GET_VREG(OPD1), GET_VREG(OPD2));                 \
+    BIN_INS = _bin;                                                            \
   }
 
 #define BINARY_INSTR_WITH_IMM_CASE(op_tag, op_class, opi_class, CONST_TP)      \
@@ -190,8 +191,8 @@ select_instruction(MachineModule *m, Instruction &ins,
     AllocaInst &alloca = static_cast<AllocaInst &>(ins);
     auto tp = alloca.getType();
     auto size = cal_size(tp);
-    current_mfunction->addSpilledSize(size);
-    ADD_INSTR(malloca, MIalloca, current_mfunction->getSpilledSize(), size,
+    current_mfunction->incSpilledSize(size);
+    ADD_INSTR(malloca, MIaddiw, &reg_s0, current_mfunction->getSpilledSize(),
               ins.getName());
     instr_map.insert({&ins, malloca});
     break;
@@ -238,9 +239,9 @@ select_instruction(MachineModule *m, Instruction &ins,
     if (addr->getValueTag() == VT_GLOBALVAR) {
       auto g = global_map.at(static_cast<GlobalVariable *>(addr));
       if (value->getType() == Type::getFloatType()) {
-        ADD_INSTR(_, MIfsw, g, v);
+        ADD_INSTR(fsw, MIfsw, g, v);
       } else {
-        ADD_INSTR(_, MIsw, g, v);
+        ADD_INSTR(sw, MIsw, g, v);
       }
     } else {
       auto a = GET_VREG(addr);
@@ -316,8 +317,12 @@ select_instruction(MachineModule *m, Instruction &ins,
       break;
     }
     case SLE: {
+      // ins.printIR(std::cout);
+      // std::cout << std::endl << std::endl << ins.getName() << std::endl;
       ADD_INSTR(slt_ins, MIslt, GET_VREG(opd2), GET_VREG(opd1));
       ADD_INSTR(snot_ins, MInot, slt_ins, ins.getName());
+      // std::cout << std::endl << std::endl << snot_ins->to_string() <<
+      // std::endl;
       instr_map.insert({&ins, snot_ins});
       break;
     }
@@ -431,13 +436,26 @@ void select_instruction(MachineModule *res, ANTPIE::Module *ir) {
     for (const auto &bb : func->getBasicBlocks()) {
       MachineBasicBlock *mbb = bb_map->at(&*bb);
       for (const auto &i : bb->getInstructions()) {
+        // std::cout << "select for ";
+        // i->printIR(std::cout);
+        // std::cout << std::endl;
         auto minstrs =
             select_instruction(res, *i, *instr_map, *bb_map, *func_map,
                                *global_map, &*func, mfunc);
+        // for (auto instr : minstrs) {
+        //   std::cout << "  " + instr->to_string() << std::endl;
+        // }
         mbb->pushInstrs(minstrs);
       }
+      // std::cout << "\n\nselect for BasicBlock" + mbb->getName() << std::endl;
+      // for (auto &instr : mbb->getInstructions()) {
+      //   std::cout << "  " + instr->to_string() << std::endl;
+      // }
+      // std::cout << std::endl << std::endl;
     }
   }
+
+  // std::cout << res->to_string() << std::endl;
 
   // reslove IRRegisters to VRegisters
   for (auto &func : res->getFunctions()) {

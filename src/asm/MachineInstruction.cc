@@ -23,20 +23,38 @@ void MachineInstruction::replaceIRRegister(
   }
 }
 
-void MachineInstruction::replaceVRegister(VRegister *oldVReg,
-                                          VRegister *newVReg) {
-  if (target == oldVReg) {
-    target = newVReg;
+void MachineInstruction::replaceRegister(Register *oldReg, Register *newReg) {
+  if (target == oldReg) {
+    target = newReg;
   }
 
   for (auto it = oprands->begin(); it != oprands->end(); ++it) {
-    if (*it == oldVReg) {
-      *it = newVReg;
+    if (*it == oldReg) {
+      *it = newReg;
     }
   }
+  oldReg->removeUse(this);
+  newReg->addUse(this);
 }
 
-void MachineInstruction::pushReg(Register *r) { oprands->push_back(r); }
+void MachineInstruction::replaceWith(vector<MachineInstruction *> instrs) {
+  bb->replaceInstructionWith(this, instrs);
+}
+
+void MachineInstruction::insertBefore(vector<MachineInstruction *> instrs) {
+  bb->insertBeforeInstructionWith(this, instrs);
+}
+
+void MachineInstruction::insertAfter(vector<MachineInstruction *> instrs) {
+  bb->insertAfterInstructionWith(this, instrs);
+}
+
+void MachineInstruction::setBasicBlock(MachineBasicBlock *bb) { this->bb = bb; }
+
+void MachineInstruction::pushReg(Register *r) {
+  oprands->push_back(r);
+  r->addUse(this);
+}
 
 int MachineInstruction::getRegNum() const {
   if (oprands == nullptr) {
@@ -62,31 +80,18 @@ void MachineInstruction::setImm(Immediate i) {
 
 Immediate *MachineInstruction::getImm() const { return imm.get(); }
 
-void MachineInstruction::setTarget(Register *reg) { target = reg; }
-
-Register *MachineInstruction::getTarget() {
+void MachineInstruction::setTarget(Register *reg) {
   if (target != nullptr) {
-    return target;
+    target->removeUse(this);
+    target = nullptr;
   }
-  switch (tag) {
-  case SW:
-  case LW:
-  case BEQ:
-  case FSW:
-  case RET:
-    return nullptr; // These instructions don't have a target register
-  default:
-    return this; // Return the instruction itself as the target
-  }
+  target = reg;
+  reg->addUse(this);
 }
 
-string MachineInstruction::getTargetName() const {
-  if (target == nullptr) {
-    return getName();
-  } else {
-    return target->getName();
-  }
-}
+Register *MachineInstruction::getTarget() { return target; }
+
+string MachineInstruction::getTargetName() const { return target->getName(); }
 
 // string MachineInstruction::getName() const { return to_string(); }
 
@@ -138,9 +143,7 @@ string MIalloca::to_string() const {
   return name + " = alloca " + std::to_string(size);
 }
 
-uint32_t MIalloca::getOffset() const {
-  return offset;
-}
+uint32_t MIalloca::getOffset() const { return offset; }
 
 ////////////////////////////////////////////
 MIphi::MIphi(string name)
@@ -289,8 +292,8 @@ std::string MIlw::to_string() const {
   if (this->global) {
     return "lw " + this->getTargetName() + ", " + this->global->getName();
   } else {
-    return "lw " + this->getTargetName() + ", 0(" + this->getReg(0)->getName() +
-           ")";
+    return "lw " + this->getTargetName() + ", " + getImm()->to_string() + "(" +
+           this->getReg(0)->getName() + ")";
   }
 }
 
@@ -310,8 +313,8 @@ std::string MIsw::to_string() const {
   if (this->global) {
     return "sw " + this->getReg(0)->getName() + ", " + this->global->getName();
   } else {
-    return "sw " + this->getReg(1)->getName() + ", 0(" +
-           this->getReg(0)->getName() + ")";
+    return "sw " + this->getReg(1)->getName() + ", " + getImm()->to_string() +
+           "(" + this->getReg(0)->getName() + ")";
   }
 }
 
@@ -370,7 +373,7 @@ std::string MIflw::to_string() const {
   if (this->global) {
     return "flw " + this->getTargetName() + ", " + this->global->getName();
   } else {
-    return "flw " + this->getTargetName() + ", 0(" +
+    return "flw " + this->getTargetName() + ", " + getImm()->to_string() + "(" +
            this->getReg(0)->getName() + ")";
   }
 }
@@ -391,8 +394,8 @@ std::string MIfsw::to_string() const {
   if (this->global) {
     return "fsw " + this->getReg(0)->getName() + ", " + this->global->getName();
   } else {
-    return "fsw " + this->getReg(1)->getName() + ", 0(" +
-           this->getReg(0)->getName() + ")";
+    return "fsw " + this->getReg(1)->getName() + ", " + this->getImm()->to_string() +
+           "(" + this->getReg(0)->getName() + ")";
   }
 }
 

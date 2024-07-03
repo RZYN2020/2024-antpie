@@ -9,6 +9,7 @@
 string MachineBasicBlock::to_string() const {
   string res = getName() + ":\n";
   for (auto &ins : *instructions) {
+    // std::cout << "      " + ins->to_string() << std::endl;
     res += "\t" + ins->to_string() + "\n";
   }
   res += "\n";
@@ -118,6 +119,7 @@ MachineFunction::MachineFunction(FuncType *fType, string name_) {
   type = fType;
   name = name_;
   basicBlocks = make_unique<vector<unique_ptr<MachineBasicBlock>>>();
+  reg_pool = make_unique<vector<unique_ptr<MachineInstruction>>>();
 }
 
 void MachineFunction::pushBasicBlock(MachineBasicBlock *bb) {
@@ -126,7 +128,10 @@ void MachineFunction::pushBasicBlock(MachineBasicBlock *bb) {
 
 string MachineFunction::to_string() const {
   string res = getName() + ":\n";
+  // std::cout << res << std::endl;
   for (const auto &bb : *basicBlocks) {
+    // std::cout << "  bb:" << std::endl;
+    // std::cout << "  :" + bb->getName() << std::endl;
     res += bb->to_string();
   }
   return res;
@@ -141,7 +146,6 @@ string MachineFunction::to_string() const {
 MachineModule::MachineModule() {
   globalVariables = make_unique<vector<unique_ptr<MachineGlobal>>>();
   functions = make_unique<vector<unique_ptr<MachineFunction>>>();
-  reg_pool = make_unique<vector<unique_ptr<VRegister>>>();
 }
 
 MachineFunction *MachineModule::addFunction(FuncType *funcType, string name) {

@@ -114,20 +114,61 @@ private:
   Register *target; // target in non-SSA version
   unique_ptr<vector<Register *>> oprands;
   unique_ptr<Immediate> imm;
+  MachineBasicBlock *bb;
 
 public:
   MachineInstruction(MachineInstructionTag tag, string name)
       : VRegister(name), tag(tag) {
     oprands = unique_ptr<vector<Register *>>(new vector<Register *>());
+    imm = make_unique<Immediate>(0);
+    switch (tag) {
+    case SW:
+    case BEQ:
+    case FSW:
+    case RET:
+      break;
+    default: {
+      target = this;
+      addUse(this);
+    }
+    }
   }
   MachineInstruction(MachineInstructionTag tag) : VRegister(), tag(tag) {
     oprands = unique_ptr<vector<Register *>>(new vector<Register *>());
+    imm = make_unique<Immediate>(0);
+    switch (tag) {
+    case SW:
+    case BEQ:
+    case FSW:
+    case RET:
+      break;
+    default: {
+      target = this;
+      addUse(this);
+    }
+    }
   }
 
   virtual string to_string() const = 0;
 
+  void replaceRegisterUsers(Register *newReg) override {
+    auto uses = getUses();
+    for (Register *use : uses) {
+      if (!dynamic_cast<MachineInstruction *>(use))
+        continue;
+      auto use_instr = static_cast<MachineInstruction *>(use);
+      use_instr->replaceRegister(this, newReg);
+    }
+    clearUses();
+  }
+
   void replaceIRRegister(map<Instruction *, Register *> instr_map);
-  void replaceVRegister(VRegister *oldVReg, VRegister *newVReg);
+  void replaceRegister(Register *oldReg, Register *newReg);
+  void replaceWith(vector<MachineInstruction *> instrs);
+  void insertBefore(vector<MachineInstruction *> instrs);
+  void insertAfter(vector<MachineInstruction *> instrs);
+
+  void setBasicBlock(MachineBasicBlock *bb);
 
   void pushReg(Register *r);
   int getRegNum() const;
@@ -158,11 +199,11 @@ public:
   MachineBasicBlock *getIncomingBlock(int idx) const;
 };
 
-
 class MIalloca : public MachineInstruction {
 private:
   uint32_t offset; // from stack allocation place
   uint32_t size;
+
 public:
   MIalloca(uint32_t offset_, uint32_t size_, string name);
   string to_string() const override;
@@ -212,7 +253,7 @@ DEFINE_MI_IMM_CLASS(sltiu)
 
 class MIlw : public MachineInstruction {
 private:
-  MachineGlobal *global;
+  MachineGlobal *global = nullptr;
 
 public:
   MIlw(MachineGlobal *global);
@@ -227,7 +268,7 @@ public:
 
 class MIsw : public MachineInstruction {
 private:
-  MachineGlobal *global;
+  MachineGlobal *global = nullptr;
 
 public:
   MIsw(MachineGlobal *global, Register *val);
@@ -256,7 +297,7 @@ DEFINE_MI_BIN_CLASS(fdiv_s);
 
 class MIflw : public MachineInstruction {
 private:
-  MachineGlobal *global;
+  MachineGlobal *global = nullptr;
 
 public:
   MIflw(MachineGlobal *global);
@@ -271,7 +312,7 @@ public:
 
 class MIfsw : public MachineInstruction {
 private:
-  MachineGlobal *global;
+  MachineGlobal *global = nullptr;
 
 public:
   MIfsw(MachineGlobal *global, Register *val);
@@ -279,10 +320,8 @@ public:
   string to_string() const override;
 };
 
-
 DEFINE_MIN_UNA_CLASS(fcvts_w)
 DEFINE_MIN_UNA_CLASS(fcvtw_s)
-
 
 DEFINE_MI_BIN_CLASS(feq_s);
 DEFINE_MI_BIN_CLASS(flt_s);
@@ -321,10 +360,8 @@ public:
   string to_string() const override;
 };
 
-
 DEFINE_MIN_UNA_CLASS(mv)
-DEFINE_MIN_UNA_CLASS(not)
+DEFINE_MIN_UNA_CLASS(not )
 DEFINE_MIN_UNA_CLASS(fmv_s)
-
 
 #endif

@@ -92,7 +92,7 @@ int main() {
   // In if.end block, let ret = phi [arrLoad entry], [ret1 if.then]
   module->setCurrBasicBlock(ifEndBB);
   // %ret = phi i32[ %arr1.val, %foo.entry ], [ %ret1, %if.then ]
-  PhiInst *phi = module->addPhiInst("ret");
+  PhiInst *phi = module->addPhiInst("ret_phi");
   phi->pushIncoming(arrLoad, bb1);
   phi->pushIncoming(ret1, ifThenBB);
   // %gv.val = load i32, i32* @gx
@@ -154,11 +154,18 @@ int main() {
   MachineModule *mmodule = new MachineModule();
 
   select_instruction(mmodule, module);
-  std::cout << mmodule->to_string() << std::endl;
+  std::ofstream out_file0;
+  out_file0.open("tests/test.phi.s");
+  out_file0 << mmodule->to_string() << std::endl;
+//   std::cout <<" mmodule->to_string() "<< std::endl;
+
 
   allocate_register(mmodule);
-  std::cout << mmodule->to_string() << std::endl;
-
+  std::ofstream out_file1;
+// //   std::cout << " NEXTNEXTNEXT1" << std::endl;
+  out_file1.open("tests/test.s");
+  out_file1 << mmodule->to_string() << std::endl;
+//   std::cout << " NEXTNEXTNEXT2" << std::endl;
 
   //   prelude_conclusion(mmodule);
   //   mmodule->printASM(std::cout);
