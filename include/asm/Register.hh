@@ -27,7 +27,7 @@ protected:
 public:
   virtual string getName() const = 0;
   virtual bool is_float() const = 0;
-  RegTag getTag() {return tag;}
+  RegTag getTag() { return tag; }
 };
 
 class IRRegister : public Register {
@@ -37,9 +37,7 @@ public:
     tag = IR_REGISTER;
     ir_reg = ins;
   };
-  string getName() const override { 
-    return ir_reg->getName();
-  }
+  string getName() const override { return ir_reg->getName(); }
   bool is_float() const override {
     return ir_reg->getType() == FloatType::getFloatType();
   }
@@ -50,7 +48,12 @@ static int get_id() {
   return cnt++;
 }
 
+class MachineInstruction;
+
 class VRegister : public Register {
+private:
+  std::vector<VRegister *> uses;
+
 public:
   VRegister() {
     tag = V_REGISTER;
@@ -64,13 +67,24 @@ public:
     name = n;
   }
 
-  void setName(string name_) {
-    name = name_;
+  void setName(string name_) { name = name_; }
+
+  string getName() const override { return name; }
+
+  void addUse(VRegister *use) { uses.push_back(use); }
+
+  void removeUse(VRegister *use) {
+    for (auto it = uses.begin(); it != uses.end(); ++it) {
+      if (*it == use) {
+        uses.erase(it);
+        break;
+      }
+    }
   }
 
-  string getName() const override { 
-      return name;
-  }
+  std::vector<VRegister *> getUses() { return uses; }
+
+  void replaceVRegisterUsers(VRegister *newVReg);
 };
 
 class IRegister : public Register {
@@ -80,9 +94,7 @@ public:
     id = id_;
     name = n;
   }
-  string getName() const override { 
-    return name;
-  }
+  string getName() const override { return name; }
   bool is_float() const override { return false; }
 };
 
@@ -93,9 +105,7 @@ public:
     id = id_;
     name = n;
   }
-  string getName() const override { 
-    return name;
-  }
+  string getName() const override { return name; }
   bool is_float() const override { return true; }
 };
 
@@ -219,9 +229,7 @@ private:
 
 public:
   Immediate(int32_t val) : val(val) {}
-  string to_string() const {
-    return std::to_string(val);
-  }
+  string to_string() const { return std::to_string(val); }
 };
 
 #endif

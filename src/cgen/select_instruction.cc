@@ -66,7 +66,8 @@ select_instruction(MachineModule *m, Instruction &ins,
                    map<BasicBlock *, MachineBasicBlock *> &bb_map,
                    map<Function *, MachineFunction *> &func_map,
                    map<GlobalVariable *, MachineGlobal *> &global_map,
-                   Function *current_function) {
+                   Function *current_function,
+                   MachineFunction *current_mfunction) {
   auto res = vector<MachineInstruction *>();
   switch (ins.getValueTag()) {
 
@@ -189,9 +190,10 @@ select_instruction(MachineModule *m, Instruction &ins,
     AllocaInst &alloca = static_cast<AllocaInst &>(ins);
     auto tp = alloca.getType();
     auto size = cal_size(tp);
-    ADD_INSTR(_, MIaddiw, &reg_sp, size, &reg_sp);
-    ADD_INSTR(move, MImv, &reg_sp, ins.getName());
-    instr_map.insert({&ins, move});
+    current_mfunction->addSpilledSize(size);
+    ADD_INSTR(malloca, MIalloca, current_mfunction->getSpilledSize(), size,
+              ins.getName());
+    instr_map.insert({&ins, malloca});
     break;
   }
   case VT_LOAD: {
@@ -414,7 +416,7 @@ void select_instruction(MachineModule *res, ANTPIE::Module *ir) {
   for (const auto &func : ir->getFunctions()) {
     MachineFunction *mfunc = res->addFunction(
         static_cast<FuncType *>(func->getType()), func->getName());
-        
+
     func_map->insert({&*func, mfunc});
   }
 
@@ -429,8 +431,9 @@ void select_instruction(MachineModule *res, ANTPIE::Module *ir) {
     for (const auto &bb : func->getBasicBlocks()) {
       MachineBasicBlock *mbb = bb_map->at(&*bb);
       for (const auto &i : bb->getInstructions()) {
-        auto minstrs = select_instruction(res, *i, *instr_map, *bb_map,
-                                          *func_map, *global_map, &*func);
+        auto minstrs =
+            select_instruction(res, *i, *instr_map, *bb_map, *func_map,
+                               *global_map, &*func, mfunc);
         mbb->pushInstrs(minstrs);
       }
     }

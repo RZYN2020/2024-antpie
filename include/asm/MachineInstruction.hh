@@ -26,6 +26,7 @@ public:
     // 64-bits-wise instruction provided by RV64GC
 
     PHI,
+    ALLOCA,
 
     // RV64I
     //// Integer Computation
@@ -126,6 +127,7 @@ public:
   virtual string to_string() const = 0;
 
   void replaceIRRegister(map<Instruction *, Register *> instr_map);
+  void replaceVRegister(VRegister *oldVReg, VRegister *newVReg);
 
   void pushReg(Register *r);
   int getRegNum() const;
@@ -135,7 +137,7 @@ public:
   Immediate *getImm() const;
 
   void setTarget(Register *reg);
-  Register *getTarget() const;
+  Register *getTarget();
   string getTargetName() const;
 
   // string getName() const;
@@ -154,6 +156,17 @@ public:
   string to_string() const override;
   void pushIncoming(Register *reg, MachineBasicBlock *bb);
   MachineBasicBlock *getIncomingBlock(int idx) const;
+};
+
+
+class MIalloca : public MachineInstruction {
+private:
+  uint32_t offset; // from stack allocation place
+  uint32_t size;
+public:
+  MIalloca(uint32_t offset_, uint32_t size_, string name);
+  string to_string() const override;
+  uint32_t getOffset() const;
 };
 
 #define DEFINE_MI_BIN_CLASS(NAME)                                              \
@@ -312,5 +325,6 @@ public:
 DEFINE_MIN_UNA_CLASS(mv)
 DEFINE_MIN_UNA_CLASS(not)
 DEFINE_MIN_UNA_CLASS(fmv_s)
+
 
 #endif

@@ -23,6 +23,19 @@ void MachineInstruction::replaceIRRegister(
   }
 }
 
+void MachineInstruction::replaceVRegister(VRegister *oldVReg,
+                                          VRegister *newVReg) {
+  if (target == oldVReg) {
+    target = newVReg;
+  }
+
+  for (auto it = oprands->begin(); it != oprands->end(); ++it) {
+    if (*it == oldVReg) {
+      *it = newVReg;
+    }
+  }
+}
+
 void MachineInstruction::pushReg(Register *r) { oprands->push_back(r); }
 
 int MachineInstruction::getRegNum() const {
@@ -51,7 +64,21 @@ Immediate *MachineInstruction::getImm() const { return imm.get(); }
 
 void MachineInstruction::setTarget(Register *reg) { target = reg; }
 
-Register *MachineInstruction::getTarget() const { return target; }
+Register *MachineInstruction::getTarget() {
+  if (target != nullptr) {
+    return target;
+  }
+  switch (tag) {
+  case SW:
+  case LW:
+  case BEQ:
+  case FSW:
+  case RET:
+    return nullptr; // These instructions don't have a target register
+  default:
+    return this; // Return the instruction itself as the target
+  }
+}
 
 string MachineInstruction::getTargetName() const {
   if (target == nullptr) {
@@ -99,6 +126,21 @@ bool MachineInstruction::is_float() const {
 ///  Concrete MachineInstructions  ///
 //////////////////////////////////////
 //////////////////////////////////////
+
+MIalloca::MIalloca(uint32_t offset_, uint32_t size_, string name)
+    : MachineInstruction(MachineInstruction::MachineInstructionTag::ALLOCA,
+                         name) {
+  offset = offset_;
+  size = size_;
+}
+
+string MIalloca::to_string() const {
+  return name + " = alloca " + std::to_string(size);
+}
+
+uint32_t MIalloca::getOffset() const {
+  return offset;
+}
 
 ////////////////////////////////////////////
 MIphi::MIphi(string name)
@@ -151,9 +193,9 @@ MachineBasicBlock *MIphi::getIncomingBlock(int idx) const {
   }                                                                            \
   std::string MI##NAME::to_string() const {                                    \
     std::string target = this->getTargetName();                                \
-    auto reg = this->getReg(0)->getName();                                   \
+    auto reg = this->getReg(0)->getName();                                     \
     auto imm = this->getImm()->to_string();                                    \
-    return #ASM_NAME " " + target + ", " + reg + ", " + imm;                     \
+    return #ASM_NAME " " + target + ", " + reg + ", " + imm;                   \
   }
 
 #define DEFINE_MI_BIN_CLASS_IMPL(NAME, TAG, ASM_NAME)                          \
@@ -175,9 +217,9 @@ MachineBasicBlock *MIphi::getIncomingBlock(int idx) const {
   }                                                                            \
   std::string MI##NAME::to_string() const {                                    \
     std::string target = this->getTargetName();                                \
-    auto reg1 = this->getReg(0)->getName();                                  \
-    auto reg2 = this->getReg(1)->getName();                                  \
-    return #ASM_NAME " " + target + ", " + reg1 + ", " + reg2;                   \
+    auto reg1 = this->getReg(0)->getName();                                    \
+    auto reg2 = this->getReg(1)->getName();                                    \
+    return #ASM_NAME " " + target + ", " + reg1 + ", " + reg2;                 \
   }
 
 #define DEFINE_MI_UNA_CLASS_IMPL(NAME, TAG, ASM_NAME)                          \
@@ -196,7 +238,7 @@ MachineBasicBlock *MIphi::getIncomingBlock(int idx) const {
   }                                                                            \
   std::string MI##NAME::to_string() const {                                    \
     std::string target = this->getTargetName();                                \
-    auto reg = this->getReg(0)->getName();                                   \
+    auto reg = this->getReg(0)->getName();                                     \
     return #ASM_NAME " " + target + " " + reg;                                 \
   }
 
@@ -247,8 +289,8 @@ std::string MIlw::to_string() const {
   if (this->global) {
     return "lw " + this->getTargetName() + ", " + this->global->getName();
   } else {
-    return "lw " + this->getTargetName() + ", 0(" +
-           this->getReg(0)->getName() + ")";
+    return "lw " + this->getTargetName() + ", 0(" + this->getReg(0)->getName() +
+           ")";
   }
 }
 
@@ -266,8 +308,7 @@ MIsw::MIsw(Register *addr, Register *val)
 
 std::string MIsw::to_string() const {
   if (this->global) {
-    return "sw " + this->getReg(0)->getName() + ", " +
-           this->global->getName();
+    return "sw " + this->getReg(0)->getName() + ", " + this->global->getName();
   } else {
     return "sw " + this->getReg(1)->getName() + ", 0(" +
            this->getReg(0)->getName() + ")";
@@ -348,8 +389,7 @@ MIfsw::MIfsw(Register *addr, Register *val)
 
 std::string MIfsw::to_string() const {
   if (this->global) {
-    return "fsw " + this->getReg(0)->getName() + ", " +
-           this->global->getName();
+    return "fsw " + this->getReg(0)->getName() + ", " + this->global->getName();
   } else {
     return "fsw " + this->getReg(1)->getName() + ", 0(" +
            this->getReg(0)->getName() + ")";
@@ -406,27 +446,6 @@ std::string MIli::to_string() const {
   return "li " + this->getTargetName() + ", " + this->getImm()->to_string();
 }
 
-// DEFINE_MI_UNA_CLASS_IMPL(mv, MV, mv)
-
-MImv::MImv(Register *reg) : MachineInstruction(MachineInstruction::MV) {
-  this->pushReg(reg);
-}
-MImv::MImv(Register *reg, Register *target)
-    : MachineInstruction(MachineInstruction::MV) {
-  this->pushReg(reg);
-  this->setTarget(target);
-}
-MImv::MImv(Register *reg, std::string name)
-    : MachineInstruction(MachineInstruction::MV, name) {
-  this->pushReg(reg);
-}
-std::string MImv::to_string() const {
-  std::string target = this->getTargetName();
-  auto reg = this->getReg(0)->getName();
-  return "mv"
-         " " +
-         target + ", " + reg;
-}
-
+DEFINE_MI_UNA_CLASS_IMPL(mv, MV, mv)
 DEFINE_MI_UNA_CLASS_IMPL(not, NOT, not )
 DEFINE_MI_UNA_CLASS_IMPL(fmv_s, FMV_S, fmv.s)

@@ -65,12 +65,18 @@ private:
   FuncType *type;
   string name;
   unique_ptr<vector<unique_ptr<MachineBasicBlock>>> basicBlocks;
+  unique_ptr<vector<Register *>> saved_registers;
+  uint32_t spilled_size =
+      0; // Without the user directly using alloca in the source code, we can
+         // statically determine the spilled size.
 
 public:
   MachineFunction(FuncType *fType, string name);
   void pushBasicBlock(MachineBasicBlock *bb);
   string to_string() const;
   string getName() const { return name; }
+  uint32_t getSpilledSize() const { return spilled_size; }
+  void addSpilledSize(uint32_t sz) { spilled_size += sz; }
 
   const vector<unique_ptr<MachineBasicBlock>> &getBasicBlocks() const {
     return *basicBlocks;
