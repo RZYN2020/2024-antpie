@@ -3,8 +3,8 @@
 
 #include "Constant.hh"
 #include "GlobalVariable.hh"
-#include "MachineInstruction.hh"
 #include "Type.hh"
+#include "MachineInstruction.hh"
 
 class MachineBasicBlock {
 private:
@@ -13,107 +13,32 @@ private:
   MachineFunction *function;
 
 public:
-  MachineBasicBlock(string name_) {
-    name = name_;
-    instructions = make_unique<vector<unique_ptr<MachineInstruction>>>();
-  }
-  void pushInstr(MachineInstruction *i) {
-    instructions->push_back(unique_ptr<MachineInstruction>(i));
-    i->setBasicBlock(this);
-  }
-
-  void pushInstrs(vector<MachineInstruction *> is) {
-    for (auto i : is) {
-      instructions->push_back(unique_ptr<MachineInstruction>(i));
-      i->setBasicBlock(this);
-    }
-  }
-
-  void pushInstrAtHead(MachineInstruction *i) {
-    instructions->insert(instructions->begin(),
-                         unique_ptr<MachineInstruction>(i));
-    i->setBasicBlock(this);
-  }
-
-  void pushInstrsAtHead(vector<MachineInstruction *> is) {
-    for (auto i : is) {
-      pushInstrAtHead(i);
-    }
-  }
-
+  MachineBasicBlock(string name_);
+  void pushInstr(MachineInstruction *i);
+  void pushInstrs(vector<MachineInstruction *> is);
+  void pushInstrBeforeJmp(MachineInstruction *i);
+  void pushInstrAtHead(MachineInstruction *i);
+  void pushInstrsAtHead(vector<MachineInstruction *> is);
   string getName() const { return "." + name; }
-
   string to_string() const;
+  void setFunction(MachineFunction *function);
+  MachineFunction *getFunction();
 
-  void setFunction(MachineFunction *function) { this->function = function; }
+  unique_ptr<MachineInstruction> removeInstruction(MachineInstruction *ins);
 
-  MachineFunction *getFunction() { return function; }
+  void replaceInstructionWith(MachineInstruction *ins,
+                              vector<MachineInstruction *> instrs);
+  void insertBeforeInstructionWith(MachineInstruction *ins,
+                                   vector<MachineInstruction *> instrs);
+
+  void insertAfterInstructionWith(MachineInstruction *ins,
+                                  vector<MachineInstruction *> instrs);
 
   const vector<unique_ptr<MachineInstruction>> &getInstructions() const {
     return *instructions;
   }
-
-  unique_ptr<MachineInstruction> removeInstruction(MachineInstruction *ins) {
-    for (auto it = instructions->begin(); it != instructions->end();) {
-      if (it->get() == ins) {
-        unique_ptr<MachineInstruction> removed = std::move(*it);
-        it = instructions->erase(it);
-        removed->setBasicBlock(nullptr);
-        return removed;
-      } else {
-        ++it;
-      }
-    }
-    return nullptr;
-  }
-
-  void replaceInstructionWith(MachineInstruction *ins,
-                              vector<MachineInstruction *> instrs) {
-    for (auto it = instructions->begin(); it != instructions->end(); ++it) {
-      if (it->get() == ins) {
-        instructions->erase(it);
-        ins->setBasicBlock(nullptr);
-
-        for (auto new_ins : instrs) {
-          instructions->insert(it, unique_ptr<MachineInstruction>(new_ins));
-          new_ins->setBasicBlock(this);
-        }
-        return;
-      }
-    }
-  }
-
-  void insertBeforeInstructionWith(MachineInstruction *ins,
-                                   vector<MachineInstruction *> instrs) {
-    for (auto it = instructions->begin(); it != instructions->end(); ++it) {
-      if (it->get() == ins) {
-        for (auto new_ins : instrs) {
-          it =
-              instructions->insert(it, unique_ptr<MachineInstruction>(new_ins));
-          new_ins->setBasicBlock(this);
-          ++it;
-        }
-        return;
-      }
-    }
-  }
-
-  void insertAfterInstructionWith(MachineInstruction *ins,
-                                  vector<MachineInstruction *> instrs) {
-    for (auto it = instructions->begin(); it != instructions->end(); ++it) {
-      if (it->get() == ins) {
-        ++it;
-        for (auto new_ins : instrs) {
-          it =
-              instructions->insert(it, unique_ptr<MachineInstruction>(new_ins));
-          new_ins->setBasicBlock(this);
-          ++it;
-        }
-        return;
-      }
-    }
-  }
 };
+
 uint32_t cal_size(const Type *tp);
 
 class MachineGlobal {

@@ -29,9 +29,11 @@ public:
 
     // RV64I
     //// Integer Computation
+    ADD,
+    ADDI, // to add ra/sp
     ADDIW,
     ADDW,
-    
+
     SUBW,
     AND,
     OR,
@@ -67,6 +69,7 @@ public:
     // JALR,
 
     // RV64M
+    MUL,
     MULW,
     // MULHU,
     // MULHSU,
@@ -140,9 +143,10 @@ public:
     imm = 0;
     switch (tag) {
     case SW:
-    case BEQ:
     case FSW:
+    case BEQ:
     case RET:
+    case J:
       break;
     default: {
       target = this;
@@ -171,7 +175,7 @@ public:
   void insertAfter(vector<MachineInstruction *> instrs);
 
   void setBasicBlock(MachineBasicBlock *bb);
-  MachineBasicBlock * getBasicBlock() const {return bb;}
+  MachineBasicBlock *getBasicBlock() const { return bb; }
 
   void pushReg(Register *r);
   int getRegNum() const;
@@ -189,6 +193,7 @@ public:
   MachineInstructionTag getTag() const;
 
   bool is_float() const override;
+  bool is_64bit() const;
 };
 
 class MIphi : public MachineInstruction {
@@ -225,9 +230,9 @@ public:
 #define DEFINE_MI_IMM_CLASS(NAME)                                              \
   class MI##NAME : public MachineInstruction {                                 \
   public:                                                                      \
-    MI##NAME(Register *reg, int32_t imm);                                     \
-    MI##NAME(Register *reg, int32_t imm, Register *target);                   \
-    MI##NAME(Register *reg, int32_t imm, std::string name);                   \
+    MI##NAME(Register *reg, int32_t imm);                                      \
+    MI##NAME(Register *reg, int32_t imm, Register *target);                    \
+    MI##NAME(Register *reg, int32_t imm, std::string name);                    \
     string to_string() const override;                                         \
   };
 
@@ -240,7 +245,8 @@ public:
     string to_string() const override;                                         \
   };
 
-
+DEFINE_MI_IMM_CLASS(addi)
+DEFINE_MI_BIN_CLASS(add)
 DEFINE_MI_IMM_CLASS(addiw)
 DEFINE_MI_BIN_CLASS(addw)
 DEFINE_MI_BIN_CLASS(subw)
@@ -255,43 +261,40 @@ DEFINE_MI_IMM_CLASS(slti)
 DEFINE_MI_BIN_CLASS(sltu)
 DEFINE_MI_IMM_CLASS(sltiu)
 
-class MIlw : public MachineInstruction {
-private:
-  MachineGlobal *global = nullptr;
+#define DEFINE_MI_LOAD_CLASS(NAME)                                             \
+  class MI##NAME : public MachineInstruction {                                 \
+  private:                                                                     \
+    MachineGlobal *global = nullptr;                                           \
+                                                                               \
+  public:                                                                      \
+    MI##NAME(MachineGlobal *global);                                           \
+    MI##NAME(MachineGlobal *global, std::string name);                         \
+    MI##NAME(MachineGlobal *global, Register *target);                         \
+    MI##NAME(Register *addr, uint32_t offset);                                 \
+    MI##NAME(Register *addr, uint32_t offset, std::string name);               \
+    MI##NAME(Register *addr, uint32_t offset, Register *target);               \
+    MachineGlobal *getGlobal();                                                \
+    std::string to_string() const override;                                    \
+  };
 
-public:
-  MIlw(MachineGlobal *global);
-  MIlw(MachineGlobal *global, string name);
-  MIlw(MachineGlobal *global, Register *target);
-  MIlw(Register *addr);
-  MIlw(Register *addr, string name);
-  MIlw(Register *addr, Register *target);
-  MachineGlobal *getGlobal();
-  string to_string() const override;
-};
+#define DEFINE_MI_STORE_CLASS(NAME)                                            \
+  class MI##NAME : public MachineInstruction {                                 \
+  private:                                                                     \
+    MachineGlobal *global = nullptr;                                           \
+                                                                               \
+  public:                                                                      \
+    MI##NAME(Register *val, MachineGlobal *global);                            \
+    MI##NAME(Register *val, uint32_t offset, Register *addr);                  \
+    MachineGlobal *getGlobal();                                                \
+    std::string to_string() const override;                                    \
+  };
 
-class MIsw : public MachineInstruction {
-private:
-  MachineGlobal *global = nullptr;
-
-public:
-  MIsw(MachineGlobal *global, Register *val);
-  MIsw(Register *addr, Register *val);
-  string to_string() const override;
-};
-
-class MIld : public MachineInstruction {
-private:
-public:
-  MIld(Register *addr, uint32_t offset, Register *target);
-  string to_string() const override;
-};
-
-class MIsd : public MachineInstruction {
-public:
-  MIsd(Register *addr,  uint32_t offset, Register *val);
-  string to_string() const override;
-};
+DEFINE_MI_LOAD_CLASS(lw)
+DEFINE_MI_STORE_CLASS(sw)
+DEFINE_MI_LOAD_CLASS(ld)
+DEFINE_MI_STORE_CLASS(sd)
+DEFINE_MI_LOAD_CLASS(flw)
+DEFINE_MI_STORE_CLASS(fsw)
 
 class MIbeq : public MachineInstruction {
 private:
@@ -303,6 +306,7 @@ public:
   string to_string() const override;
 };
 
+DEFINE_MI_BIN_CLASS(mul);
 DEFINE_MI_BIN_CLASS(mulw);
 DEFINE_MI_BIN_CLASS(divw);
 DEFINE_MI_BIN_CLASS(remw);
@@ -311,31 +315,6 @@ DEFINE_MI_BIN_CLASS(fadd_s);
 DEFINE_MI_BIN_CLASS(fsub_s);
 DEFINE_MI_BIN_CLASS(fmul_s);
 DEFINE_MI_BIN_CLASS(fdiv_s);
-
-class MIflw : public MachineInstruction {
-private:
-  MachineGlobal *global = nullptr;
-
-public:
-  MIflw(MachineGlobal *global);
-  MIflw(MachineGlobal *global, string name);
-  MIflw(MachineGlobal *global, Register *target);
-  MIflw(Register *addr);
-  MIflw(Register *addr, string name);
-  MIflw(Register *addr, Register *target);
-  MachineGlobal *getGlobal();
-  string to_string() const override;
-};
-
-class MIfsw : public MachineInstruction {
-private:
-  MachineGlobal *global = nullptr;
-
-public:
-  MIfsw(MachineGlobal *global, Register *val);
-  MIfsw(Register *addr, Register *val);
-  string to_string() const override;
-};
 
 DEFINE_MIN_UNA_CLASS(fcvts_w)
 DEFINE_MIN_UNA_CLASS(fcvtw_s)

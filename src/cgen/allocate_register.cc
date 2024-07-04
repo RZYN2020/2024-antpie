@@ -12,10 +12,10 @@ void out_of_ssa(MachineModule *mod) {
             auto bk = phi->getIncomingBlock(i);
             if (reg->is_float()) {
               auto move = new MIfmv_s(reg, phi);
-              bk->pushInstr(move);
+              bk->pushInstrBeforeJmp(move);
             } else {
               auto move = new MImv(reg, phi);
-              bk->pushInstr(move);
+              bk->pushInstrBeforeJmp(move);
             }
           }
           remove.push_back(ins.get());
@@ -52,14 +52,15 @@ static bool check_avalibale(Register *reg, MachineInstruction *ins) {
   return true;
 }
 
-static Register *find_avaliable_register(MachineInstruction *ins, Register* reg) {
+static Register *find_avaliable_register(MachineInstruction *ins,
+                                         Register *reg) {
   int reg_cnt = 0;
   vector<Register *> attempts;
   if (reg->is_float()) {
-    attempts = {&reg_ft0, &reg_ft1, &reg_ft2};
+    attempts = {Register::reg_ft0, Register::reg_ft1, Register::reg_ft2};
 
   } else {
-    attempts = {&reg_t0, &reg_t1, &reg_t2};
+    attempts = {Register::reg_t0, Register::reg_t1, Register::reg_t2};
   }
   for (auto attempt : attempts) {
     if (check_avalibale(attempt, ins)) {
@@ -70,9 +71,13 @@ static Register *find_avaliable_register(MachineInstruction *ins, Register* reg)
 }
 
 void spill_register(MachineFunction *func, Register *reg) {
-  func->incSpilledSize(4);
-  auto ins = static_cast<MachineInstruction *>(reg);
 
+  auto ins = static_cast<MachineInstruction *>(reg);
+  if (ins->is_64bit()) {
+    func->incSpilledSize(8);
+  } else {
+    func->incSpilledSize(4);
+  }
   // std::cout << "   Who use " + ins->getName() + ":" << std::endl;
   for (auto use : ins->getUses()) {
     Register *new_reg = find_avaliable_register(use, ins);
@@ -81,31 +86,40 @@ void spill_register(MachineFunction *func, Register *reg) {
       // std::cout << "      try store" << std::endl;
       MachineInstruction *store;
       if (ins->is_float()) {
-        store = new MIfsw(&reg_s0, new_reg);
+        store = new MIfsw(new_reg, -func->getSpilledSize(), Register::reg_s0);
+      } else if (ins->is_64bit()) {
+        store = new MIsd(new_reg, -func->getSpilledSize(), Register::reg_s0);
       } else {
-        store = new MIsw(&reg_s0, new_reg);
+        store = new MIsw(new_reg, -func->getSpilledSize(), Register::reg_s0);
       }
       use->replaceRegister(ins, new_reg);
-      store->setImm(func->getSpilledSize());
       use->insertAfter({store});
     } else {
       // std::cout << "      try load" << std::endl;
       MachineInstruction *load;
       if (ins->is_float()) {
-        load = new MIflw(&reg_s0, new_reg);
+        load = new MIflw(Register::reg_s0, -func->getSpilledSize(), new_reg);
+      } else if (ins->is_64bit()) {
+        load = new MIld(Register::reg_s0, -func->getSpilledSize(), new_reg);
       } else {
-        load = new MIlw(&reg_s0, new_reg);
+        load = new MIlw(Register::reg_s0, -func->getSpilledSize(), new_reg);
       }
       use->replaceRegister(ins, new_reg);
-      load->setImm(func->getSpilledSize());
       use->insertBefore({load});
     }
   }
 }
 
+#include <fstream>
+#include <iostream>
+
 void allocate_register(MachineModule *mod) {
   // step1. out-of-ssa
   out_of_ssa(mod);
+
+  std::ofstream out_file0;
+  out_file0.open("tests/test.outofssa.s");
+  out_file0 << mod->to_string() << std::endl;
 
   // // Step 2: Allocate registers
   for (auto &func : mod->getFunctions()) {
@@ -130,6 +144,9 @@ void allocate_register(MachineModule *mod) {
     }
   }
 
+  std::ofstream out_file1;
+  out_file1.open("tests/test.before_handle_phi.s");
+  out_file1 << mod->to_string() << std::endl;
   // std::cout << " NEXTNEXTNEXT" << std::endl;
 
   for (auto &func : mod->getFunctions()) {

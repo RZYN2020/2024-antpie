@@ -33,9 +33,9 @@ Register *get_vreg(MachineModule *m, vector<MachineInstruction *> &res,
     }
     assert(found);
     if (tp == Type::getFloatType()) {
-      return getFRegister(10 + cnt);
+      return Register::getFRegister(10 + cnt);
     } else {
-      return getIRegister(10 + cnt);
+      return Register::getIRegister(10 + cnt);
     }
   }
 
@@ -126,9 +126,9 @@ select_instruction(MachineModule *m, Instruction &ins,
   case VT_BR: {
     BranchInst &br = static_cast<BranchInst &>(ins);
     auto cond = GET_VREG(br.getRValue(0));
-    auto if_true = bb_map.at(static_cast<BasicBlock *>(br.getRValue(2)));
+    auto if_true = bb_map.at(static_cast<BasicBlock *>(br.getRValue(1)));
     auto if_false = bb_map.at(static_cast<BasicBlock *>(br.getRValue(2)));
-    ADD_INSTR(beq, MIbeq, &reg_zero, cond, if_false);
+    ADD_INSTR(beq, MIbeq, Register::reg_zero, cond, if_false);
     ADD_INSTR(jmp, MIj, if_true);
     break;
   }
@@ -142,9 +142,9 @@ select_instruction(MachineModule *m, Instruction &ins,
       auto arg = call.getRValue(i);
       auto reg = get_vreg(m, res, arg, instr_map, current_function);
       if (reg->is_float()) {
-        ADD_INSTR(_, MIfmv_s, reg, getFRegister(float_cnt++));
+        ADD_INSTR(_, MIfmv_s, reg, Register::getFRegister(float_cnt++));
       } else {
-        ADD_INSTR(_, MImv, reg, getIRegister(integer_cnt++));
+        ADD_INSTR(_, MImv, reg, Register::getIRegister(integer_cnt++));
       }
     }
     // 2.Jump to the function (using presudo instruction call)..
@@ -153,10 +153,10 @@ select_instruction(MachineModule *m, Instruction &ins,
 
     if (static_cast<FuncType>(call.getType()).getRetType() ==
         Type::getFloatType()) {
-      ADD_INSTR(move, MIfmv_s, getFRegister(10), ins.getName());
+      ADD_INSTR(move, MIfmv_s, Register::getFRegister(10), ins.getName());
       instr_map.insert({&ins, move});
     } else {
-      ADD_INSTR(move, MImv, getIRegister(10), ins.getName());
+      ADD_INSTR(move, MImv, Register::getIRegister(10), ins.getName());
       instr_map.insert({&ins, move});
     }
     break;
@@ -166,9 +166,9 @@ select_instruction(MachineModule *m, Instruction &ins,
     auto ret_val = ret.getRValue(0);
     auto ret_val_reg = GET_VREG(ret_val);
     if (ret_val->getType() == Type::getFloatType()) {
-      ADD_INSTR(move, MIfmv_s, ret_val_reg, getFRegister(10));
+      ADD_INSTR(move, MIfmv_s, ret_val_reg, Register::getFRegister(10));
     } else {
-      ADD_INSTR(move, MImv, ret_val_reg, getIRegister(10));
+      ADD_INSTR(move, MImv, ret_val_reg, Register::getIRegister(10));
     }
     ADD_INSTR(_, MIret);
     break;
@@ -192,7 +192,7 @@ select_instruction(MachineModule *m, Instruction &ins,
     auto tp = alloca.getType();
     auto size = cal_size(tp);
     current_mfunction->incSpilledSize(size);
-    ADD_INSTR(malloca, MIaddiw, &reg_s0, current_mfunction->getSpilledSize(),
+    ADD_INSTR(malloca, MIaddi, Register::reg_s0, -current_mfunction->getSpilledSize(),
               ins.getName());
     instr_map.insert({&ins, malloca});
     break;
@@ -209,17 +209,23 @@ select_instruction(MachineModule *m, Instruction &ins,
       if (tp == Type::getFloatType()) {
         ADD_INSTR(mload, MIflw, g);
         instr_map.insert({&ins, mload});
-      } else {
+      } else if (tp == Type::getInt32Type() || tp == Type::getInt1Type()) {
         ADD_INSTR(mload, MIlw, g);
+        instr_map.insert({&ins, mload});
+      } else { // pointer/Aarray // todo: clarify between two types
+        ADD_INSTR(mload, MIld, g);
         instr_map.insert({&ins, mload});
       }
     } else {
       auto a = GET_VREG(addr);
       if (tp == Type::getFloatType()) {
-        ADD_INSTR(mload, MIflw, a, ins.getName());
+        ADD_INSTR(mload, MIflw, a, 0, ins.getName());
+        instr_map.insert({&ins, mload});
+      } else if (tp == Type::getInt32Type() || tp == Type::getInt1Type()) {
+        ADD_INSTR(mload, MIlw, a, 0, ins.getName());
         instr_map.insert({&ins, mload});
       } else {
-        ADD_INSTR(mload, MIlw, a, ins.getName());
+        ADD_INSTR(mload, MIld, a, 0, ins.getName());
         instr_map.insert({&ins, mload});
       }
     }
@@ -233,22 +239,26 @@ select_instruction(MachineModule *m, Instruction &ins,
     StoreInst &store = static_cast<StoreInst &>(ins);
     auto value = store.getRValue(0);
     auto addr = store.getRValue(1);
-    MachineInstruction *mstore;
-
     auto v = GET_VREG(value);
     if (addr->getValueTag() == VT_GLOBALVAR) {
       auto g = global_map.at(static_cast<GlobalVariable *>(addr));
       if (value->getType() == Type::getFloatType()) {
-        ADD_INSTR(fsw, MIfsw, g, v);
+        ADD_INSTR(_, MIfsw, v, g);
+      } else if (value->getType() == Type::getInt32Type() ||
+                 value->getType() == Type::getInt1Type()) {
+        ADD_INSTR(_, MIsw, v, g);
       } else {
-        ADD_INSTR(sw, MIsw, g, v);
+        ADD_INSTR(_, MIsd, v, g);
       }
     } else {
       auto a = GET_VREG(addr);
       if (value->getType() == Type::getFloatType()) {
-        ADD_INSTR(_, MIfsw, a, v);
+        ADD_INSTR(_, MIfsw, v, 0, a);
+      } else if (value->getType() == Type::getInt32Type() ||
+                 value->getType() == Type::getInt1Type()) {
+        ADD_INSTR(_, MIsw, v, 0, a);
       } else {
-        ADD_INSTR(_, MIsw, a, v);
+        ADD_INSTR(_, MIsd, v, 0, a);
       }
     }
     break;
@@ -265,8 +275,8 @@ select_instruction(MachineModule *m, Instruction &ins,
       Register *index = GET_VREG(gep.getRValue(i));
 
       ADD_INSTR(elesz, MIli, cal_size(current_type));
-      ADD_INSTR(offset, MImulw, index, elesz);
-      ADD_INSTR(addr, MIaddw, base, offset);
+      ADD_INSTR(offset, MImul, index, elesz);
+      ADD_INSTR(addr, MIadd, base, offset);
 
       if (i != gep.getRValueSize() - 1) {
         current_type =
@@ -312,7 +322,7 @@ select_instruction(MachineModule *m, Instruction &ins,
     }
     case NE: {
       ADD_INSTR(sub_ins, MIsubw, GET_VREG(opd1), GET_VREG(opd2));
-      ADD_INSTR(sltu_ins, MIsltu, &reg_zero, sub_ins, ins.getName());
+      ADD_INSTR(sltu_ins, MIsltu, Register::reg_zero, sub_ins, ins.getName());
       instr_map.insert({&ins, sltu_ins});
       break;
     }
@@ -320,7 +330,7 @@ select_instruction(MachineModule *m, Instruction &ins,
       // ins.printIR(std::cout);
       // std::cout << std::endl << std::endl << ins.getName() << std::endl;
       ADD_INSTR(slt_ins, MIslt, GET_VREG(opd2), GET_VREG(opd1));
-      ADD_INSTR(snot_ins, MInot, slt_ins, ins.getName());
+      ADD_INSTR(snot_ins, MIxori, slt_ins, 1, ins.getName());
       // std::cout << std::endl << std::endl << snot_ins->to_string() <<
       // std::endl;
       instr_map.insert({&ins, snot_ins});
@@ -332,7 +342,7 @@ select_instruction(MachineModule *m, Instruction &ins,
     case SGE: {
       CREATE_BINARY_INSTR_WITH_IMM(slt_ins, MIslt, MIslti, opd1, opd2,
                                    IntegerConstant)
-      ADD_INSTR(sge_ins, MInot, slt_ins, ins.getName());
+      ADD_INSTR(sge_ins, MIxori, slt_ins, 1, ins.getName());
       instr_map.insert({&ins, sge_ins});
       break;
     }
@@ -357,7 +367,7 @@ select_instruction(MachineModule *m, Instruction &ins,
       BINARY_OP_CASE(OEQ, MIfeq_s)
     case ONE: {
       ADD_INSTR(feq, MIfeq_s, GET_VREG(opd1), GET_VREG(opd2), ins.getName());
-      ADD_INSTR(ne, MInot, feq, ins.getName());
+      ADD_INSTR(ne, MIxori, feq,1,  ins.getName());
       instr_map.insert({&ins, ne});
       break;
     }

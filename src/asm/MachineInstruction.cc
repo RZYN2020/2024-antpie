@@ -1,4 +1,3 @@
-#include "MachineInstruction.hh"
 #include "Machine.hh"
 
 //////////////////////////////////////
@@ -108,12 +107,24 @@ bool MachineInstruction::is_float() const {
   case FLW:
   case FSW:
   case FCVTS_W:
-  // case FCVTS_WU:
-  // case FCVTW_S:
-  // case FCVTWU_S:
-  // case FEQ_S:
-  // case FLT_S:
-  // case FLE_S:
+    // case FCVTS_WU:
+    // case FCVTW_S:
+    // case FCVTWU_S:
+    // case FEQ_S:
+    // case FLT_S:
+    // case FLE_S:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool MachineInstruction::is_64bit() const {
+  switch (tag) {
+  case ADD:
+  case ADDI:
+  case LD:
+  case MUL:
     return true;
   default:
     return false;
@@ -171,7 +182,7 @@ MachineBasicBlock *MIphi::getIncomingBlock(int idx) const {
 
 ////////////////////////////////////////////
 
-#define DEFINE_MI_IMM_CLASS_IMPL(NAME, TAG, ASM_NAME)                          \
+#define IMPLEMENT_MI_IMM_CLASS(NAME, TAG, ASM_NAME)                            \
   MI##NAME::MI##NAME(Register *reg, int32_t imm)                               \
       : MachineInstruction(MachineInstruction::TAG) {                          \
     this->pushReg(reg);                                                        \
@@ -195,7 +206,7 @@ MachineBasicBlock *MIphi::getIncomingBlock(int idx) const {
     return #ASM_NAME " " + target + ", " + reg + ", " + imm;                   \
   }
 
-#define DEFINE_MI_BIN_CLASS_IMPL(NAME, TAG, ASM_NAME)                          \
+#define IMPLEMENT_MI_BIN_CLASS(NAME, TAG, ASM_NAME)                            \
   MI##NAME::MI##NAME(Register *reg1, Register *reg2)                           \
       : MachineInstruction(MachineInstruction::TAG) {                          \
     this->pushReg(reg1);                                                       \
@@ -219,7 +230,7 @@ MachineBasicBlock *MIphi::getIncomingBlock(int idx) const {
     return #ASM_NAME " " + target + ", " + reg1 + ", " + reg2;                 \
   }
 
-#define DEFINE_MI_UNA_CLASS_IMPL(NAME, TAG, ASM_NAME)                          \
+#define IMPLEMENT_MI_UNA_CLASS(NAME, TAG, ASM_NAME)                            \
   MI##NAME::MI##NAME(Register *reg)                                            \
       : MachineInstruction(MachineInstruction::TAG) {                          \
     this->pushReg(reg);                                                        \
@@ -236,111 +247,105 @@ MachineBasicBlock *MIphi::getIncomingBlock(int idx) const {
   std::string MI##NAME::to_string() const {                                    \
     std::string target = this->getTargetName();                                \
     auto reg = this->getReg(0)->getName();                                     \
-    return #ASM_NAME " " + target + ", " + reg;                                 \
+    return #ASM_NAME " " + target + ", " + reg;                                \
   }
 
-DEFINE_MI_IMM_CLASS_IMPL(addiw, ADDIW, addiw)
-DEFINE_MI_BIN_CLASS_IMPL(addw, ADDW, addw)
-DEFINE_MI_BIN_CLASS_IMPL(subw, SUBW, subw)
-DEFINE_MI_BIN_CLASS_IMPL(and, AND, and)
-DEFINE_MI_IMM_CLASS_IMPL(andi, ANDI, andi)
-DEFINE_MI_BIN_CLASS_IMPL(or, OR, or)
-DEFINE_MI_IMM_CLASS_IMPL(ori, ORI, ori)
-DEFINE_MI_BIN_CLASS_IMPL(xor, XOR, xor)
-DEFINE_MI_IMM_CLASS_IMPL(xori, XORI, xori)
-DEFINE_MI_BIN_CLASS_IMPL(slt, SLT, slt)
-DEFINE_MI_IMM_CLASS_IMPL(slti, SLTI, slti)
-DEFINE_MI_BIN_CLASS_IMPL(sltu, SLTU, sltu)
-DEFINE_MI_IMM_CLASS_IMPL(sltiu, SLTIU, sltiu)
+IMPLEMENT_MI_IMM_CLASS(addi, ADDI, addi)
+IMPLEMENT_MI_BIN_CLASS(add, ADD, add)
+IMPLEMENT_MI_IMM_CLASS(addiw, ADDIW, addiw)
+IMPLEMENT_MI_BIN_CLASS(addw, ADDW, addw)
+IMPLEMENT_MI_BIN_CLASS(subw, SUBW, subw)
+IMPLEMENT_MI_BIN_CLASS(and, AND, and)
+IMPLEMENT_MI_IMM_CLASS(andi, ANDI, andi)
+IMPLEMENT_MI_BIN_CLASS(or, OR, or)
+IMPLEMENT_MI_IMM_CLASS(ori, ORI, ori)
+IMPLEMENT_MI_BIN_CLASS(xor, XOR, xor)
+IMPLEMENT_MI_IMM_CLASS(xori, XORI, xori)
+IMPLEMENT_MI_BIN_CLASS(slt, SLT, slt)
+IMPLEMENT_MI_IMM_CLASS(slti, SLTI, slti)
+IMPLEMENT_MI_BIN_CLASS(sltu, SLTU, sltu)
+IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, sltiu)
 
-// MIlw
-MIlw::MIlw(MachineGlobal *global)
-    : MachineInstruction(MachineInstruction::LW), global(global) {}
-
-MIlw::MIlw(MachineGlobal *global, string name)
-    : MachineInstruction(MachineInstruction::LW, name), global(global) {}
-
-MIlw::MIlw(MachineGlobal *global, Register *target)
-    : MachineInstruction(MachineInstruction::LW), global(global) {
-  this->setTarget(target);
-}
-
-MIlw::MIlw(Register *addr) : MachineInstruction(MachineInstruction::LW) {
-  this->pushReg(addr);
-}
-
-MIlw::MIlw(Register *addr, string name)
-    : MachineInstruction(MachineInstruction::LW, name) {
-  this->pushReg(addr);
-}
-
-MIlw::MIlw(Register *addr, Register *target)
-    : MachineInstruction(MachineInstruction::LW) {
-  this->pushReg(addr);
-  this->setTarget(target);
-}
-
-MachineGlobal *MIlw::getGlobal() { return this->global; }
-
-std::string MIlw::to_string() const {
-  if (this->global) {
-    return "lw " + this->getTargetName() + ", " + this->global->getName();
-  } else {
-    auto offset = getBasicBlock()->getFunction()->getSavedSize();
-    return "lw " + this->getTargetName() + ", " +
-           std::to_string(getImm() + offset) + "(" +
-           this->getReg(0)->getName() + ")";
+#define IMPLEMENT_MI_LOAD_CLASS(NAME, TAG)                                     \
+  MI##NAME::MI##NAME(MachineGlobal *global)                                    \
+      : MachineInstruction(MachineInstruction::TAG), global(global) {}         \
+                                                                               \
+  MI##NAME::MI##NAME(MachineGlobal *global, std::string name)                  \
+      : MachineInstruction(MachineInstruction::TAG, name), global(global) {}   \
+                                                                               \
+  MI##NAME::MI##NAME(MachineGlobal *global, Register *target)                  \
+      : MachineInstruction(MachineInstruction::TAG) {                          \
+    this->setTarget(target);                                                   \
+    this->global = global;                                                     \
+  }                                                                            \
+                                                                               \
+  MI##NAME::MI##NAME(Register *addr, uint32_t offset)                          \
+      : MachineInstruction(MachineInstruction::TAG) {                          \
+    this->pushReg(addr);                                                       \
+    this->setImm(offset);                                                      \
+  }                                                                            \
+                                                                               \
+  MI##NAME::MI##NAME(Register *addr, uint32_t offset, std::string name)        \
+      : MachineInstruction(MachineInstruction::TAG, name) {                    \
+    this->pushReg(addr);                                                       \
+    this->setImm(offset);                                                      \
+  }                                                                            \
+                                                                               \
+  MI##NAME::MI##NAME(Register *addr, uint32_t offset, Register *target)        \
+      : MachineInstruction(MachineInstruction::TAG) {                          \
+    this->pushReg(addr);                                                       \
+    this->setTarget(target);                                                   \
+    this->setImm(offset);                                                      \
+  }                                                                            \
+                                                                               \
+  MachineGlobal *MI##NAME::getGlobal() { return this->global; }                \
+                                                                               \
+  std::string MI##NAME::to_string() const {                                    \
+    if (this->global) {                                                        \
+      return #NAME " " + this->getTargetName() + ", " +                        \
+             this->global->getName();                                          \
+    } else {                                                                   \
+      return #NAME " " + this->getTargetName() + ", " +                        \
+             std::to_string(getImm()) + "(" + this->getReg(0)->getName() +     \
+             ")";                                                              \
+    }                                                                          \
   }
-}
 
-// MIsw
-MIsw::MIsw(MachineGlobal *global, Register *val)
-    : MachineInstruction(MachineInstruction::SW), global(global) {
-  this->pushReg(val);
-}
-
-MIsw::MIsw(Register *addr, Register *val)
-    : MachineInstruction(MachineInstruction::SW) {
-  this->pushReg(addr);
-  this->pushReg(val);
-}
-
-std::string MIsw::to_string() const {
-  if (this->global) {
-    return "sw " + this->getReg(0)->getName() + ", " + this->global->getName();
-  } else {
-    auto offset = getBasicBlock()->getFunction()->getSavedSize();
-    return "sw " + this->getReg(1)->getName() + ", " +
-           std::to_string(getImm() + offset) + "(" +
-           this->getReg(0)->getName() + ")";
+#define IMPLEMENT_MI_STORE_CLASS(NAME, TAG)                                    \
+  MI##NAME::MI##NAME(Register *val, MachineGlobal *global)                     \
+      : MachineInstruction(MachineInstruction::TAG) {                          \
+    this->pushReg(val);                                                        \
+    this->global = global;                                                     \
+  }                                                                            \
+                                                                               \
+  MI##NAME::MI##NAME(Register *val, uint32_t offset, Register *addr)           \
+      : MachineInstruction(MachineInstruction::TAG) {                          \
+    this->pushReg(val);                                                        \
+    this->pushReg(addr);                                                       \
+    this->setImm(offset);                                                      \
+  }                                                                            \
+                                                                               \
+  MachineGlobal *MI##NAME::getGlobal() { return this->global; }                \
+                                                                               \
+  std::string MI##NAME::to_string() const {                                    \
+    if (this->global) {                                                        \
+      return #NAME " " + this->getReg(0)->getName() + ", " +                   \
+             this->global->getName();                                          \
+    } else {                                                                   \
+      return #NAME " " + this->getReg(0)->getName() + ", " +                   \
+             std::to_string(getImm()) + "(" +                         \
+             this->getReg(1)->getName() + ")";                                 \
+    }                                                                          \
   }
-}
 
-// MIsd
-MIsd::MIsd(Register *addr, uint32_t offset, Register *val)
-    : MachineInstruction(MachineInstruction::SD) {
-  this->pushReg(addr);
-  this->pushReg(val);
-  this->setImm(offset);
-}
+IMPLEMENT_MI_LOAD_CLASS(lw, LW)
+IMPLEMENT_MI_STORE_CLASS(sw, SW)
 
-std::string MIsd::to_string() const {
-  return "sd " + this->getReg(1)->getName() + ", " + std::to_string(getImm()) +
-         "(" + this->getReg(0)->getName() + ")";
-}
+IMPLEMENT_MI_LOAD_CLASS(ld, LD)
+IMPLEMENT_MI_STORE_CLASS(sd, SD)
 
-// MIld
-MIld::MIld(Register *addr, uint32_t offset, Register *target)
-    : MachineInstruction(MachineInstruction::LD) {
-  this->pushReg(addr);
-  this->pushReg(target);
-  this->setImm(offset);
-}
-
-std::string MIld::to_string() const {
-  return "ld " + this->getReg(1)->getName() + ", " + std::to_string(getImm()) +
-         "(" + this->getReg(0)->getName() + ")";
-}
+IMPLEMENT_MI_LOAD_CLASS(flw, FLW)
+IMPLEMENT_MI_STORE_CLASS(fsw, FSW)
 
 // MIbeq
 MIbeq::MIbeq(Register *reg1, Register *reg2, MachineBasicBlock *targetBB)
@@ -356,83 +361,22 @@ std::string MIbeq::to_string() const {
          this->getReg(1)->getName() + ", " + this->targetBB->getName();
 }
 
-DEFINE_MI_BIN_CLASS_IMPL(mulw, MULW, mulw)
-DEFINE_MI_BIN_CLASS_IMPL(divw, DIVW, divw)
-DEFINE_MI_BIN_CLASS_IMPL(remw, REMW, remw)
+IMPLEMENT_MI_BIN_CLASS(mul, MUL, mul)
+IMPLEMENT_MI_BIN_CLASS(mulw, MULW, mulw)
+IMPLEMENT_MI_BIN_CLASS(divw, DIVW, divw)
+IMPLEMENT_MI_BIN_CLASS(remw, REMW, remw)
 
-DEFINE_MI_BIN_CLASS_IMPL(fadd_s, FADD_S, fadd.s)
-DEFINE_MI_BIN_CLASS_IMPL(fsub_s, FSUB_S, fsub.s)
-DEFINE_MI_BIN_CLASS_IMPL(fmul_s, FMUL_S, fmul.s)
-DEFINE_MI_BIN_CLASS_IMPL(fdiv_s, FDIV_S, fdiv.s)
+IMPLEMENT_MI_BIN_CLASS(fadd_s, FADD_S, fadd.s)
+IMPLEMENT_MI_BIN_CLASS(fsub_s, FSUB_S, fsub.s)
+IMPLEMENT_MI_BIN_CLASS(fmul_s, FMUL_S, fmul.s)
+IMPLEMENT_MI_BIN_CLASS(fdiv_s, FDIV_S, fdiv.s)
 
-MIflw::MIflw(MachineGlobal *global)
-    : MachineInstruction(MachineInstruction::FLW), global(global) {}
+IMPLEMENT_MI_UNA_CLASS(fcvts_w, FCVTS_W, fcvt.s.w)
+IMPLEMENT_MI_UNA_CLASS(fcvtw_s, FCVTW_S, fcvt.w.s)
 
-MIflw::MIflw(MachineGlobal *global, string name)
-    : MachineInstruction(MachineInstruction::FLW, name), global(global) {}
-
-MIflw::MIflw(MachineGlobal *global, Register *target)
-    : MachineInstruction(MachineInstruction::FLW), global(global) {
-  this->setTarget(target);
-}
-
-MIflw::MIflw(Register *addr) : MachineInstruction(MachineInstruction::FLW) {
-  this->pushReg(addr);
-}
-
-MIflw::MIflw(Register *addr, string name)
-    : MachineInstruction(MachineInstruction::FLW, name) {
-  this->pushReg(addr);
-}
-
-MIflw::MIflw(Register *addr, Register *target)
-    : MachineInstruction(MachineInstruction::FLW) {
-  this->pushReg(addr);
-  this->setTarget(target);
-}
-
-MachineGlobal *MIflw::getGlobal() { return this->global; }
-
-std::string MIflw::to_string() const {
-  if (this->global) {
-    return "flw " + this->getTargetName() + ", " + this->global->getName();
-  } else {
-    auto offset = getBasicBlock()->getFunction()->getSavedSize();
-    return "flw " + this->getTargetName() + ", " +
-           std::to_string(getImm() + offset) + "(" +
-           this->getReg(0)->getName() + ")";
-  }
-}
-
-// MIfsw
-MIfsw::MIfsw(MachineGlobal *global, Register *val)
-    : MachineInstruction(MachineInstruction::FSW), global(global) {
-  this->pushReg(val);
-}
-
-MIfsw::MIfsw(Register *addr, Register *val)
-    : MachineInstruction(MachineInstruction::FSW) {
-  this->pushReg(addr);
-  this->pushReg(val);
-}
-
-std::string MIfsw::to_string() const {
-  if (this->global) {
-    return "fsw " + this->getReg(0)->getName() + ", " + this->global->getName();
-  } else {
-    auto offset = getBasicBlock()->getFunction()->getSavedSize();
-    return "fsw " + this->getReg(1)->getName() + ", " +
-           std::to_string(getImm() + offset) + "(" +
-           this->getReg(0)->getName() + ")";
-  }
-}
-
-DEFINE_MI_UNA_CLASS_IMPL(fcvts_w, FCVTS_W, fcvt.s.w)
-DEFINE_MI_UNA_CLASS_IMPL(fcvtw_s, FCVTW_S, fcvt.w.s)
-
-DEFINE_MI_BIN_CLASS_IMPL(feq_s, FEQ_S, feq.s)
-DEFINE_MI_BIN_CLASS_IMPL(flt_s, FLT_S, flt.s)
-DEFINE_MI_BIN_CLASS_IMPL(fle_s, FLE_S, fle.s)
+IMPLEMENT_MI_BIN_CLASS(feq_s, FEQ_S, feq.s)
+IMPLEMENT_MI_BIN_CLASS(flt_s, FLT_S, flt.s)
+IMPLEMENT_MI_BIN_CLASS(fle_s, FLE_S, fle.s)
 
 // MIcall
 MIcall::MIcall(MachineFunction *func)
@@ -477,6 +421,6 @@ std::string MIli::to_string() const {
   return "li " + this->getTargetName() + ", " + std::to_string(getImm());
 }
 
-DEFINE_MI_UNA_CLASS_IMPL(mv, MV, mv)
-DEFINE_MI_UNA_CLASS_IMPL(not, NOT, not )
-DEFINE_MI_UNA_CLASS_IMPL(fmv_s, FMV_S, fmv.s)
+IMPLEMENT_MI_UNA_CLASS(mv, MV, mv)
+IMPLEMENT_MI_UNA_CLASS(not, NOT, not )
+IMPLEMENT_MI_UNA_CLASS(fmv_s, FMV_S, fmv.s)
