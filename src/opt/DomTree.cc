@@ -106,6 +106,7 @@ void DomTree::buildDomTree() {
 DomTree::DomTree(Function* func) : dtActive(false) {
   blocks = func->getBasicBlocks();
   cfg = func->getCFG();
+  assert(cfg);
   for (BasicBlock* bb : *blocks) {
     domChildren[bb] = new LinkedList<BasicBlock*>();
   }

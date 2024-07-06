@@ -122,6 +122,7 @@ bool MemToReg::runOnModule(ANTPIE::Module* module) {
     valueInfos.clear();
     runOnFunction(func);
   }
+  return true;
 }
 
 bool MemToReg::runOnFunction(Function* func) {
@@ -130,4 +131,5 @@ bool MemToReg::runOnFunction(Function* func) {
   if (!func->getDT()->dfReady()) func->getDT()->calculateDF();
   function = func;
   runPass();
+  return true;
 }

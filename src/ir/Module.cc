@@ -1,5 +1,6 @@
 #include "Module.hh"
 
+#include "CSE.hh"
 #include "MemToReg.hh"
 
 using ANTPIE::Module;
@@ -184,7 +185,8 @@ void Module::irOptimize() {
 
   // Add mem2reg Pass
   optimizations.pushBack(new MemToReg());
-
+  // Add earlyCSE pass
+  optimizations.pushBack(new CommonSubexpElimination());
   // run all pass
   for (auto& pass : optimizations) {
     pass->runOnModule(this);
