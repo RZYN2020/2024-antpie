@@ -23,7 +23,8 @@ bool isAllocaPromotable(AllocaInst* alloc) {
 void MemToReg::runPass() {
   for (Instruction* instr : *function->getEntry()->getInstructions()) {
     AllocaInst* allocaInstr;
-    if ((allocaInstr = dynamic_cast<AllocaInst*>(instr)) && isAllocaPromotable(allocaInstr)) {
+    if ((allocaInstr = dynamic_cast<AllocaInst*>(instr)) &&
+        isAllocaPromotable(allocaInstr)) {
       ValueInfo* valueInfo = new ValueInfo(allocaInstr);
       if (linkDefsAndUsesToVar(valueInfo)) {
         valueInfos.pushBack(valueInfo);
@@ -47,7 +48,8 @@ void MemToReg::runPass() {
   }
   renameRecursive(function->getEntry());
 
-  for (Instruction* trash : trashList) {
+  while (!trashList.isEmpty()) {
+    Instruction* trash = trashList.popFront();
     trash->eraseFromParent();
     delete trash;
   }
@@ -112,4 +114,20 @@ void MemToReg::renameRecursive(BasicBlock* bb) {
       trashList.pushBack(instr);
     }
   }
+}
+
+bool MemToReg::runOnModule(ANTPIE::Module* module) {
+  for (Function* func : *module->getFunctions()) {
+    instToValueInfo.clear();
+    valueInfos.clear();
+    runOnFunction(func);
+  }
+}
+
+bool MemToReg::runOnFunction(Function* func) {
+  if (!func->getCFG()) func->buildCFG();
+  if (!func->getDT()) func->buildDT();
+  if (!func->getDT()->dfReady()) func->getDT()->calculateDF();
+  function = func;
+  runPass();
 }

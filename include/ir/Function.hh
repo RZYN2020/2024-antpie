@@ -33,10 +33,10 @@ class Function : public GlobalValue {
   BasicBlock* getExit() const { return exit; }
 
   CFG* buildCFG();
-  CFG* getCFG() { assert(cfg); return cfg; }
+  CFG* getCFG() { return cfg; }
 
   DomTree* buildDT();
-  DomTree* getDT() { assert(dt); return dt; }
+  DomTree* getDT() { return dt; }
 };
 
 #endif

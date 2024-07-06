@@ -5,7 +5,6 @@
 #ifndef _MODULE_H_
 #define _MODULE_H_
 
-#include "MemToReg.hh"
 #include "Function.hh"
 #include "GlobalVariable.hh"
 

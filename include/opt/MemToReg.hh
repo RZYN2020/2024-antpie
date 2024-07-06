@@ -3,11 +3,12 @@
 #include <map>
 
 #include "Function.hh"
+#include "Optimization.hh"
 
 using std::map;
 
 struct ValueInfo;
-class MemToReg {
+class MemToReg : public Optimization {
  private:
   Function* function = 0;
   map<Instruction*, ValueInfo*> instToValueInfo;
@@ -18,7 +19,9 @@ class MemToReg {
   void renameRecursive(BasicBlock* bb);
 
  public:
-  MemToReg(Function* func) : function(func) { runPass(); }
+  MemToReg() {}
+  bool runOnModule(ANTPIE::Module* module) override;
+  bool runOnFunction(Function* func) override;
 };
 
 #endif

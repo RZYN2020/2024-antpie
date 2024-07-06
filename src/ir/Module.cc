@@ -1,5 +1,7 @@
 #include "Module.hh"
 
+#include "MemToReg.hh"
+
 using ANTPIE::Module;
 
 Module::Module() {}
@@ -178,12 +180,13 @@ void Module::buildCFG() {
 }
 
 void Module::irOptimize() {
+  LinkedList<Optimization*> optimizations;
 
-  // Mem2reg Pass
-  for (Function* func : functions) {
-    func->buildCFG();
-    func->buildDT();
-    func->getDT()->calculateDF();
-    MemToReg MemToReg(func);
+  // Add mem2reg Pass
+  optimizations.pushBack(new MemToReg());
+
+  // run all pass
+  for (auto& pass : optimizations) {
+    pass->runOnModule(this);
   }
 }

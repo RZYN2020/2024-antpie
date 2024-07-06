@@ -95,13 +95,28 @@ class LinkedList {
     T old = head->data;
     remove(old);
     return old;
-  } 
+  }
 
   bool isEmpty() const { return head == nullptr; }
 
   int getSize() const { return size; }
+  
+  void clear() {
+    Node<T>* current = head;
+    Node<T>* next = nullptr;
 
-  // 定义迭代器类
+    while (current != nullptr) {
+      next = current->next;
+      delete current;
+      current = next;
+    }
+
+    head = nullptr;
+    tail = nullptr;
+    size = 0;
+  }
+
+  // defin iterator class
   class Iterator : public std::iterator<std::forward_iterator_tag, T> {
    private:
     Node<T>* current;
