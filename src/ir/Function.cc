@@ -5,7 +5,8 @@
 Function::Function(FuncType* fType, string name)
     : GlobalValue(fType, name, VT_FUNC) {
   entry = new BasicBlock(name + "_entry");
-  basicBlocks.pushBack(entry);
+  pushBasicBlock(entry);
+
 }
 
 Function::~Function() {

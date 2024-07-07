@@ -54,8 +54,9 @@ class Instruction : public Value {
   int getRValueSize() const { return useList->size(); }
   BasicBlock* getParent() { return block; }
   void setParent(BasicBlock* bb) { block = bb; }
-  void replaceAllUsesWith(Value* value);
   void eraseFromParent();
+  // delete use operand
+  void deleteUseList();
 };
 
 class AllocaInst : public Instruction {

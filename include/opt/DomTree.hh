@@ -49,6 +49,7 @@ class DomTree {
   void calculateDF();
   BBListPtr getDF(BasicBlock* bb) const { return dominanceFrontier.at(bb); }
 
+  void mergeChildrenTo(BasicBlock* src, BasicBlock* dest);
   void draw();
 
   void calculateIDF(BBListPtr src, BBListPtr result);

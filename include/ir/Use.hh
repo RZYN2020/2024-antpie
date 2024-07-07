@@ -13,8 +13,11 @@ struct Use {
   Value* value;
   Instruction* instr;
   Use* next;
+  Use* pre;
 
-  Use(Instruction* instr_, Value* value_) : value(value_), instr(instr_), next(0) {}
+  Use(Instruction* instr_, Value* value_)
+      : value(value_), instr(instr_), next(0), pre(0) {}
+
 };
 
 #endif

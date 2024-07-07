@@ -69,9 +69,34 @@ class Value {
   void setType(Type* type) { vType = type; }
   Type* getType() const { return vType; }
   virtual string toString() const { return "%" + vName; }
-  void addUser(Use* use) { use->next = useHead; useHead = use; }
-  Use* getUseHead() const { return useHead; }
   bool isa(ValueTag vt_) { return vt_ == vTag; }
+
+  Use* getUseHead() const { return useHead; }
+  void addUser(Use* use) {
+    if (useHead) useHead->pre = use;
+    use->next = useHead;
+    useHead = use;
+    use->pre = nullptr;
+  }
+
+  void removeUse(Use* use) {
+    if (use == useHead) {
+      useHead = use->next;
+    }
+    if (use->next) {
+      use->next->pre = use->pre;
+    }
+    if (use->pre) {
+      use->pre->next = use->next;
+    }
+    delete use;
+  }
+
+  void replaceAllUsesWith(Value* value) {
+    for (Use* use = getUseHead(); use; use = use->next) {
+      use->value = value;
+    }
+  }
 };
 
 class GlobalValue : public Value {

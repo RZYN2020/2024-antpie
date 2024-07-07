@@ -27,7 +27,7 @@ class Function : public GlobalValue {
   void pushBasicBlockAtHead(BasicBlock* bb);
   void printIR(ostream& stream) const override;
 
-  const LinkedList<BasicBlock*>* getBasicBlocks() const { return &basicBlocks; }
+  LinkedList<BasicBlock*>* getBasicBlocks() { return &basicBlocks; }
 
   BasicBlock* getEntry() const { return entry; }
   BasicBlock* getExit() const { return exit; }

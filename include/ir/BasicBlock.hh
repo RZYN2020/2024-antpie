@@ -28,7 +28,7 @@ class BasicBlock : public Value {
   Instruction* getTailInstr() { return tail; }
   Function* getParent() { return function; }
   void setParent(Function* func) { function = func; }
-
+  void eraseFromParent();
   const LinkedList<Instruction*>* getInstructions() const {
     return &instructions;
   }

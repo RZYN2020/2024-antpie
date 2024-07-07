@@ -2,6 +2,7 @@
 
 #include "CSE.hh"
 #include "MemToReg.hh"
+#include "MergeBlock.hh"
 
 using ANTPIE::Module;
 
@@ -187,6 +188,8 @@ void Module::irOptimize() {
   optimizations.pushBack(new MemToReg());
   // Add earlyCSE pass
   optimizations.pushBack(new CommonSubexpElimination());
+  // Add mergeBlock pass
+  optimizations.pushBack(new MergeBlock());
   // run all pass
   for (auto& pass : optimizations) {
     pass->runOnModule(this);

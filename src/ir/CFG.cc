@@ -1,4 +1,5 @@
 #include "CFG.hh"
+
 #include "Function.hh"
 
 void CFG::addNode(BasicBlock* bb) {
@@ -9,6 +10,25 @@ void CFG::addNode(BasicBlock* bb) {
 void CFG::addEdge(BasicBlock* src, BasicBlock* dest) {
   blkPredMap[dest]->pushBack(src);
   blkSuccMap[src]->pushBack(dest);
+}
+
+void CFG::eraseNode(BasicBlock* bb) {
+  if (bb == exit) {
+    return;
+  }
+  for (BasicBlock* succ : *getSuccOf(bb)) {
+    blkPredMap[succ]->remove(bb);
+  }
+  blkSuccMap.erase(bb);
+  for (BasicBlock* pred : *getPredOf(bb)) {
+    blkSuccMap[pred]->remove(bb);
+  }
+  blkPredMap.erase(bb);
+}
+
+void CFG::eraseEdge(BasicBlock* src, BasicBlock* dest) {
+  blkSuccMap[src]->remove(dest);
+  blkPredMap[dest]->remove(src);
 }
 
 // build CFG

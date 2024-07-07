@@ -3,4 +3,5 @@ add_library(
     DomTree.cc
     MemToReg.cc
     CSE.cc
+    MergeBlock.cc
 )

@@ -40,7 +40,7 @@ void MemToReg::runPass() {
     function->getDT()->calculateIDF(&valueInfo->defBlocks, phiBlocks);
 
     for (BasicBlock* bb : *phiBlocks) {
-      PhiInst* phiInstr = new PhiInst("phi" + (id++));
+      PhiInst* phiInstr = new PhiInst("phi" + std::to_string(id++));
       bb->pushInstrAtHead(phiInstr);
       instToValueInfo[phiInstr] = valueInfo;
     }
@@ -51,6 +51,7 @@ void MemToReg::runPass() {
   while (!trashList.isEmpty()) {
     Instruction* trash = trashList.popFront();
     trash->eraseFromParent();
+    trash->deleteUseList();
     delete trash;
   }
 }
@@ -93,7 +94,8 @@ void MemToReg::renameRecursive(BasicBlock* bb) {
       PhiInst* phi;
       ValueInfo* valueInfo;
       if ((phi = dynamic_cast<PhiInst*>(instr)) &&
-          (valueInfo = instToValueInfo[instr])) {
+          (valueInfo = instToValueInfo[instr]) &&
+          !valueInfo->defStask.isEmpty()) {
         phi->pushIncoming(valueInfo->defStask.front(), bb);
       }
     }
@@ -107,11 +109,11 @@ void MemToReg::renameRecursive(BasicBlock* bb) {
     ValueInfo* valueInfo;
     if (instr->isa(VT_STORE) && (valueInfo = instToValueInfo[instr])) {
       valueInfo->defStask.popFront();
-      trashList.pushBack(instr);
+      trashList.pushFront(instr);
     } else if (instr->isa(VT_PHI) && (valueInfo = instToValueInfo[instr])) {
       valueInfo->defStask.popFront();
     } else if (instr->isa(VT_LOAD) && (valueInfo = instToValueInfo[instr])) {
-      trashList.pushBack(instr);
+      trashList.pushFront(instr);
     }
   }
 }

@@ -1,5 +1,7 @@
 #include "BasicBlock.hh"
 
+#include "Function.hh"
+
 BasicBlock::~BasicBlock() {
   for (const auto& instr : instructions) {
     delete instr;
@@ -25,12 +27,18 @@ void BasicBlock::pushInstr(Instruction* instr) {
   instructions.pushBack(instr);
   if (isTail(instr)) {
     if (tail) {
-      std::cout << "Multiple jump instruction in bb";
+      // std::cout << "Multiple jump instruction in bb";
     }
     tail = instr;
   }
 }
+
 void BasicBlock::pushInstrAtHead(Instruction* instr) {
   instr->setParent(this);
   instructions.pushFront(instr);
+}
+
+void BasicBlock::eraseFromParent() {
+  getParent()->getBasicBlocks()->remove(this);
+  function = nullptr;
 }

@@ -30,6 +30,10 @@ class CFG {
 
   void addNode(BasicBlock* bb);
   void addEdge(BasicBlock* src, BasicBlock* dest);
+
+  void eraseNode(BasicBlock* bb);
+  void eraseEdge(BasicBlock* src, BasicBlock* dest);
+  
   void debug();
   void draw();
 };

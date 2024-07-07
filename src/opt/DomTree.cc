@@ -177,6 +177,15 @@ void DomTree::calculateIDF(BBListPtr src, BBListPtr result) {
   }
 }
 
+void DomTree::mergeChildrenTo(BasicBlock* src, BasicBlock* dest) {
+  BBListPtr srcList = domChildren[src];
+  BBListPtr destList = domChildren[dest];
+  for (BasicBlock* domChild: *srcList) {
+    destList->pushBack(domChild);
+  }
+  domChildren.erase(src);
+}
+
 void DomTree::testDomTree() {
   cfg = new CFG();
   BasicBlock* R = new BasicBlock("R", true);

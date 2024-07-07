@@ -1,7 +1,6 @@
 #include "CSE.hh"
 
 string CommonSubexpElimination::hashToString(Instruction* instr) {
-  std::cout << instr->toString() << std::endl;
   assert(isSimpleExpr(instr));
   Value* lhs = 0;
   Value* rhs = 0;
@@ -131,6 +130,7 @@ bool CommonSubexpElimination::cseDfs(BasicBlock* block) {
   while (!trashList.isEmpty()) {
     Instruction* trash = trashList.popFront();
     trash->eraseFromParent();
+    trash->deleteUseList();
     delete trash;
   }
 

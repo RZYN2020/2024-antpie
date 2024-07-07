@@ -30,16 +30,16 @@ Value* Instruction::getRValue(int idx) const {
   return useList->at(idx)->value;
 }
 
-void Instruction::replaceAllUsesWith(Value* value) {
-  for (Use* use = getUseHead(); use; use = use->next) {
-    use->value = value;
-  }
-}
-
 void Instruction::eraseFromParent() {
   getParent()->getInstructions()->remove(this);
+  block = nullptr;
 }
 
+void Instruction::deleteUseList() {
+  for (Use* use : *useList) {
+    use->value->removeUse(use);
+  }
+}
 
 AllocaInst::AllocaInst(Type* type, string name)
     : Instruction(Type::getPointerType(type), name, VT_ALLOCA),
