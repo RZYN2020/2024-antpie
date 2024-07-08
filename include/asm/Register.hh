@@ -1,23 +1,19 @@
-#ifndef _REGISTER_H_
-#define _REGISTER_H_
-
+#pragma once
 #include "Instruction.hh"
-#include "Type.hh"
-#include <iostream>
+#include "Argument.hh"
 #include <string>
+#include <vector>
 
-using std::ostream;
 using std::string;
+using std::vector;
 
-class MachineInstruction;
+class MInstruction;
 class IRegister;
 class FRegister;
 
 class Register {
-
 private:
-  std::vector<MachineInstruction *> uses;
-
+  vector<MInstruction *> uses;
 
 public:
   static IRegister *reg_zero;
@@ -94,94 +90,59 @@ public:
     F_REGISTER,
     I_REGISTER,
     V_REGISTER,  // virtual_register
+    A_REGISTER,  // argment register
     IR_REGISTER, // to be resolved
   };
 
-protected:
+private:
   RegTag tag;
-  int id;
   string name;
 
 public:
-  virtual string getName() const = 0;
-  virtual bool is_float() const = 0;
-  RegTag getTag() { return tag; }
+  Register(string name, RegTag tag);
+  string getName();
+  void setName(string name);
+  RegTag getTag();
 
-  void addUse(MachineInstruction *use) { uses.push_back(use); }
-  virtual void replaceRegisterUsers(Register *newReg) = 0;
-
-  void removeUse(MachineInstruction *use) {
-    for (auto it = uses.begin(); it != uses.end(); ++it) {
-      if (*it == use) {
-        uses.erase(it);
-        break;
-      }
-    }
-  }
-
-  std::vector<MachineInstruction *> getUses() { return uses; }
-  void clearUses() { uses.clear(); }
+  void addUse(MInstruction *use);
+  void removeUse(MInstruction *use);
+  void replaceRegisterWith(Register *newReg);
+  vector<MInstruction *> &getUses();
+  void clearUses();
 };
 
 class IRRegister : public Register {
 public:
   Instruction *ir_reg;
-  IRRegister(Instruction *ins) {
-    tag = IR_REGISTER;
-    ir_reg = ins;
-  };
-  string getName() const override { return ir_reg->getName(); }
-  bool is_float() const override {
-    return ir_reg->getType() == FloatType::getFloatType();
-  }
-  void replaceRegisterUsers(Register *newReg) override {}
+  IRRegister(Instruction *ins);
 };
 
-static int get_id() {
-  static int cnt = 0;
-  return cnt++;
-}
+class ARGRegister : public Register {
+private:
+  Argument *arg;
+
+public:
+  ARGRegister(Argument *arg);
+};
 
 class VRegister : public Register {
 public:
-  VRegister() {
-    tag = V_REGISTER;
-    id = get_id();
-    name = "t" + std::to_string(id);
-  }
-
-  VRegister(string n) {
-    tag = V_REGISTER;
-    id = get_id();
-    name = n;
-  }
-
-  void setName(string name_) { name = name_; }
-
-  string getName() const override { return name; }
+  VRegister();
+  VRegister(string name);
 };
 
 class IRegister : public Register {
+private:
+  int id;
+
 public:
-  IRegister(int id_, std::string n) {
-    tag = I_REGISTER;
-    id = id_;
-    name = n;
-  }
-  string getName() const override { return name; }
-  bool is_float() const override { return false; }
-  void replaceRegisterUsers(Register *newReg) override {}
+  IRegister(int id, string n);
 };
 
 class FRegister : public Register {
+private:
+  int id;
+
 public:
-  FRegister(int id_, std::string n) {
-    tag = F_REGISTER;
-    id = id_;
-    name = n;
-  }
-  string getName() const override { return name; }
-  bool is_float() const override { return true; }
-  void replaceRegisterUsers(Register *newReg) override {}
+  FRegister(int id, string n);
 };
-#endif

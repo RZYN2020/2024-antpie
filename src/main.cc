@@ -4,9 +4,8 @@
 #include "Instruction.hh"
 #include "Machine.hh"
 #include "Module.hh"
-#include "allocate_register.hh"
-#include "prelude_conclusion.hh"
-#include "select_instruction.hh"
+#include "cgen.hh"
+
 
 #include <fstream>
 #include <iostream>
@@ -151,24 +150,24 @@ int main() {
   // ret i32 %foo.ret
   ReturnInst *returnInst = module->addReturnInst(callInst);
 
-  MachineModule *mmodule = new MachineModule();
+  MModule *mmodule = new MModule();
 
   // module->buildCFG();
 
   select_instruction(mmodule, module);
   std::ofstream out_file0;
   out_file0.open("tests/test.phi.s");
-  out_file0 << mmodule->to_string() << std::endl;
+  out_file0 << *mmodule << std::endl;
 
   allocate_register(mmodule);
   std::ofstream out_file1;
   out_file1.open("tests/test.h.s");
-  out_file1 << mmodule->to_string() << std::endl;
+  out_file1 << *mmodule << std::endl;
 
-  prelude_conclusion(mmodule);
-  std::ofstream out_file3;
-  out_file3.open("tests/test.s");
-  out_file3 << mmodule->to_string() << std::endl;
+//   prelude_conclusion(mmodule);
+//   std::ofstream out_file3;
+//   out_file3.open("tests/test.s");
+//   out_file3 << mmodule << std::endl;
 
   std::ofstream out_file;
   out_file.open("tests/test.ll");

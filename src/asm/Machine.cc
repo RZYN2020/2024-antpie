@@ -5,67 +5,206 @@
 //                MachineBasicBlocks
 //
 /////////////////////////////////////////////////
+MBasicBlock::MBasicBlock(string name) {
+  this->name = name;
+  this->instructions = make_unique<vector<unique_ptr<MInstruction>>>();
+  this->jmps = make_unique<vector<unique_ptr<MInstruction>>>();
+  this->phis = make_unique<vector<unique_ptr<MHIphi>>>();
+  this->incoming = make_unique<vector<MBasicBlock *>>();
+  this->outgoing = make_unique<vector<MBasicBlock *>>();
+}
 
-string MachineBasicBlock::to_string() const {
-  string res = getName() + ":\n";
-  for (auto &ins : *instructions) {
-    // std::cout << "      " + ins->to_string() << std::endl;
-    res += "\t" + ins->to_string() + "\n";
-  }
-  res += "\n";
-  return res;
-}
-MachineBasicBlock::MachineBasicBlock(string name_) {
-  name = name_;
-  instructions = make_unique<vector<unique_ptr<MachineInstruction>>>();
-}
-void MachineBasicBlock::pushInstr(MachineInstruction *i) {
-  instructions->push_back(unique_ptr<MachineInstruction>(i));
+void MBasicBlock::pushInstr(MInstruction *i) {
+  instructions->push_back(unique_ptr<MInstruction>(i));
   i->setBasicBlock(this);
 }
 
-void MachineBasicBlock::pushInstrs(vector<MachineInstruction *> is) {
+void MBasicBlock::pushInstrs(vector<MInstruction *> is) {
   for (auto i : is) {
-    instructions->push_back(unique_ptr<MachineInstruction>(i));
+    instructions->push_back(unique_ptr<MInstruction>(i));
     i->setBasicBlock(this);
   }
 }
 
-void MachineBasicBlock::pushInstrBeforeJmp(MachineInstruction *i) {
-  for (auto it = instructions->begin(); it != instructions->end(); ++it) {
-    auto tg = (*it)->getTag();
-    if (tg == MachineInstruction::J || tg == MachineInstruction::BEQ ||
-        tg == MachineInstruction::RET) {
-      it = instructions->insert(it, unique_ptr<MachineInstruction>(i));
-      i->setBasicBlock(this);
-      return;
-    }
-  }
-}
-
-void MachineBasicBlock::pushInstrAtHead(MachineInstruction *i) {
-  instructions->insert(instructions->begin(),
-                       unique_ptr<MachineInstruction>(i));
+void MBasicBlock::pushInstrAtHead(MInstruction *i) {
+  instructions->insert(instructions->begin(), unique_ptr<MInstruction>(i));
   i->setBasicBlock(this);
 }
 
-void MachineBasicBlock::pushInstrsAtHead(vector<MachineInstruction *> is) {
+void MBasicBlock::pushInstrsAtHead(vector<MInstruction *> is) {
   for (int i = is.size() - 1; i >= 0; i--) {
     pushInstrAtHead(is.at(i));
   }
 }
 
-void MachineBasicBlock::setFunction(MachineFunction *function) {
+void MBasicBlock::setFunction(MFunction *function) {
   this->function = function;
 }
 
-MachineFunction *MachineBasicBlock::getFunction() { return function; }
+MFunction *MBasicBlock::getFunction() { return function; }
 
-unique_ptr<MachineInstruction>
-MachineBasicBlock::removeInstruction(MachineInstruction *ins) {
+void MBasicBlock::pushJmp(MInstruction *ins) {
+  jmps->push_back(unique_ptr<MInstruction>(ins));
+  switch (ins->getInsTag()) {
+  case MInstruction::H_BR: {
+    auto br = static_cast<MHIbr *>(ins);
+    outgoing->push_back(br->getFBlock());
+    outgoing->push_back(br->getTBlock());
+    br->getFBlock()->addIncoming(this);
+    br->getTBlock()->addIncoming(this);
+    break;
+  }
+  case MInstruction::BEQ: {
+    auto beq = static_cast<MIbeq *>(ins);
+    outgoing->push_back(beq->getTargetBB());
+    beq->getTargetBB()->addIncoming(this);
+    break;
+  }
+  case MInstruction::BNE: {
+    auto bne = static_cast<MIbne *>(ins);
+    outgoing->push_back(bne->getTargetBB());
+    bne->getTargetBB()->addIncoming(this);
+    break;
+  }
+  case MInstruction::BGE: {
+    auto bge = static_cast<MIbge *>(ins);
+    outgoing->push_back(bge->getTargetBB());
+    bge->getTargetBB()->addIncoming(this);
+    break;
+  }
+  case MInstruction::BLT: {
+    auto blt = static_cast<MIblt *>(ins);
+    outgoing->push_back(blt->getTargetBB());
+    blt->getTargetBB()->addIncoming(this);
+    break;
+  }
+  case MInstruction::J: {
+    auto j = static_cast<MIj *>(ins);
+    outgoing->push_back(j->getTargetBB());
+    j->getTargetBB()->addIncoming(this);
+    break;
+  }
+  case MInstruction::RET:
+  case MInstruction::H_RET:
+    break;
+  default: {
+    std::cout << ins->getInsTag() << endl;
+    std::cout << *ins << endl;
+    assert(0);
+  }
+  }
+}
+
+int MBasicBlock::getJmpNum() { return jmps->size(); }
+
+MInstruction *MBasicBlock::getJmp(int idx) { return &*jmps->at(idx); }
+
+void MBasicBlock::clearJmps() {
+  jmps->clear();
+  for (auto &bb : *outgoing) {
+    bb->removeIncoming(this);
+  }
+  outgoing->clear();
+}
+
+void MBasicBlock::pushPhi(MHIphi *phi) {
+  phis->push_back(std::unique_ptr<MHIphi>(phi));
+}
+
+vector<unique_ptr<MHIphi>> &MBasicBlock::getPhis() { return *phis; }
+
+void MBasicBlock::removeIncoming(MBasicBlock *bb) {
+  auto it = incoming->begin();
+  while (it != incoming->end()) {
+    if (*it == bb) {
+      it = incoming->erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+void MBasicBlock::addIncoming(MBasicBlock *bb) { incoming->push_back(bb); }
+
+// control the incoming/out coming relation
+void MBasicBlock::replaceOutgoing(MBasicBlock *oldbb, MBasicBlock *newbb) {
+  for (auto it = outgoing->begin(); it != outgoing->end(); ++it) {
+    if (*it == oldbb) {
+      *it = newbb;
+      break;
+    }
+  }
+  oldbb->removeIncoming(this);
+  newbb->addIncoming(this);
+  for (auto &jmp : *jmps) {
+    auto ins = &*jmp;
+    switch (ins->getInsTag()) {
+    case MInstruction::H_BR: {
+      auto br = static_cast<MHIbr *>(ins);
+      if (br->getFBlock() == oldbb) {
+        br->setFBlock(newbb);
+      }
+      if (br->getTBlock() == oldbb) {
+        br->setTBlock(newbb);
+      }
+      break;
+    }
+    case MInstruction::BEQ: {
+      auto i = static_cast<MIbeq *>(ins);
+      if (i->getTargetBB() == oldbb) {
+        i->setTargetBB(newbb);
+      }
+      break;
+    }
+    case MInstruction::BNE: {
+      auto i = static_cast<MIbne *>(ins);
+      if (i->getTargetBB() == oldbb) {
+        i->setTargetBB(newbb);
+      }
+      break;
+    }
+    case MInstruction::BGE: {
+      auto i = static_cast<MIbge *>(ins);
+      if (i->getTargetBB() == oldbb) {
+        i->setTargetBB(newbb);
+      }
+      break;
+    }
+    case MInstruction::BLT: {
+      auto i = static_cast<MIblt *>(ins);
+      if (i->getTargetBB() == oldbb) {
+        i->setTargetBB(newbb);
+      }
+      break;
+    }
+    case MInstruction::J: {
+      auto i = static_cast<MIj *>(ins);
+      if (i->getTargetBB() == oldbb) {
+        i->setTargetBB(newbb);
+      }
+      break;
+    }
+    case MInstruction::RET:
+    case MInstruction::H_RET:
+      break;
+    default:
+      assert(0);
+    }
+  }
+}
+
+// only affect phi
+void MBasicBlock::replacePhiIncoming(MBasicBlock *oldbb, MBasicBlock *newbb) {
+  for (auto &phi : *phis) {
+    phi->replaceIncoming(oldbb, newbb);
+  }
+}
+vector<MBasicBlock *> &MBasicBlock::getIncomings() { return *incoming; }
+vector<MBasicBlock *> &MBasicBlock::getOutgoings() { return *outgoing; }
+
+unique_ptr<MInstruction> MBasicBlock::removeInstruction(MInstruction *ins) {
   for (auto it = instructions->begin(); it != instructions->end();) {
     if (it->get() == ins) {
-      unique_ptr<MachineInstruction> removed = std::move(*it);
+      unique_ptr<MInstruction> removed = std::move(*it);
       it = instructions->erase(it);
       removed->setBasicBlock(nullptr);
       return removed;
@@ -76,15 +215,15 @@ MachineBasicBlock::removeInstruction(MachineInstruction *ins) {
   return nullptr;
 }
 
-void MachineBasicBlock::replaceInstructionWith(
-    MachineInstruction *ins, vector<MachineInstruction *> instrs) {
+void MBasicBlock::replaceInstructionWith(MInstruction *ins,
+                                         vector<MInstruction *> instrs) {
   for (auto it = instructions->begin(); it != instructions->end(); ++it) {
     if (it->get() == ins) {
-      instructions->erase(it);
       ins->setBasicBlock(nullptr);
+      instructions->erase(it);
 
       for (auto new_ins : instrs) {
-        instructions->insert(it, unique_ptr<MachineInstruction>(new_ins));
+        instructions->insert(it, unique_ptr<MInstruction>(new_ins));
         new_ins->setBasicBlock(this);
       }
       return;
@@ -92,12 +231,12 @@ void MachineBasicBlock::replaceInstructionWith(
   }
 }
 
-void MachineBasicBlock::insertBeforeInstructionWith(
-    MachineInstruction *ins, vector<MachineInstruction *> instrs) {
+void MBasicBlock::insertBeforeInstructionWith(MInstruction *ins,
+                                              vector<MInstruction *> instrs) {
   for (auto it = instructions->begin(); it != instructions->end(); ++it) {
     if (it->get() == ins) {
       for (auto new_ins : instrs) {
-        it = instructions->insert(it, unique_ptr<MachineInstruction>(new_ins));
+        it = instructions->insert(it, unique_ptr<MInstruction>(new_ins));
         new_ins->setBasicBlock(this);
         ++it;
       }
@@ -106,19 +245,56 @@ void MachineBasicBlock::insertBeforeInstructionWith(
   }
 }
 
-void MachineBasicBlock::insertAfterInstructionWith(
-    MachineInstruction *ins, vector<MachineInstruction *> instrs) {
+void MBasicBlock::insertAfterInstructionWith(MInstruction *ins,
+                                             vector<MInstruction *> instrs) {
   for (auto it = instructions->begin(); it != instructions->end(); ++it) {
     if (it->get() == ins) {
       ++it;
       for (auto new_ins : instrs) {
-        it = instructions->insert(it, unique_ptr<MachineInstruction>(new_ins));
+        it = instructions->insert(it, unique_ptr<MInstruction>(new_ins));
         new_ins->setBasicBlock(this);
         ++it;
       }
       return;
     }
   }
+}
+
+vector<unique_ptr<MInstruction>> &MBasicBlock::getInstructions() {
+  return *instructions;
+}
+
+std::ostream &operator<<(std::ostream &os, const MBasicBlock &obj) {
+  os << obj.getName() << ":" << endl;
+  auto mod = obj.function->getMod();
+  if (mod->is_ssa()) {
+    for (auto &phi : *obj.phis) {
+      auto com = phi->getComment();
+      if (com == "") {
+        os << "\t" << *phi << endl;
+      } else {
+        os << "\t" << *phi << " #" << com << endl;
+      }
+    }
+  }
+  for (auto &ins : *obj.instructions) {
+    auto com = ins->getComment();
+    if (com == "") {
+      os << "\t" << *ins << endl;
+    } else {
+      os << "\t" << *ins << " #" << com << endl;
+    }
+  }
+
+  for (auto &jmp : *obj.jmps) {
+    auto com = jmp->getComment();
+    if (com == "") {
+      os << "\t" << *jmp << endl;
+    } else {
+      os << "\t" << *jmp << " #" << com << endl;
+    }
+  }
+  return os;
 }
 
 /////////////////////////////////////////////////
@@ -126,26 +302,6 @@ void MachineBasicBlock::insertAfterInstructionWith(
 //                MachineGlobal
 //
 /////////////////////////////////////////////////
-
-// in bytes
-uint32_t cal_size(const Type *tp) {
-  switch (tp->getTypeTag()) {
-  case TT_POINTER:
-  case TT_INT1:
-  case TT_INT32:
-  case TT_FLOAT:
-    return 4;
-  case TT_ARRAY: {
-    const ArrayType *atp = static_cast<const ArrayType *>(tp);
-    return atp->getLen() * cal_size(atp->getElemType());
-  }
-  case TT_FUNCTION:
-  case TT_VOID:
-  default:
-    assert(0);
-  }
-  return 0;
-}
 
 union FloatIntUnion {
   float f;
@@ -158,59 +314,56 @@ int32_t float_to_int_bits(float f) {
   return u.i;
 }
 
-static void add_decl(string &res, Constant *init, Type *tp) {
+string MGlobal::getName() const { return global->getName(); }
+
+static void add_decl(std::ostream &os, Constant *init, Type *tp) {
   switch (tp->getTypeTag()) {
   case TT_INT32: {
-    res += "\t.word " + init->toString() + "\n";
+    os << "\t.word " << init->toString() << endl;
     break;
   }
   case TT_INT1:
-    res += "\t.word " + init->toString() + "\n";
+    os << "\t.word " << init->toString() << endl;
     break;
   case TT_FLOAT: {
     auto f = static_cast<FloatConstant *>(init);
-    res += "\t.word " + std::to_string(float_to_int_bits(f->getValue())) + "\n";
+    os << "\t.word " + std::to_string(float_to_int_bits(f->getValue())) << endl;
     break;
   }
   case TT_ARRAY: {
     ArrayType *arrType = static_cast<ArrayType *>(tp);
     Type *elemType = arrType->getElemType();
     int size = arrType->getLen();
-
     if (init->isZeroInit()) {
-      res += "\t.zero " + std::to_string(size * cal_size(elemType)) + "\n";
+      os << "\t.zero " << std::to_string(size * cal_size(elemType)) << endl;
       break;
     }
-
     auto arrInit = static_cast<ArrayConstant *>(init);
     for (int i = 0; i < size; i++) {
       Constant *elemInit = arrInit->getElemInit(i);
-      add_decl(res, elemInit, elemType);
+      add_decl(os, elemInit, elemType);
     }
     break;
   }
   case TT_POINTER: {
-    PointerType *ptrType = static_cast<PointerType *>(tp);
-    Type *elemType = ptrType->getElemType();
-    if (init->isZeroInit()) {
-      res += "\t.word 0\n";
-    } else {
-      add_decl(res, init, elemType);
-    }
+    PointerType *p = static_cast<PointerType *>(tp);
+    Type *elemType = p->getElemType();
+    add_decl(os, init, elemType);
     break;
   }
-  default:
-    res += "\t.word 0\n";
-    break;
+  default: {
+    std::cout << tp->getTypeTag() << endl;
+    assert(0);
+  }
   }
 }
 
-string MachineGlobal::to_string() const {
-  string res = getName() + ":\n";
-  auto tp = global->getType();
-  auto init = global->getInitValue();
-  add_decl(res, init, tp);
-  return res;
+std::ostream &operator<<(std::ostream &os, const MGlobal &obj) {
+  os << obj.getName() << ":" << endl;
+  auto tp = obj.global->getType();
+  auto init = obj.global->getInitValue();
+  add_decl(os, init, tp);
+  return os;
 }
 
 /////////////////////////////////////////////////
@@ -219,28 +372,52 @@ string MachineGlobal::to_string() const {
 //
 /////////////////////////////////////////////////
 
-MachineFunction::MachineFunction(FuncType *fType, string name_) {
-  type = fType;
-  name = name_;
-  basicBlocks = make_unique<vector<unique_ptr<MachineBasicBlock>>>();
-  reg_pool = make_unique<vector<unique_ptr<MachineInstruction>>>();
-  saved_registers = make_unique<vector<Register *>>();
-}
-
-void MachineFunction::pushBasicBlock(MachineBasicBlock *bb) {
-  basicBlocks->push_back(unique_ptr<MachineBasicBlock>(bb));
-  bb->setFunction(this);
-}
-
-string MachineFunction::to_string() const {
-  string res = getName() + ":\n";
-  // std::cout << res << std::endl;
-  for (const auto &bb : *basicBlocks) {
-    // std::cout << "  bb:" << std::endl;
-    // std::cout << "  :" + bb->getName() << std::endl;
-    res += bb->to_string();
+MFunction::MFunction(FuncType *type, string name) {
+  this->type = type;
+  this->name = name;
+  this->basicBlocks = make_unique<vector<unique_ptr<MBasicBlock>>>();
+  this->arguments = make_unique<vector<unique_ptr<ARGRegister>>>();
+  for (int i = 0; i < type->getArgSize(); i++) {
+    auto arg = type->getArgument(i);
+    arguments->push_back(unique_ptr<ARGRegister>(new ARGRegister(arg)));
   }
-  return res;
+}
+
+MBasicBlock *MFunction::addBasicBlock(string name) {
+  auto bb = new MBasicBlock(name);
+  basicBlocks->push_back(unique_ptr<MBasicBlock>(bb));
+  bb->setFunction(this);
+  return bb;
+}
+
+void MFunction::setEntry(MBasicBlock *entry) { this->entry = entry; }
+
+MBasicBlock *MFunction::getEntry() { return entry; }
+
+void MFunction::setExit(MBasicBlock *exit) { this->exit = exit; }
+
+MBasicBlock *MFunction::getExit() { return exit; }
+
+void MFunction::setMod(MModule *mod) { this->mod = mod; }
+
+MModule *MFunction::getMod() { return mod; }
+
+ARGRegister *MFunction::getArg(int idx) { return &*arguments->at(idx); }
+
+FuncType *MFunction::getType() { return type; }
+
+string MFunction::getName() const { return name; }
+
+vector<unique_ptr<MBasicBlock>> &MFunction::getBasicBlocks() {
+  return *basicBlocks;
+}
+
+std::ostream &operator<<(std::ostream &os, const MFunction &obj) {
+  os << obj.getName() << ":" << endl;
+  for (const auto &bb : *obj.basicBlocks) {
+    os << *bb << endl;
+  }
+  return os;
 }
 
 /////////////////////////////////////////////////
@@ -249,154 +426,45 @@ string MachineFunction::to_string() const {
 //
 /////////////////////////////////////////////////
 
-MachineModule::MachineModule() {
-  globalVariables = make_unique<vector<unique_ptr<MachineGlobal>>>();
-  functions = make_unique<vector<unique_ptr<MachineFunction>>>();
+MModule::MModule() {
+  globalVariables = make_unique<vector<unique_ptr<MGlobal>>>();
+  functions = make_unique<vector<unique_ptr<MFunction>>>();
 }
 
-MachineFunction *MachineModule::addFunction(FuncType *funcType, string name) {
-  MachineFunction *func = new MachineFunction(funcType, name);
-  functions->push_back(unique_ptr<MachineFunction>(func));
+void MModule::ssa_out() { this->if_ssa = false; }
+
+MFunction *MModule::addFunction(FuncType *funcType, string name) {
+  MFunction *func = new MFunction(funcType, name);
+  functions->push_back(unique_ptr<MFunction>(func));
+  func->setMod(this);
   return func;
 }
 
-MachineBasicBlock *MachineModule::addBasicBlock(MachineFunction *function,
-                                                string name) {
-  MachineBasicBlock *bb = new MachineBasicBlock(name);
-  function->pushBasicBlock(bb);
-  return bb;
-}
-
-MachineGlobal *MachineModule::addGlobalVariable(GlobalVariable *global) {
-  auto g = new MachineGlobal(global);
-  globalVariables->push_back(unique_ptr<MachineGlobal>(g));
+MGlobal *MModule::addGlobalVariable(GlobalVariable *global) {
+  auto g = new MGlobal(global);
+  globalVariables->push_back(unique_ptr<MGlobal>(g));
   return g;
 }
 
-MachineGlobal *MachineModule::addGlobalFloat(FloatConstant *f) {
+MGlobal *MModule::addGlobalFloat(FloatConstant *f) {
   static int float_cnt = 0;
-  auto g = new MachineGlobal(
+  auto g = new MGlobal(
       new GlobalVariable(FloatType::getFloatType(), f, "fi" + float_cnt));
-  globalVariables->push_back(unique_ptr<MachineGlobal>(g));
+  globalVariables->push_back(unique_ptr<MGlobal>(g));
   return g;
 }
 
-string MachineModule::to_string() const {
-  string res = ".globl main\n";
-  for (const auto &gv : *globalVariables) {
-    res += gv->to_string() + "\n";
+vector<unique_ptr<MGlobal>> &MModule::getGlobals() { return *globalVariables; }
+
+vector<unique_ptr<MFunction>> &MModule::getFunctions() { return *functions; }
+
+std::ostream &operator<<(std::ostream &os, const MModule &obj) {
+  os << ".globl main\n";
+  for (const auto &gv : *obj.globalVariables) {
+    os << *gv << endl;
   }
-  for (const auto &f : *functions) {
-    res += f->to_string();
+  for (const auto &f : *obj.functions) {
+    os << *f << endl;
   }
-  return res;
-}
-
-IRegister *Register::reg_zero = new IRegister(0, "zero");
-IRegister *Register::reg_ra = new IRegister(1, "ra"); // saved
-IRegister *Register::reg_sp = new IRegister(2, "sp"); // saved
-IRegister *Register::reg_gp = new IRegister(3, "gp");
-IRegister *Register::reg_tp = new IRegister(4, "tp");
-IRegister *Register::reg_t0 = new IRegister(5, "t0");
-IRegister *Register::reg_t1 = new IRegister(6, "t1");
-IRegister *Register::reg_t2 = new IRegister(7, "t2");
-IRegister *Register::reg_s0 =
-    new IRegister(8, "s0"); // 注意：s0 和 fp 是同一个寄存器
-IRegister *Register::reg_s1 = new IRegister(9, "s1");
-IRegister *Register::reg_a0 = new IRegister(10, "a0");
-IRegister *Register::reg_a1 = new IRegister(11, "a1");
-IRegister *Register::reg_a2 = new IRegister(12, "a2");
-IRegister *Register::reg_a3 = new IRegister(13, "a3");
-IRegister *Register::reg_a4 = new IRegister(14, "a4");
-IRegister *Register::reg_a5 = new IRegister(15, "a5");
-IRegister *Register::reg_a6 = new IRegister(16, "a6");
-IRegister *Register::reg_a7 = new IRegister(17, "a7");
-IRegister *Register::reg_s2 = new IRegister(18, "s2");
-IRegister *Register::reg_s3 = new IRegister(19, "s3");
-IRegister *Register::reg_s4 = new IRegister(20, "s4");
-IRegister *Register::reg_s5 = new IRegister(21, "s5");
-IRegister *Register::reg_s6 = new IRegister(22, "s6");
-IRegister *Register::reg_s7 = new IRegister(23, "s7");
-IRegister *Register::reg_s8 = new IRegister(24, "s8");
-IRegister *Register::reg_s9 = new IRegister(25, "s9");
-IRegister *Register::reg_s10 = new IRegister(26, "s10");
-IRegister *Register::reg_s11 = new IRegister(27, "s11");
-IRegister *Register::reg_t3 = new IRegister(28, "t3");
-IRegister *Register::reg_t4 = new IRegister(29, "t4");
-IRegister *Register::reg_t5 = new IRegister(30, "t5");
-IRegister *Register::reg_t6 = new IRegister(31, "t6");
-
-Register *Register::getIRegister(int idx) {
-  static IRegister *iregisters[] = {
-      Register::reg_zero, Register::reg_ra, Register::reg_sp,
-      Register::reg_gp,   Register::reg_tp, Register::reg_t0,
-      Register::reg_t1,   Register::reg_t2, Register::reg_s0,
-      Register::reg_s1,   Register::reg_a0, Register::reg_a1,
-      Register::reg_a2,   Register::reg_a3, Register::reg_a4,
-      Register::reg_a5,   Register::reg_a6, Register::reg_a7,
-      Register::reg_s2,   Register::reg_s3, Register::reg_s4,
-      Register::reg_s5,   Register::reg_s6, Register::reg_s7,
-      Register::reg_s8,   Register::reg_s9, Register::reg_s10,
-      Register::reg_s11,  Register::reg_t3, Register::reg_t4,
-      Register::reg_t5,   Register::reg_t6,
-  };
-
-  if (idx < 0 || idx >= (sizeof(iregisters) / sizeof(iregisters[0]))) {
-    throw std::out_of_range("Index is out of the range of IRegister array.");
-  }
-  return iregisters[idx];
-}
-
-FRegister *Register::reg_ft0 = new FRegister(0, "ft0");
-FRegister *Register::reg_ft1 = new FRegister(1, "ft1");
-FRegister *Register::reg_ft2 = new FRegister(2, "ft2");
-FRegister *Register::reg_ft3 = new FRegister(3, "ft3");
-FRegister *Register::reg_ft4 = new FRegister(4, "ft4");
-FRegister *Register::reg_ft5 = new FRegister(5, "ft5");
-FRegister *Register::reg_ft6 = new FRegister(6, "ft6");
-FRegister *Register::reg_ft7 = new FRegister(7, "ft7");
-FRegister *Register::reg_fs0 = new FRegister(8, "fs0");
-FRegister *Register::reg_fs1 = new FRegister(9, "fs1");
-FRegister *Register::reg_fa0 = new FRegister(10, "fa0");
-FRegister *Register::reg_fa1 = new FRegister(11, "fa1");
-FRegister *Register::reg_fa2 = new FRegister(12, "fa2");
-FRegister *Register::reg_fa3 = new FRegister(13, "fa3");
-FRegister *Register::reg_fa4 = new FRegister(14, "fa4");
-FRegister *Register::reg_fa5 = new FRegister(15, "fa5");
-FRegister *Register::reg_fa6 = new FRegister(16, "fa6");
-FRegister *Register::reg_fa7 = new FRegister(17, "fa7");
-FRegister *Register::reg_fs2 = new FRegister(18, "fs2");
-FRegister *Register::reg_fs3 = new FRegister(19, "fs3");
-FRegister *Register::reg_fs4 = new FRegister(20, "fs4");
-FRegister *Register::reg_fs5 = new FRegister(21, "fs5");
-FRegister *Register::reg_fs6 = new FRegister(22, "fs6");
-FRegister *Register::reg_fs7 = new FRegister(23, "fs7");
-FRegister *Register::reg_fs8 = new FRegister(24, "fs8");
-FRegister *Register::reg_fs9 = new FRegister(25, "fs9");
-FRegister *Register::reg_fs10 = new FRegister(26, "fs10");
-FRegister *Register::reg_fs11 = new FRegister(27, "fs11");
-FRegister *Register::reg_ft8 = new FRegister(28, "ft8");
-FRegister *Register::reg_ft9 = new FRegister(29, "ft9");
-FRegister *Register::reg_ft10 = new FRegister(30, "ft10");
-FRegister *Register::reg_ft11 = new FRegister(31, "ft11");
-
-Register *Register::getFRegister(int idx) {
-  static FRegister *fregisters[] = {
-      Register::reg_ft0,  Register::reg_ft1,  Register::reg_ft2,
-      Register::reg_ft3,  Register::reg_ft4,  Register::reg_ft5,
-      Register::reg_ft6,  Register::reg_ft7,  Register::reg_fs0,
-      Register::reg_fs1,  Register::reg_fa0,  Register::reg_fa1,
-      Register::reg_fa2,  Register::reg_fa3,  Register::reg_fa4,
-      Register::reg_fa5,  Register::reg_fa6,  Register::reg_fa7,
-      Register::reg_fs2,  Register::reg_fs3,  Register::reg_fs4,
-      Register::reg_fs5,  Register::reg_fs6,  Register::reg_fs7,
-      Register::reg_fs8,  Register::reg_fs9,  Register::reg_fs10,
-      Register::reg_fs11, Register::reg_ft8,  Register::reg_ft9,
-      Register::reg_ft10, Register::reg_ft11,
-  };
-
-  if (idx < 0 || idx >= (sizeof(fregisters) / sizeof(fregisters[0]))) {
-    throw std::out_of_range("Index is out of the range of FRegister array.");
-  }
-  return fregisters[idx];
+  return os;
 }

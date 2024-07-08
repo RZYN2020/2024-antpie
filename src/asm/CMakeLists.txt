@@ -1,5 +1,6 @@
 add_library(
     asm
-    MachineInstruction.cc
+    Register.cc
+    MInstruction.cc
     Machine.cc
 )

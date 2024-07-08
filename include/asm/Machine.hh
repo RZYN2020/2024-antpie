@@ -1,114 +1,144 @@
-#ifndef _MACHINE_H_
-#define _MACHINE_H_
+#pragma once
 
 #include "Constant.hh"
-#include "GlobalVariable.hh"
+#include "MInstruction.hh"
 #include "Type.hh"
-#include "MachineInstruction.hh"
 
-class MachineBasicBlock {
+class MBasicBlock {
 private:
   string name;
-  unique_ptr<vector<unique_ptr<MachineInstruction>>> instructions;
-  MachineFunction *function;
+  unique_ptr<vector<unique_ptr<MHIphi>>> phis;
+  unique_ptr<vector<unique_ptr<MInstruction>>> instructions;
+  unique_ptr<vector<unique_ptr<MInstruction>>> jmps;
+  MFunction *function;
+  unique_ptr<vector<MBasicBlock *>> outgoing;
+  unique_ptr<vector<MBasicBlock *>> incoming;
 
 public:
-  MachineBasicBlock(string name_);
-  void pushInstr(MachineInstruction *i);
-  void pushInstrs(vector<MachineInstruction *> is);
-  void pushInstrBeforeJmp(MachineInstruction *i);
-  void pushInstrAtHead(MachineInstruction *i);
-  void pushInstrsAtHead(vector<MachineInstruction *> is);
+  MBasicBlock(string name);
+
+  void pushInstr(MInstruction *i);
+  void pushInstrs(vector<MInstruction *> is);
+
+  void pushInstrAtHead(MInstruction *i);
+  void pushInstrsAtHead(vector<MInstruction *> is);
+
   string getName() const { return "." + name; }
-  string to_string() const;
-  void setFunction(MachineFunction *function);
-  MachineFunction *getFunction();
 
-  unique_ptr<MachineInstruction> removeInstruction(MachineInstruction *ins);
+  void setFunction(MFunction *function);
+  MFunction *getFunction();
 
-  void replaceInstructionWith(MachineInstruction *ins,
-                              vector<MachineInstruction *> instrs);
-  void insertBeforeInstructionWith(MachineInstruction *ins,
-                                   vector<MachineInstruction *> instrs);
+  void pushJmp(MInstruction *ins);
+  int getJmpNum();
+  MInstruction *getJmp(int idx);
+  void clearJmps();
 
-  void insertAfterInstructionWith(MachineInstruction *ins,
-                                  vector<MachineInstruction *> instrs);
+  void pushPhi(MHIphi *phi);
+  vector<unique_ptr<MHIphi>> &getPhis();
 
-  const vector<unique_ptr<MachineInstruction>> &getInstructions() const {
-    return *instructions;
-  }
+
+  void removeIncoming(MBasicBlock *bb);
+  void addIncoming(MBasicBlock* bb);
+  void replaceOutgoing(MBasicBlock* oldbb, MBasicBlock* newbb);
+  void replacePhiIncoming(MBasicBlock* oldbb, MBasicBlock* newbb);
+  vector<MBasicBlock *> &getIncomings();
+  vector<MBasicBlock *> &getOutgoings();
+
+  unique_ptr<MInstruction> removeInstruction(MInstruction *ins);
+  void replaceInstructionWith(MInstruction *ins, vector<MInstruction *> instrs);
+  void insertBeforeInstructionWith(MInstruction *ins,
+                                   vector<MInstruction *> instrs);
+
+  void insertAfterInstructionWith(MInstruction *ins,
+                                  vector<MInstruction *> instrs);
+
+  vector<unique_ptr<MInstruction>> &getInstructions();
+
+  friend std::ostream &operator<<(std::ostream &os, const MBasicBlock &obj);
 };
 
-uint32_t cal_size(const Type *tp);
-
-class MachineGlobal {
+class MGlobal {
 private:
   GlobalVariable *global;
 
 public:
-  MachineGlobal(GlobalVariable *global) : global(global) {}
-  string to_string() const;
-  string getName() const { return global->getName(); }
+  MGlobal(GlobalVariable *global) : global(global) {}
+  string getName() const;
+
+  friend std::ostream &operator<<(std::ostream &os, const MGlobal &obj);
 };
 
-class MachineFunction {
+class MModule;
+
+class MFunction {
 private:
   FuncType *type;
+  unique_ptr<vector<unique_ptr<ARGRegister>>> arguments;
   string name;
-  unique_ptr<vector<unique_ptr<MachineBasicBlock>>> basicBlocks;
-  unique_ptr<vector<Register *>> saved_registers;
-  uint32_t spilled_size =
-      0; // Without the user directly using alloca in the source code, we can
-         // statically determine the spilled size.
-  unique_ptr<vector<unique_ptr<MachineInstruction>>> reg_pool;
+  unique_ptr<vector<unique_ptr<MBasicBlock>>> basicBlocks;
+  MBasicBlock *entry;
+  MBasicBlock *exit;
+  MModule* mod;
 
 public:
-  MachineFunction(FuncType *fType, string name);
-  void pushBasicBlock(MachineBasicBlock *bb);
-  string to_string() const;
-  string getName() const { return name; }
-  uint32_t getSavedSize() const {
-    return saved_registers->size() * 4 + 2 * 8; // with ra, fp
-  }
-  uint32_t getSpilledSize() const { return spilled_size; }
-  void incSpilledSize(uint32_t sz) { spilled_size += sz; }
+  MFunction(FuncType *fType, string name);
+  MBasicBlock *addBasicBlock(string name);
 
-  const vector<unique_ptr<MachineBasicBlock>> &getBasicBlocks() const {
-    return *basicBlocks;
-  }
+  void setEntry(MBasicBlock *entry);
+  MBasicBlock *getEntry();
 
-  void pushIntoRegPool(MachineInstruction *reg) {
-    reg_pool->push_back(unique_ptr<MachineInstruction>(reg));
-  }
+  void setExit(MBasicBlock *exit);
+  MBasicBlock *getExit();
 
-  const vector<unique_ptr<MachineInstruction>> &getRegPool() const {
-    return *reg_pool;
-  }
+  void setMod(MModule *mod);
+  MModule *getMod();
+
+  ARGRegister *getArg(int idx);
+  FuncType *getType();
+
+  string getName() const;
+  vector<unique_ptr<MBasicBlock>> &getBasicBlocks();
+
+  friend std::ostream &operator<<(std::ostream &os, const MFunction &obj);
 };
 
-class MachineModule {
+class MModule {
 private:
-  unique_ptr<vector<unique_ptr<MachineGlobal>>> globalVariables;
-  unique_ptr<vector<unique_ptr<MachineFunction>>> functions;
-  MachineBasicBlock *currBasicBlock;
+  unique_ptr<vector<unique_ptr<MGlobal>>> globalVariables;
+  unique_ptr<vector<unique_ptr<MFunction>>> functions;
+  bool if_ssa = true;
 
 public:
-  MachineModule();
-  string to_string() const;
-  void setCurrBasicBlock(MachineBasicBlock *bb) { currBasicBlock = bb; }
-  MachineFunction *addFunction(FuncType *funcType, string name);
-  MachineBasicBlock *addBasicBlock(MachineFunction *function, string name);
+  MModule();
 
-  MachineGlobal *addGlobalVariable(GlobalVariable *global);
-  MachineGlobal *addGlobalFloat(FloatConstant *f);
+  bool is_ssa() {return if_ssa;}
+  void ssa_out();
+  MFunction *addFunction(FuncType *funcType, string name);
+  MGlobal *addGlobalVariable(GlobalVariable *global);
+  MGlobal *addGlobalFloat(FloatConstant *f);
 
-  const vector<unique_ptr<MachineGlobal>> &getGlobals() const {
-    return *globalVariables;
-  }
+  vector<unique_ptr<MGlobal>> &getGlobals();
+  vector<unique_ptr<MFunction>> &getFunctions();
 
-  const vector<unique_ptr<MachineFunction>> &getFunctions() const {
-    return *functions;
-  }
+  friend std::ostream &operator<<(std::ostream &os, const MModule &obj);
 };
 
-#endif
+// in bytes
+static uint32_t cal_size(const Type *tp) {
+  switch (tp->getTypeTag()) {
+  case TT_POINTER:
+  case TT_INT1:
+  case TT_INT32:
+  case TT_FLOAT:
+    return 4;
+  case TT_ARRAY: {
+    const ArrayType *atp = static_cast<const ArrayType *>(tp);
+    return atp->getLen() * cal_size(atp->getElemType());
+  }
+  case TT_FUNCTION:
+  case TT_VOID:
+  default:
+    assert(0);
+  }
+  return 0;
+}
