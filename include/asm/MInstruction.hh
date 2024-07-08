@@ -160,7 +160,7 @@ public:
   MHIphi(string name);
   ostream &printASM(ostream &stream) override;
   void pushIncoming(Register *reg, MBasicBlock *bb);
-  void replaceIncoming(MBasicBlock *oldbb, MBasicBlock *newbb);
+  void replaceIncoming(MBasicBlock* oldbb, MBasicBlock* newbb);
   MBasicBlock *getIncomingBlock(int idx) const;
 };
 
@@ -171,13 +171,14 @@ private:
 public:
   MHIalloca(uint32_t size, string name);
   ostream &printASM(ostream &stream) override;
+  uint32_t getSize() {return size;}
 };
 
 class MHIret : public MInstruction {
 public:
   enum RetTp { Float, Int, Reg };
 
-private:
+public:
   int imm;
   int fimm;
   RetTp ret_type;
@@ -201,7 +202,7 @@ public:
     } arg;
   };
 
-private:
+public:
   MFunction *function;
   unique_ptr<vector<unique_ptr<CallArg>>> args;
 
@@ -290,15 +291,15 @@ DEFINE_MI_IMM_CLASS(sltiu)
   class MI##NAME : public MInstruction {                                       \
   private:                                                                     \
     MGlobal *global = nullptr;                                                 \
-    uint32_t imm;                                                              \
+    int imm;                                                              \
                                                                                \
   public:                                                                      \
     MI##NAME(MGlobal *global);                                                 \
     MI##NAME(MGlobal *global, std::string name);                               \
     MI##NAME(MGlobal *global, Register *target);                               \
-    MI##NAME(Register *addr, uint32_t offset);                                 \
-    MI##NAME(Register *addr, uint32_t offset, std::string name);               \
-    MI##NAME(Register *addr, uint32_t offset, Register *target);               \
+    MI##NAME(Register *addr, int offset);                                 \
+    MI##NAME(Register *addr, int offset, std::string name);               \
+    MI##NAME(Register *addr, int offset, Register *target);               \
     MGlobal *getGlobal();                                                      \
     ostream &printASM(ostream &stream) override;                               \
   };
@@ -307,11 +308,11 @@ DEFINE_MI_IMM_CLASS(sltiu)
   class MI##NAME : public MInstruction {                                       \
   private:                                                                     \
     MGlobal *global = nullptr;                                                 \
-    uint32_t imm;                                                              \
+    int imm;                                                              \
                                                                                \
   public:                                                                      \
     MI##NAME(Register *val, MGlobal *global);                                  \
-    MI##NAME(Register *val, uint32_t offset, Register *addr);                  \
+    MI##NAME(Register *val, int offset, Register *addr);                  \
     MGlobal *getGlobal();                                                      \
     ostream &printASM(ostream &stream) override;                               \
   };

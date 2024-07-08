@@ -53,6 +53,7 @@ public:
                                   vector<MInstruction *> instrs);
 
   vector<unique_ptr<MInstruction>> &getInstructions();
+  vector<unique_ptr<MInstruction>> &getJmps();
 
   friend std::ostream &operator<<(std::ostream &os, const MBasicBlock &obj);
 };
@@ -81,6 +82,7 @@ private:
   MModule* mod;
 
 public:
+  int stack_offset;
   MFunction(FuncType *fType, string name);
   MBasicBlock *addBasicBlock(string name);
 
@@ -127,6 +129,7 @@ public:
 static uint32_t cal_size(const Type *tp) {
   switch (tp->getTypeTag()) {
   case TT_POINTER:
+    return 8;
   case TT_INT1:
   case TT_INT32:
   case TT_FLOAT:

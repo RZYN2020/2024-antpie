@@ -123,6 +123,7 @@ private:
 
 public:
   ARGRegister(Argument *arg);
+  Argument * getIRArgument() {return arg;}
 };
 
 class VRegister : public Register {

@@ -159,9 +159,9 @@ int main() {
   out_file0.open("tests/test.phi.s");
   out_file0 << *mmodule << std::endl;
 
-  allocate_register(mmodule);
+  spill_all_register(mmodule);
   std::ofstream out_file1;
-  out_file1.open("tests/test.h.s");
+  out_file1.open("tests/test.s");
   out_file1 << *mmodule << std::endl;
 
 //   prelude_conclusion(mmodule);

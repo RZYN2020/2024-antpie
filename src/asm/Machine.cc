@@ -44,6 +44,7 @@ void MBasicBlock::setFunction(MFunction *function) {
 MFunction *MBasicBlock::getFunction() { return function; }
 
 void MBasicBlock::pushJmp(MInstruction *ins) {
+  ins->setBasicBlock(this);
   jmps->push_back(unique_ptr<MInstruction>(ins));
   switch (ins->getInsTag()) {
   case MInstruction::H_BR: {
@@ -217,6 +218,21 @@ unique_ptr<MInstruction> MBasicBlock::removeInstruction(MInstruction *ins) {
 
 void MBasicBlock::replaceInstructionWith(MInstruction *ins,
                                          vector<MInstruction *> instrs) {
+
+  for (auto it = jmps->begin(); it != jmps->end(); ++it) {
+    if (it->get() == ins) {
+      ins->setBasicBlock(nullptr);
+      jmps->erase(it);
+
+      for (auto new_ins : instrs) {
+        jmps->insert(it, unique_ptr<MInstruction>(new_ins));
+        new_ins->setBasicBlock(this);
+        ++it;
+      }
+      return;
+    }
+  }
+
   for (auto it = instructions->begin(); it != instructions->end(); ++it) {
     if (it->get() == ins) {
       ins->setBasicBlock(nullptr);
@@ -225,6 +241,7 @@ void MBasicBlock::replaceInstructionWith(MInstruction *ins,
       for (auto new_ins : instrs) {
         instructions->insert(it, unique_ptr<MInstruction>(new_ins));
         new_ins->setBasicBlock(this);
+        ++it;
       }
       return;
     }
@@ -233,6 +250,16 @@ void MBasicBlock::replaceInstructionWith(MInstruction *ins,
 
 void MBasicBlock::insertBeforeInstructionWith(MInstruction *ins,
                                               vector<MInstruction *> instrs) {
+  for (auto it = jmps->begin(); it != jmps->end(); ++it) {
+    if (it->get() == ins) {
+      for (auto new_ins : instrs) {
+        instructions->push_back(unique_ptr<MInstruction>(new_ins));
+        new_ins->setBasicBlock(this);
+      }
+      return;
+    }
+  }
+
   for (auto it = instructions->begin(); it != instructions->end(); ++it) {
     if (it->get() == ins) {
       for (auto new_ins : instrs) {
@@ -263,6 +290,8 @@ void MBasicBlock::insertAfterInstructionWith(MInstruction *ins,
 vector<unique_ptr<MInstruction>> &MBasicBlock::getInstructions() {
   return *instructions;
 }
+
+vector<unique_ptr<MInstruction>> &MBasicBlock::getJmps() { return *jmps; }
 
 std::ostream &operator<<(std::ostream &os, const MBasicBlock &obj) {
   os << obj.getName() << ":" << endl;

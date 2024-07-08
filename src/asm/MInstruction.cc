@@ -428,21 +428,21 @@ IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, sltiu)
     this->global = global;                                                     \
   }                                                                            \
                                                                                \
-  MI##NAME::MI##NAME(Register *addr, uint32_t offset)                          \
+  MI##NAME::MI##NAME(Register *addr, int offset)                               \
       : MInstruction(MInstruction::TAG) {                                      \
     this->pushReg(addr);                                                       \
     imm = offset;                                                              \
     this->setTarget(this);                                                     \
   }                                                                            \
                                                                                \
-  MI##NAME::MI##NAME(Register *addr, uint32_t offset, std::string name)        \
+  MI##NAME::MI##NAME(Register *addr, int offset, std::string name)             \
       : MInstruction(MInstruction::TAG, name) {                                \
     this->pushReg(addr);                                                       \
     imm = offset;                                                              \
     this->setTarget(this);                                                     \
   }                                                                            \
                                                                                \
-  MI##NAME::MI##NAME(Register *addr, uint32_t offset, Register *target)        \
+  MI##NAME::MI##NAME(Register *addr, int offset, Register *target)             \
       : MInstruction(MInstruction::TAG) {                                      \
     this->pushReg(addr);                                                       \
     this->setTarget(target);                                                   \
@@ -469,7 +469,7 @@ IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, sltiu)
     this->global = global;                                                     \
   }                                                                            \
                                                                                \
-  MI##NAME::MI##NAME(Register *val, uint32_t offset, Register *addr)           \
+  MI##NAME::MI##NAME(Register *val, int offset, Register *addr)                \
       : MInstruction(MInstruction::TAG) {                                      \
     this->pushReg(val);                                                        \
     this->pushReg(addr);                                                       \

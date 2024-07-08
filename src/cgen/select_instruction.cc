@@ -315,11 +315,11 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           for (int i = 0; i < call->getRValueSize(); i++) {
             auto arg = call->getRValue(i);
             if (arg->getValueTag() == VT_FLOATCONST) {
-              auto i = static_cast<IntegerConstant *>(arg)->getValue();
-              mcall->pushArg(i);
-            } else if (arg->getValueTag() == VT_INTCONST) {
               auto f = static_cast<FloatConstant *>(arg)->getValue();
               mcall->pushArg(f);
+            } else if (arg->getValueTag() == VT_INTCONST) {
+              auto i = static_cast<IntegerConstant *>(arg)->getValue();
+              mcall->pushArg(i);
             } else {
               mcall->pushArg(GET_VREG(arg));
             }
@@ -344,6 +344,10 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
         case VT_ALLOCA: {
           AllocaInst *alloca = static_cast<AllocaInst *>(ins);
           auto tp = alloca->getType();
+          if (tp->getTypeTag() == TT_POINTER) {
+            auto pt = static_cast<PointerType *>(tp);
+            tp = pt->getElemType();
+          }
           auto size = cal_size(tp);
           ADD_INSTR(malloca, MHIalloca, size, ins->getName());
           instr_map->insert({ins, malloca});
@@ -418,6 +422,8 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           Register *base = GET_VREG(gep->getRValue(0));
 
           const Type *current_type = gep->getPtrType();
+          auto ptrtp = static_cast<const PointerType *>(current_type);
+          current_type = ptrtp->getElemType();
           MInstruction *dest;
           for (unsigned i = 1; i < gep->getRValueSize(); i++) {
             Register *index = GET_VREG(gep->getRValue(i));
