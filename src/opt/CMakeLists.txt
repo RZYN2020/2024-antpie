@@ -4,4 +4,6 @@ add_library(
     MemToReg.cc
     CSE.cc
     MergeBlock.cc
+    Inlining.cc
+    FunctionPropAnalysis.cc
 )

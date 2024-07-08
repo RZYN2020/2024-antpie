@@ -4,16 +4,16 @@
 #include <assert.h>
 
 #include <map>
-#include <unordered_set>
 #include <queue>
+#include <unordered_set>
+
 #include "BasicBlock.hh"
 #include "CFG.hh"
 #include "VisualizeGraph.hh"
 
-
-using std::unordered_set;
 using std::map;
 using std::queue;
+using std::unordered_set;
 
 class Function;
 
@@ -50,6 +50,8 @@ class DomTree {
   BBListPtr getDF(BasicBlock* bb) const { return dominanceFrontier.at(bb); }
 
   void mergeChildrenTo(BasicBlock* src, BasicBlock* dest);
+  void deleteChildren(BasicBlock* block) { domChildren[block]->clear(); }
+  void deleteParent(BasicBlock* block) { dominators.erase(block); }
   void draw();
 
   void calculateIDF(BBListPtr src, BBListPtr result);

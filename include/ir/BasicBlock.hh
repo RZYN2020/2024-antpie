@@ -33,8 +33,22 @@ class BasicBlock : public Value {
     return &instructions;
   }
   LinkedList<Instruction*>* getInstructions() { return &instructions; }
-
+  BasicBlock* clone(unordered_map<Value*, Value*>& replaceMap);
   bool isEmpty() { return empty; }
+  BasicBlock* split(LinkedList<Instruction*>::Iterator iter);
 };
+
+struct BasicBlockPtrHash {
+  std::size_t operator()(const BasicBlock* bb) const {
+    return std::hash<const BasicBlock*>()(bb);
+  }
+};
+
+struct BasicBlockPtrEqual {
+  bool operator()(const BasicBlock* lhs, const BasicBlock* rhs) const {
+    return lhs == rhs;
+  }
+};
+
 
 #endif

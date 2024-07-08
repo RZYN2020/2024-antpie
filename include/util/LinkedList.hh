@@ -100,7 +100,7 @@ class LinkedList {
   bool isEmpty() const { return head == nullptr; }
 
   int getSize() const { return size; }
-  
+
   void clear() {
     Node<T>* current = head;
     Node<T>* next = nullptr;
@@ -144,11 +144,93 @@ class LinkedList {
     bool operator!=(const Iterator& other) const {
       return current != other.current;
     }
+
+    bool operator==(const Iterator& other) const {
+      return current == other.current;
+    }
+
+    Node<T>* getCurrentNode() const { return current; }
   };
 
   Iterator begin() const { return Iterator(head); }
 
   Iterator end() const { return Iterator(nullptr); }
+
+  void insertBefore(const Iterator& it, const T& data) {
+    if (it == begin()) {
+      pushFront(data);
+      return;
+    }
+
+    Node<T>* newNode = new Node<T>(data);
+    Node<T>* current = head;
+    Node<T>* previous = nullptr;
+
+    while (current != nullptr && current != it.getCurrentNode()) {
+      previous = current;
+      current = current->next;
+    }
+
+    if (current == nullptr) {
+      delete newNode;
+      return;
+    }
+
+    previous->next = newNode;
+    newNode->next = current;
+    size++;
+  }
+
+  void insertAfter(const Iterator& it, const T& data) {
+    if (it == end()) {
+      return;
+    }
+
+    Node<T>* newNode = new Node<T>(data);
+    Node<T>* current = it.getCurrentNode();
+
+    if (current == tail) {
+      tail = newNode;
+    }
+
+    newNode->next = current->next;
+    current->next = newNode;
+    size++;
+  }
+
+  /**
+   * @brief Splits the linked list into two parts after the given iterator
+   * position.
+   *
+   * This function takes an iterator and splits the linked list into two
+   * separate lists. The original list retains the elements from the beginning
+   * up to the given iterator position. The new list (provided by the caller) is
+   * assigned the elements that come after the iterator position.
+   *
+   */
+  void splitAfter(const Iterator& it, LinkedList<T>* newList) {
+    if (newList == nullptr || it == end() || it.getCurrentNode() == tail) {
+      return;
+    }
+
+    Node<T>* current = it.getCurrentNode();
+    Node<T>* newHead = current->next;
+
+    current->next = nullptr;
+    newList->head = newHead;
+    newList->tail = tail;
+
+    // Calculate the size of the new list and update the original list size
+    int newSize = 0;
+    while (newHead != nullptr) {
+      newSize++;
+      newHead = newHead->next;
+    }
+
+    newList->size = newSize;
+    this->size -= newSize;
+    this->tail = current;
+  }
 };
 
 #endif

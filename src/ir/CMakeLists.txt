@@ -9,4 +9,5 @@ add_library(
     Instruction.cc
     Module.cc
     Type.cc
+    Use.cc
 )

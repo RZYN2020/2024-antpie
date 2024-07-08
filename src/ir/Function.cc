@@ -6,7 +6,6 @@ Function::Function(FuncType* fType, string name)
     : GlobalValue(fType, name, VT_FUNC) {
   entry = new BasicBlock(name + "_entry");
   pushBasicBlock(entry);
-
 }
 
 Function::~Function() {
@@ -52,8 +51,10 @@ void Function::printIR(ostream& stream) const {
 }
 
 CFG* Function::buildCFG() {
-  exit = new BasicBlock(getName() + "_exit", true);
-  pushBasicBlock(exit);
+  if (!exit) {
+    exit = new BasicBlock(getName() + "_exit", true);
+    pushBasicBlock(exit);
+  }
   cfg = new CFG(this);
   return cfg;
 }
@@ -62,4 +63,5 @@ DomTree* Function::buildDT() {
   dt = new DomTree(this);
   dt->buildDomTree();
   dt->calculateDF();
+  return dt;
 }

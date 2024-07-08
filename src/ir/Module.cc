@@ -1,6 +1,8 @@
 #include "Module.hh"
 
 #include "CSE.hh"
+#include "FunctionPropAnalysis.hh"
+#include "Inlining.hh"
 #include "MemToReg.hh"
 #include "MergeBlock.hh"
 
@@ -25,6 +27,7 @@ void Module::pushGlobalVariable(GlobalVariable* globalVariable) {
 Function* Module::addFunction(FuncType* funcType, string name) {
   Function* func = new Function(funcType, name);
   functions.pushBack(func);
+  func->setParent(this);
   return func;
 }
 
@@ -186,10 +189,15 @@ void Module::irOptimize() {
 
   // Add mem2reg Pass
   optimizations.pushBack(new MemToReg());
-  // Add earlyCSE pass
-  optimizations.pushBack(new CommonSubexpElimination());
+  // Add function analysis pass
+  optimizations.pushBack(new FunctionPropAnalysis());
+  // Add function inlining pass
+  optimizations.pushBack(new Inlining());
   // Add mergeBlock pass
   optimizations.pushBack(new MergeBlock());
+  // Add earlyCSE pass
+  optimizations.pushBack(new CommonSubexpElimination());
+
   // run all pass
   for (auto& pass : optimizations) {
     pass->runOnModule(this);

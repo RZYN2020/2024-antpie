@@ -17,7 +17,9 @@ struct Use {
 
   Use(Instruction* instr_, Value* value_)
       : value(value_), instr(instr_), next(0), pre(0) {}
+  void replaceValue(Value* value);
 
+  void removeFromValue();
 };
 
 #endif

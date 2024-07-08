@@ -61,7 +61,7 @@ void DomTree::buildDomTree() {
     mn.push_back(i);
   }
 
-  for (int i = size - 1; i >= 1; i--) {
+  for (int i = depth - 1; i >= 1; i--) {
     BasicBlock* bb = dfnToBB[i];
     int res = i;
     for (BasicBlock* pred : *cfg->getPredOf(bb)) {
@@ -182,6 +182,7 @@ void DomTree::mergeChildrenTo(BasicBlock* src, BasicBlock* dest) {
   BBListPtr destList = domChildren[dest];
   for (BasicBlock* domChild: *srcList) {
     destList->pushBack(domChild);
+    setDominator(domChild, dest);
   }
   domChildren.erase(src);
 }

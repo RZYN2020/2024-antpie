@@ -16,16 +16,22 @@ bool MergeBlock::runOnModule(ANTPIE::Module* module) {
 bool MergeBlock::runOnFunction(Function* func) {
   bool changed = false;
   CFG* cfg = func->getCFG();
+  if (!cfg) {
+    cfg = func->buildCFG();
+  }
   LinkedList<BasicBlock*> trashList;
   for (BasicBlock* block : *func->getBasicBlocks()) {
+
     // this block has been merge
     if (!block->getInstructions()->getSize()) {
       continue;
     }
     while (cfg->getSuccOf(block)->getSize() == 1) {
+
       BasicBlock* succBlock = cfg->getSuccOf(block)->front();
       // have multiple pred block or self loop
-      if (cfg->getPredOf(succBlock)->getSize() != 1 || succBlock == block) {
+      if (cfg->getPredOf(succBlock)->getSize() != 1 || succBlock == block ||
+          succBlock == func->getExit()) {
         break;
       }
 
@@ -42,9 +48,9 @@ bool MergeBlock::runOnFunction(Function* func) {
         if (instr->isa(VT_PHI)) {
           // it must have only one incoming value from block
           assert(instr->getRValueSize() == 2);
-          assert((BasicBlock*)instr->getRValue(0) == block);
+          assert((BasicBlock*)instr->getRValue(1) == block);
           PhiInst* phi = dynamic_cast<PhiInst*>(instr);
-          phi->replaceAllUsesWith(instr->getRValue(1));
+          phi->replaceAllUsesWith(instr->getRValue(0));
           phi->deleteUseList();
           delete phi;
         } else {
@@ -64,6 +70,8 @@ bool MergeBlock::runOnFunction(Function* func) {
       DomTree* dt = func->getDT();
       if (!dt) continue;
       assert(dt->getDominator(succBlock) == block);
+      dt->deleteChildren(block);
+      dt->deleteParent(succBlock);
       dt->mergeChildrenTo(succBlock, block);
     }
   }
