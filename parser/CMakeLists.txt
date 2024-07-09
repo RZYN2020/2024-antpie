@@ -1,8 +1,15 @@
 add_library(
         parser
         SysYLexer.cpp
+        SysYLexer.h
         SysYParser.cpp
+        SysYParser.h
         SysYParserBaseListener.cpp
-        SysYParserBaseListener.cpp
+        SysYParserBaseListener.h
+        SysYParserBaseVisitor.cpp
         SysYParserBaseVisitor.h
+        SysYParserListener.cpp
+        SysYParserListener.h
+        SysYParserVisitor.cpp
+        SysYParserVisitor.h
 )

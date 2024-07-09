@@ -1,4 +1,9 @@
 add_library(
     opt
-    example.cc
+    DomTree.cc
+    MemToReg.cc
+    CSE.cc
+    MergeBlock.cc
+    Inlining.cc
+    FunctionPropAnalysis.cc
 )

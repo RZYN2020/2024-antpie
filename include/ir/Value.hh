@@ -55,7 +55,8 @@ class Value {
   Type* vType{nullptr};
   // Record subclass types
   ValueTag vTag{VT_VALUE};
-  Use* useHead;
+  Use* useHead = 0;
+  friend Use;
 
  public:
   Value(){};
@@ -65,10 +66,31 @@ class Value {
 
   virtual void printIR(ostream& stream) const {};
   string getName() const { return vName; }
+  void setName(string name_) { vName = name_; }
   ValueTag getValueTag() const { return vTag; }
   void setType(Type* type) { vType = type; }
   Type* getType() const { return vType; }
   virtual string toString() const { return "%" + vName; }
+  bool isa(ValueTag vt_) { return vt_ == vTag; }
+
+  Use* getUseHead() const { return useHead; }
+  void addUser(Use* use) {
+    if (useHead) useHead->pre = use;
+    use->next = useHead;
+    useHead = use;
+    use->pre = nullptr;
+  }
+
+  void replaceAllUsesWith(Value* value) {
+    vector<Use*> tmpUse;
+    for (Use* use = getUseHead(); use; use = use->next) {
+      use->value = value;
+      tmpUse.push_back(use);
+    }
+    for (Use* use : tmpUse) {
+      value->addUser(use);
+    }
+  }
 };
 
 class GlobalValue : public Value {

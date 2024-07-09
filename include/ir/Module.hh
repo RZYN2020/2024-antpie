@@ -7,7 +7,6 @@
 
 #include "Function.hh"
 #include "GlobalVariable.hh"
-#include "LinkedList.hh"
 
 namespace ANTPIE {
 class Module {
@@ -15,6 +14,7 @@ class Module {
   LinkedList<GlobalVariable*> globalVariables;
   LinkedList<Function*> functions;
   BasicBlock* currBasicBlock;
+
 
  public:
   Module();
@@ -54,6 +54,8 @@ class Module {
   LinkedList<Function*>* getFunctions() { return &functions; }
 
   void buildCFG();
+
+  void irOptimize();
 };
 }  // namespace ANTPIE
 

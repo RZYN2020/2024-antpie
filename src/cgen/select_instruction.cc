@@ -14,7 +14,6 @@ bool is_constant(Value *v) {
 void lowerHIicmp(MFunction *mfunc) {
   // 2.1 combine
   for (auto &mbb : mfunc->getBasicBlocks()) {
-    assert(mbb->getJmpNum() == 1);
     auto jmp = mbb->getJmp(0);
     if (jmp->getInsTag() == MInstruction::H_BR) {
       auto br = static_cast<MHIbr *>(jmp);
@@ -214,21 +213,26 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     auto basicBlocks = func->getBasicBlocks();
     for (auto it = basicBlocks->begin(); it != basicBlocks->end(); ++it) {
       auto bb = *it;
-      MBasicBlock *mbb = mfunc->addBasicBlock(bb->getName());
+      if (bb->isEmpty()) continue;
+      MBasicBlock *mbb = mfunc->addBasicBlock(func->getName() + "." + bb->getName());
       bb_map->insert({bb, mbb});
     }
-    mfunc->setEntry(bb_map->at(*basicBlocks->begin()));
+    mfunc->setEntry(bb_map->at(func->getEntry()));
 
     // Select every Instruction
     for (auto it = basicBlocks->begin(); it != basicBlocks->end();
          ++it) { // Begin BB Loop
       auto bb = *it;
+      if (bb->isEmpty()) continue;
       MBasicBlock *mbb = bb_map->at(bb);
 
       auto instrs = bb->getInstructions();
       for (auto it = instrs->begin(); it != instrs->end();
            ++it) { // Begin Instruction Loop
         auto ins = *it;
+        // std::cout << "select  ";
+        // ins->printIR(std::cout);
+        // std::cout << endl;
         switch (ins->getValueTag()) {
           ///////////////////////////////////////////////////////////////////////////////
 #define GET_VREG(V) get_vreg(res, mbb, V, &*instr_map, mfunc)
@@ -526,7 +530,8 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
         }
       } // End Instruction Loop
     } // End BB Loop
-
+    
+    // std::cout << "Reslove IRRegisters to VRegisters" << endl;
     // 1. Reslove IRRegisters to VRegisters
     for (auto &mbb : mfunc->getBasicBlocks()) {
       for (auto &mins : mbb->getInstructions()) {
@@ -534,6 +539,8 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
       }
     }
 
+
+    // std::cout << "lower H_ICMP and BR" << endl;
     // 2. lower H_ICMP and BR
     lowerHIicmp(mfunc);
 

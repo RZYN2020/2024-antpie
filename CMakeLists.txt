@@ -12,7 +12,8 @@ INCLUDE_DIRECTORIES(
     include/opt
     include/util
     include
-#     parser
+    parser
+    /usr/local/include/antlr4-runtime
 )
 
 add_subdirectory(src/ir)
@@ -20,7 +21,7 @@ add_subdirectory(src/asm)
 add_subdirectory(src/cgen)
 add_subdirectory(src/opt)
 add_subdirectory(src/util)
-# add_subdirectory(parser)
+add_subdirectory(parser)
 
 add_executable(
         compiler
@@ -29,12 +30,13 @@ add_executable(
 
 target_link_libraries(
         compiler
-        ir
         asm
         cgen
         opt
+        ir 
+        opt
         util
-        # parser
+        parser
 )
 
 install(
