@@ -32,6 +32,16 @@ INPUT := tests/test.in
 qemu-run:
 	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M $(EXE) < $(INPUT)
 
+PORT := 1237
+qemu-debug:
+	qemu-riscv64 -cpu sifive-u54 -L /usr/riscv64-linux-gnu -g $(PORT) $(EXE) &
+	gdb-multiarch -q \
+		-ex "set sysroot /usr/riscv64-linux-gnu" \
+		-ex "file $(EXE)" \
+		-ex "target remote localhost:$(PORT)" \
+		-ex "break main" \
+		-ex "continue"
+
 clean:
 	rm -rf build
 	rm -rf ./parser/antlr4/*.cpp
@@ -43,7 +53,7 @@ antlr: $(LFILE) $(PFILE)
 	$(ANTLR) -Dlanguage=Cpp $(PFILE) $(LFILE)
 
 
-SRC := tests/test.c
+SRC := tests/test.s
 RES := tests/test
 gcc-riscv64:
 	riscv64-linux-gnu-gcc-10 -o $(RES) $(SRC)

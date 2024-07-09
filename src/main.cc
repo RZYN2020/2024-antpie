@@ -8,9 +8,7 @@
 #include "Instruction.hh"
 #include "Machine.hh"
 #include "Module.hh"
-#include "allocate_register.hh"
-#include "prelude_conclusion.hh"
-#include "select_instruction.hh"
+#include "cgen.hh"
 
 int main() {
   ANTPIE::Module* module = new ANTPIE::Module();
@@ -86,7 +84,7 @@ int main() {
 
   Function* fFunction = module->addFunction(funcType, "foo");
   // foo.entry:
-  BasicBlock* bb1 = module->addBasicBlock(fFunction, "foo.entry");
+  BasicBlock *bb1 = module->addBasicBlock(fFunction, "foo.entry");
   module->setCurrBasicBlock(bb1);
   
   BinaryOpInst* r1 = module->addBinaryOpInst(ADD, funcType->getArgument(0), funcType->getArgument(1), "r1");
@@ -113,23 +111,15 @@ int main() {
 
   module->addReturnInst(r4);
 
-
-
   module->irOptimize();
-  // module->buildCFG();
 
-  //   MachineModule* mmodule = new MachineModule();
+  std::ofstream out_ll;
+  out_ll.open("tests/test.ll");
+  module->printIR(out_ll);
 
-  //   select_instruction(mmodule, module);
-  //   mmodule->printASM(std::cout);
-
-  //   allocate_register(mmodule);
-  //   mmodule->printASM(std::cout);
-
-  //   prelude_conclusion(mmodule);
-  //   mmodule->printASM(std::cout);
-
-  std::ofstream out_file;
-  out_file.open("tests/test.ll");
-  module->printIR(out_file);
+  MModule* mmodule = new MModule();
+  std::ofstream out_s;
+  generate_code(mmodule, module);
+  out_s.open("tests/test.s");
+  out_s << *mmodule;
 }
