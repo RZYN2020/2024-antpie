@@ -1,60 +1,147 @@
-#ifndef _MACHINE_H_
-#define _MACHINE_H_
+#pragma once
 
-#include "MachineInstruction.hh"
-#include "Type.hh"
 #include "Constant.hh"
-#include "GlobalVariable.hh"
+#include "MInstruction.hh"
+#include "Type.hh"
 
-class MachineGlobal {
+class MBasicBlock {
 private:
-  GlobalVariable* global;
-public:
-  MachineGlobal(GlobalVariable* global) : global(global) {}
-  void printASM(ostream& stream) const;
-};
-
-class MachineBasicBlock {
- private:
   string name;
-  unique_ptr<vector<unique_ptr<MachineInstruction>>> instructions;
- public:
-  MachineBasicBlock(string name_) {
-    name = name_;
-    instructions = make_unique<vector<unique_ptr<MachineInstruction>>>();
-  }
-  void pushInstr(MachineInstruction* i) {
-    instructions->push_back(unique_ptr<MachineInstruction>(i));
-  }
-  void printASM(ostream& stream) const;
-};
-
-class MachineFunction {
-private:
-  FuncType* type;
-  string name;
-  unique_ptr<vector<unique_ptr<MachineBasicBlock>>> basicBlocks;
- public:
-  MachineFunction(FuncType* fType, string name);
-  void pushBasicBlock(MachineBasicBlock* bb);
-  void printASM(ostream& stream) const;
-};
-
-
-class MachineModule {
-private:
-  unique_ptr<vector<unique_ptr<MachineGlobal>>> globalVariables;
-  unique_ptr<vector<unique_ptr<MachineFunction>>> functions;
-  MachineBasicBlock *currBasicBlock;
+  unique_ptr<vector<unique_ptr<MHIphi>>> phis;
+  unique_ptr<vector<unique_ptr<MInstruction>>> instructions;
+  unique_ptr<vector<unique_ptr<MInstruction>>> jmps;
+  MFunction *function;
+  unique_ptr<vector<MBasicBlock *>> outgoing;
+  unique_ptr<vector<MBasicBlock *>> incoming;
 
 public:
-  MachineModule();
-  void printASM(ostream& stream) const;
-  void setCurrBasicBlock(MachineBasicBlock* bb) { currBasicBlock = bb; }
-  MachineFunction* addFunction(FuncType* funcType, string name);
-  MachineBasicBlock* addBasicBlock(MachineFunction* function, string name);
+  MBasicBlock(string name);
 
-  MachineGlobal* addGlobalVariable(GlobalVariable* global);
+  void pushInstr(MInstruction *i);
+  void pushInstrs(vector<MInstruction *> is);
+
+  void pushInstrAtHead(MInstruction *i);
+  void pushInstrsAtHead(vector<MInstruction *> is);
+
+  string getName() const { return "." + name; }
+
+  void setFunction(MFunction *function);
+  MFunction *getFunction();
+
+  void pushJmp(MInstruction *ins);
+  int getJmpNum();
+  MInstruction *getJmp(int idx);
+  void clearJmps();
+
+  void pushPhi(MHIphi *phi);
+  vector<unique_ptr<MHIphi>> &getPhis();
+
+
+  void removeIncoming(MBasicBlock *bb);
+  void addIncoming(MBasicBlock* bb);
+  void replaceOutgoing(MBasicBlock* oldbb, MBasicBlock* newbb);
+  void replacePhiIncoming(MBasicBlock* oldbb, MBasicBlock* newbb);
+  vector<MBasicBlock *> &getIncomings();
+  vector<MBasicBlock *> &getOutgoings();
+
+  unique_ptr<MInstruction> removeInstruction(MInstruction *ins);
+  void replaceInstructionWith(MInstruction *ins, vector<MInstruction *> instrs);
+  void insertBeforeInstructionWith(MInstruction *ins,
+                                   vector<MInstruction *> instrs);
+
+  void insertAfterInstructionWith(MInstruction *ins,
+                                  vector<MInstruction *> instrs);
+
+  vector<unique_ptr<MInstruction>> &getInstructions();
+  vector<unique_ptr<MInstruction>> &getJmps();
+
+  friend std::ostream &operator<<(std::ostream &os, const MBasicBlock &obj);
 };
 
-#endif
+class MGlobal {
+private:
+  GlobalVariable *global;
+
+public:
+  MGlobal(GlobalVariable *global) : global(global) {}
+  string getName() const;
+
+  friend std::ostream &operator<<(std::ostream &os, const MGlobal &obj);
+};
+
+class MModule;
+
+class MFunction {
+private:
+  FuncType *type;
+  unique_ptr<vector<unique_ptr<ARGRegister>>> arguments;
+  string name;
+  unique_ptr<vector<unique_ptr<MBasicBlock>>> basicBlocks;
+  MBasicBlock *entry;
+  MBasicBlock *exit;
+  MModule* mod;
+
+public:
+  int stack_offset;
+  MFunction(FuncType *fType, string name);
+  MBasicBlock *addBasicBlock(string name);
+
+  void setEntry(MBasicBlock *entry);
+  MBasicBlock *getEntry();
+
+  void setExit(MBasicBlock *exit);
+  MBasicBlock *getExit();
+
+  void setMod(MModule *mod);
+  MModule *getMod();
+
+  ARGRegister *getArg(int idx);
+  FuncType *getType();
+
+  string getName() const;
+  vector<unique_ptr<MBasicBlock>> &getBasicBlocks();
+
+  friend std::ostream &operator<<(std::ostream &os, const MFunction &obj);
+};
+
+class MModule {
+private:
+  unique_ptr<vector<unique_ptr<MGlobal>>> globalVariables;
+  unique_ptr<vector<unique_ptr<MFunction>>> functions;
+  bool if_ssa = true;
+
+public:
+  MModule();
+
+  bool is_ssa() {return if_ssa;}
+  void ssa_out();
+  MFunction *addFunction(FuncType *funcType, string name);
+  MGlobal *addGlobalVariable(GlobalVariable *global);
+  MGlobal *addGlobalFloat(FloatConstant *f);
+
+  vector<unique_ptr<MGlobal>> &getGlobals();
+  vector<unique_ptr<MFunction>> &getFunctions();
+
+  friend std::ostream &operator<<(std::ostream &os, const MModule &obj);
+};
+
+// in bytes
+static uint32_t cal_size(const Type *tp) {
+  switch (tp->getTypeTag()) {
+  case TT_POINTER:
+    return 8;
+  case TT_INT1:
+  case TT_INT32:
+  case TT_FLOAT:
+    return 4;
+  case TT_ARRAY: {
+    const ArrayType *atp = static_cast<const ArrayType *>(tp);
+    return atp->getLen() * cal_size(atp->getElemType());
+  }
+  case TT_FUNCTION:
+  case TT_VOID:
+  default:
+    assert(0);
+  }
+  return 0;
+}

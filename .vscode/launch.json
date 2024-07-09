@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "compiler",
             "preLaunchTask": "build-dbg",
-            "program": "${workspaceFolder}/bin/compiler",
+            "program": "${workspaceFolder}/build/compiler",
             "stopOnEntry": false,
         }
     ]

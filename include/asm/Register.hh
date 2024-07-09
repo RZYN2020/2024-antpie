@@ -1,123 +1,149 @@
-#ifndef _REGISTER_H_
-#define _REGISTER_H_
-
-#include <iostream>
+#pragma once
+#include "Instruction.hh"
+#include "Argument.hh"
 #include <string>
+#include <vector>
 
 using std::string;
+using std::vector;
 
+class MInstruction;
+class IRegister;
+class FRegister;
 
 class Register {
+private:
+  vector<MInstruction *> uses;
 
 public:
+  static IRegister *reg_zero;
+  static IRegister *reg_ra; // saved
+  static IRegister *reg_sp; // saved
+  static IRegister *reg_gp;
+  static IRegister *reg_tp;
+  static IRegister *reg_t0;
+  static IRegister *reg_t1;
+  static IRegister *reg_t2;
+  static IRegister *reg_s0; // 注意：s0 和 fp 是同一个寄存器
+  static IRegister *reg_s1;
+  static IRegister *reg_a0;
+  static IRegister *reg_a1;
+  static IRegister *reg_a2;
+  static IRegister *reg_a3;
+  static IRegister *reg_a4;
+  static IRegister *reg_a5;
+  static IRegister *reg_a6;
+  static IRegister *reg_a7;
+  static IRegister *reg_s2;
+  static IRegister *reg_s3;
+  static IRegister *reg_s4;
+  static IRegister *reg_s5;
+  static IRegister *reg_s6;
+  static IRegister *reg_s7;
+  static IRegister *reg_s8;
+  static IRegister *reg_s9;
+  static IRegister *reg_s10;
+  static IRegister *reg_s11;
+  static IRegister *reg_t3;
+  static IRegister *reg_t4;
+  static IRegister *reg_t5;
+  static IRegister *reg_t6;
+
+  static FRegister *reg_ft0;
+  static FRegister *reg_ft1;
+  static FRegister *reg_ft2;
+  static FRegister *reg_ft3;
+  static FRegister *reg_ft4;
+  static FRegister *reg_ft5;
+  static FRegister *reg_ft6;
+  static FRegister *reg_ft7;
+  static FRegister *reg_fs0;
+  static FRegister *reg_fs1;
+  static FRegister *reg_fa0;
+  static FRegister *reg_fa1;
+  static FRegister *reg_fa2;
+  static FRegister *reg_fa3;
+  static FRegister *reg_fa4;
+  static FRegister *reg_fa5;
+  static FRegister *reg_fa6;
+  static FRegister *reg_fa7;
+  static FRegister *reg_fs2;
+  static FRegister *reg_fs3;
+  static FRegister *reg_fs4;
+  static FRegister *reg_fs5;
+  static FRegister *reg_fs6;
+  static FRegister *reg_fs7;
+  static FRegister *reg_fs8;
+  static FRegister *reg_fs9;
+  static FRegister *reg_fs10;
+  static FRegister *reg_fs11;
+  static FRegister *reg_ft8;
+  static FRegister *reg_ft9;
+  static FRegister *reg_ft10;
+  static FRegister *reg_ft11;
+
+  static Register *getIRegister(int idx);
+
+  static Register *getFRegister(int idx);
+
   enum RegTag {
     F_REGISTER,
     I_REGISTER,
-    V_REGISTER, // virtual_register
+    V_REGISTER,  // virtual_register
+    A_REGISTER,  // argment register
+    IR_REGISTER, // to be resolved
   };
 
 private:
   RegTag tag;
-  int id;
   string name;
 
 public:
-  Register(RegTag tt, int regId, const string &regName)
-      : tag(tt), id(regId), name(regName) {}
+  Register(string name, RegTag tag);
+  string getName();
+  void setName(string name);
+  RegTag getTag();
 
-  void printInfo() const {
-    std::cout << "Register ID: " << id << ", Name: " << name << std::endl;
-  }
+  void addUse(MInstruction *use);
+  void removeUse(MInstruction *use);
+  void replaceRegisterWith(Register *newReg);
+  vector<MInstruction *> &getUses();
+  void clearUses();
+};
+
+class IRRegister : public Register {
+public:
+  Instruction *ir_reg;
+  IRRegister(Instruction *ins);
+};
+
+class ARGRegister : public Register {
+private:
+  Argument *arg;
+
+public:
+  ARGRegister(Argument *arg);
+  Argument * getIRArgument() {return arg;}
+};
+
+class VRegister : public Register {
+public:
+  VRegister();
+  VRegister(string name);
 };
 
 class IRegister : public Register {
+private:
+  int id;
+
 public:
-  IRegister(int id, std::string n) : Register(I_REGISTER, id, n) {}
+  IRegister(int id, string n);
 };
 
 class FRegister : public Register {
-public:
-  FRegister(int id, std::string n) : Register(F_REGISTER, id, n) {}
-};
-
-#define CONCAT(x, y) x##y
-#define DEFINE_IREGISTER(regName, regId)                                       \
-  static IRegister CONCAT(reg_, regName)((regId), #regName)
-#define DEFINE_FREGISTER(regName, regId)                                       \
-  static FRegister CONCAT(reg_, regName)((regId), #regName)
-
-DEFINE_IREGISTER(zero, 0);
-DEFINE_IREGISTER(ra, 1);
-DEFINE_IREGISTER(sp, 2);
-DEFINE_IREGISTER(gp, 3);
-DEFINE_IREGISTER(tp, 4);
-DEFINE_IREGISTER(t0, 5);
-DEFINE_IREGISTER(t1, 6);
-DEFINE_IREGISTER(t2, 7);
-DEFINE_IREGISTER(s0, 8); // 注意：s0 和 fp 是同一个寄存器
-DEFINE_IREGISTER(s1, 9);
-DEFINE_IREGISTER(a0, 10);
-DEFINE_IREGISTER(a1, 11);
-DEFINE_IREGISTER(a2, 12);
-DEFINE_IREGISTER(a3, 13);
-DEFINE_IREGISTER(a4, 14);
-DEFINE_IREGISTER(a5, 15);
-DEFINE_IREGISTER(a6, 16);
-DEFINE_IREGISTER(a7, 17);
-DEFINE_IREGISTER(s2, 18);
-DEFINE_IREGISTER(s3, 19);
-DEFINE_IREGISTER(s4, 20);
-DEFINE_IREGISTER(s5, 21);
-DEFINE_IREGISTER(s6, 22);
-DEFINE_IREGISTER(s7, 23);
-DEFINE_IREGISTER(s8, 24);
-DEFINE_IREGISTER(s9, 25);
-DEFINE_IREGISTER(s10, 26);
-DEFINE_IREGISTER(s11, 27);
-DEFINE_IREGISTER(t3, 28);
-DEFINE_IREGISTER(t4, 29);
-DEFINE_IREGISTER(t5, 30);
-DEFINE_IREGISTER(t6, 31);
-
-DEFINE_FREGISTER(ft0, 0);
-DEFINE_FREGISTER(ft1, 1);
-DEFINE_FREGISTER(ft2, 2);
-DEFINE_FREGISTER(ft3, 3);
-DEFINE_FREGISTER(ft4, 4);
-DEFINE_FREGISTER(ft5, 5);
-DEFINE_FREGISTER(ft6, 6);
-DEFINE_FREGISTER(ft7, 7);
-DEFINE_FREGISTER(fs0, 8);
-DEFINE_FREGISTER(fs1, 9);
-DEFINE_FREGISTER(fa0, 10);
-DEFINE_FREGISTER(fa1, 11);
-DEFINE_FREGISTER(fa2, 12);
-DEFINE_FREGISTER(fa3, 13);
-DEFINE_FREGISTER(fa4, 14);
-DEFINE_FREGISTER(fa5, 15);
-DEFINE_FREGISTER(fa6, 16);
-DEFINE_FREGISTER(fa7, 17);
-DEFINE_FREGISTER(fs2, 18);
-DEFINE_FREGISTER(fs3, 19);
-DEFINE_FREGISTER(fs4, 20);
-DEFINE_FREGISTER(fs5, 21);
-DEFINE_FREGISTER(fs6, 22);
-DEFINE_FREGISTER(fs7, 23);
-DEFINE_FREGISTER(fs8, 24);
-DEFINE_FREGISTER(fs9, 25);
-DEFINE_FREGISTER(fs10, 26);
-DEFINE_FREGISTER(fs11, 27);
-DEFINE_FREGISTER(ft8, 28);
-DEFINE_FREGISTER(ft9, 29);
-DEFINE_FREGISTER(ft10, 30);
-DEFINE_FREGISTER(ft11, 31);
-
-class Immediate {
 private:
-  int32_t val;
+  int id;
 
 public:
-  Immediate(int32_t val) : val(val) {}
+  FRegister(int id, string n);
 };
-
-#endif
