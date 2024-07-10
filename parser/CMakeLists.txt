@@ -12,4 +12,6 @@ add_library(
         SysYParserListener.h
         SysYParserVisitor.cpp
         SysYParserVisitor.h
+        VariableTable.cpp
+        VariableTable.h
 )

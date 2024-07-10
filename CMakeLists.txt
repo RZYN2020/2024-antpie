@@ -25,6 +25,9 @@ add_subdirectory(parser)
 add_executable(
         compiler
         src/main.cc
+        src/main.cc
+        src/MySysYParserVisitor.cpp
+        src/MySysYParserVisitor.h
 )
 
 target_link_libraries(
