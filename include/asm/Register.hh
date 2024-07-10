@@ -1,6 +1,6 @@
 #pragma once
-#include "Instruction.hh"
 #include "Argument.hh"
+#include "Instruction.hh"
 #include <string>
 #include <vector>
 
@@ -89,9 +89,10 @@ public:
   enum RegTag {
     F_REGISTER,
     I_REGISTER,
-    V_REGISTER,  // virtual_register
-    A_REGISTER,  // argment register
+    V_FREGISTER, // virtual float register
+    V_IREGISTER, // virtual int register
     IR_REGISTER, // to be resolved
+    NONE, // used when the subclass of Register is not actually a Register
   };
 
 private:
@@ -117,19 +118,32 @@ public:
   IRRegister(Instruction *ins);
 };
 
-class ARGRegister : public Register {
+class VRegister : public Register {
 private:
-  Argument *arg;
+  bool is_pointer;
+  bool is_instruction;
 
 public:
-  ARGRegister(Argument *arg);
-  Argument * getIRArgument() {return arg;}
+  VRegister(RegTag tag, bool is_pointer, bool is_instruction);
+  VRegister(RegTag tag, string name, bool is_pointer, bool is_instruction);
+  bool isPointer() { return is_pointer; }
+  bool isInstruction() { return is_instruction; }
 };
 
-class VRegister : public Register {
+class ParaRegister : public VRegister {
+private:
+  Register *reg;
+  int offset;
+  uint size;
+
 public:
-  VRegister();
-  VRegister(string name);
+  ParaRegister(int offset, uint size, string name, RegTag rt, bool is_pointer)
+      : VRegister(rt, name, is_pointer, false), offset(offset), size(size) {}
+  ParaRegister(Register *reg, string name, RegTag rt, bool is_pointer)
+      : VRegister(rt, name, is_pointer, false), reg(reg) {}
+  Register *getRegister() { return reg; }
+  int getOffset() { return offset; }
+  uint getSize() { return size; }
 };
 
 class IRegister : public Register {

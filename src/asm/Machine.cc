@@ -405,10 +405,53 @@ MFunction::MFunction(FuncType *type, string name) {
   this->type = type;
   this->name = name;
   this->basicBlocks = make_unique<vector<unique_ptr<MBasicBlock>>>();
-  this->arguments = make_unique<vector<unique_ptr<ARGRegister>>>();
+  this->parameters = make_unique<vector<unique_ptr<ParaRegister>>>();
   for (int i = 0; i < type->getArgSize(); i++) {
     auto arg = type->getArgument(i);
-    arguments->push_back(unique_ptr<ARGRegister>(new ARGRegister(arg)));
+    auto tp = arg->getType();
+    int float_cnt = 10;
+    int int_cnt = 10;
+    int offset = 0;
+    ParaRegister *argr;
+    switch (tp->getTypeTag()) {
+    case TT_INT1:
+    case TT_INT32: {
+      if (int_cnt <= 17) {
+        argr = new ParaRegister(Register::getIRegister(int_cnt++),
+                               arg->getName(), Register::V_IREGISTER, false);
+      } else {
+        argr = new ParaRegister(offset, 4, arg->getName(), Register::V_IREGISTER,
+                               false);
+        offset += 4;
+      }
+      break;
+    }
+    case TT_FLOAT: {
+      if (int_cnt <= 17) {
+        argr = new ParaRegister(Register::getFRegister(int_cnt++),
+                               arg->getName(), Register::V_FREGISTER, false);
+      } else {
+        argr = new ParaRegister(offset, 4, arg->getName(), Register::V_FREGISTER,
+                               false);
+        offset += 4;
+      }
+      break;
+    }
+    case TT_POINTER: {
+      if (int_cnt <= 17) {
+        argr = new ParaRegister(Register::getIRegister(int_cnt++),
+                               arg->getName(), Register::V_IREGISTER, false);
+      } else {
+        argr = new ParaRegister(offset, 8, arg->getName(), Register::V_IREGISTER,
+                               false);
+        offset += 8;
+      }
+      break;
+    }
+    default:
+      assert(0);
+    }
+    parameters->push_back(unique_ptr<ParaRegister>(argr));
   }
 }
 
@@ -431,7 +474,7 @@ void MFunction::setMod(MModule *mod) { this->mod = mod; }
 
 MModule *MFunction::getMod() { return mod; }
 
-ARGRegister *MFunction::getArg(int idx) { return &*arguments->at(idx); }
+ParaRegister *MFunction::getPara(int idx) { return &*parameters->at(idx); }
 
 FuncType *MFunction::getType() { return type; }
 

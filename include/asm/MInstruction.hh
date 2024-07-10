@@ -24,6 +24,8 @@ public:
     H_ALLOCA,
     H_RET,
     H_CALL,
+    H_DEF_ARG,
+    
     H_BR,
     H_ICMP,
     COMMENT,
@@ -115,15 +117,15 @@ public:
   };
 
 private:
-  MITag tag;
+  MITag insTag;
   Register *target = nullptr; // target in non-SSA version
   unique_ptr<vector<Register *>> oprands;
   MBasicBlock *bb;
   string comment;
 
 public:
-  MInstruction(MITag tag, string name);
-  MInstruction(MITag tag);
+  MInstruction(MITag insTag, RegTag rt, string name, bool is_pointer = false);
+  MInstruction(MITag insTag, RegTag rt, bool is_pointer = false);
 
   void setTarget(Register *reg);
   Register *getTarget();
@@ -151,17 +153,31 @@ public:
 };
 
 ///////////////////////////////////////////////////////
+enum MIOprandTp { Float, Int, Reg };
+struct MIOprand {
+  MIOprandTp tp;
+  union Arg {
+    float f;
+    int32_t i;
+    Register *reg;
+  } arg;
+};
 
 class MHIphi : public MInstruction {
 private:
   unique_ptr<vector<MBasicBlock *>> incoming;
+  unique_ptr<vector<MIOprand>> opds;
 
 public:
-  MHIphi(string name);
+  MHIphi(string name, RegTag rt, bool is_pointer = false);
   ostream &printASM(ostream &stream) override;
   void pushIncoming(Register *reg, MBasicBlock *bb);
+  void pushIncoming(int i, MBasicBlock *bb);
+  void pushIncoming(float f, MBasicBlock *bb);
   void replaceIncoming(MBasicBlock* oldbb, MBasicBlock* newbb);
   MBasicBlock *getIncomingBlock(int idx) const;
+  MIOprand getOprand(int idx) const {return opds->at(idx);};
+  int getOprandNum() const {return opds->size(); };
 };
 
 class MHIalloca : public MInstruction {
@@ -176,14 +192,7 @@ public:
 
 class MHIret : public MInstruction {
 public:
-  enum RetTp { Float, Int, Reg };
-
-public:
-  int imm;
-  int fimm;
-  RetTp ret_type;
-
-public:
+  MIOprand r;
   MHIret(int imm);
   MHIret(float imm);
   MHIret(Register *reg);
@@ -192,29 +201,20 @@ public:
 
 class MHIcall : public MInstruction {
 public:
-  enum ArgTp { Float, Int, Reg };
-  struct CallArg {
-    ArgTp tp;
-    union Arg {
-      float f;
-      int32_t i;
-      Register *reg;
-    } arg;
-  };
-
-public:
   MFunction *function;
-  unique_ptr<vector<unique_ptr<CallArg>>> args;
+  unique_ptr<vector<MIOprand>> args;
 
 public:
-  MHIcall(MFunction *func, string name);
-  MHIcall(MFunction *func);
+  // return value can not be ptr in sysy
+  MHIcall(MFunction *func, string name, RegTag rt);
+  MHIcall(MFunction *func, RegTag rt);
   void pushArg(float f);
   void pushArg(int i);
   void pushArg(Register *r);
   int getArgNum();
-  MHIcall::CallArg &getArg(int idx);
+  MIOprand &getArg(int idx);
   ostream &printASM(ostream &stream) override;
+  vector<MInstruction*> generateCallSequence(MFunction *func, int stack_offset, map<Register *, int> *allocation);
 };
 
 class MHIbr : public MInstruction {
