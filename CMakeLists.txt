@@ -29,6 +29,8 @@ add_executable(
         src/main.cc
         src/MySysYParserVisitor.cpp
         src/MySysYParserVisitor.h
+        src/MySysYParserVisitor.cpp
+        src/MySysYParserVisitor.h
 )
 
 target_link_libraries(

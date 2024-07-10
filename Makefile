@@ -6,7 +6,6 @@ CMAKE_FLAGS := -DCMAKE_BUILD_TYPE=$(if $(DEBUG),Debug,Release)
 ANTLR_PATH = $(shell find /usr/local/lib -name "antlr-*-complete.jar")
 ANTLR = java -jar $(ANTLR_PATH) -listener -visitor -long-messages
 PFILE = $(shell find . -name "SysYParser.g4")
-LFILE = $(shell find . -name "SysYLexer.g4")
 
 all:
 	@cmake $(CMAKE_FLAGS) -B build
@@ -50,7 +49,7 @@ clean:
 	rm -rf ./parser/antlr4/*.interp
 
 antlr: $(LFILE) $(PFILE)
-	$(ANTLR) -Dlanguage=Cpp $(PFILE) $(LFILE)
+	$(ANTLR) -Dlanguage=Cpp $(PFILE)
 
 
 SRC := tests/test.s
