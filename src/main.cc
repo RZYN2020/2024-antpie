@@ -118,8 +118,8 @@ int main() {
   module->printIR(out_ll);
 
   MModule* mmodule = new MModule();
-  std::ofstream out_s;
   generate_code(mmodule, module);
+  std::ofstream out_s;
   out_s.open("tests/test.s");
   out_s << *mmodule;
 }
