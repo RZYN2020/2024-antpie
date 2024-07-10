@@ -2,35 +2,61 @@
 
 #include <cassert>
 
-#include "ir/Function.hh"
-#include "ir/Type.hh"
+#include "Function.hh"
+#include "Type.hh"
 
 Instruction::Instruction(ValueTag vTag) : Value(Type::getVoidType(), vTag) {
   useList = make_unique<vector<Use*>>();
-  valueList = make_unique<vector<Value*>>();
 }
 
 Instruction::Instruction(string name, ValueTag vTag)
     : Value(Type::getVoidType(), name, vTag) {
   useList = make_unique<vector<Use*>>();
-  valueList = make_unique<vector<Value*>>();
 }
 
 Instruction::Instruction(Type* t, string name, ValueTag vTag)
     : Value(t, name, vTag) {
   useList = make_unique<vector<Use*>>();
-  valueList = make_unique<vector<Value*>>();
 }
 
-void Instruction::pushValue(Value* v) { valueList->push_back(v); };
+void Instruction::pushValue(Value* v) {
+  Use* use = new Use(this, v);
+  useList->push_back(use);
+  v->addUser(use);
+}
 
 Value* Instruction::getRValue(int idx) const {
-  assert(idx < valueList->size());
-  return valueList->at(idx);
+  assert(idx < useList->size());
+  return useList->at(idx)->value;
+}
+
+void Instruction::eraseFromParent() {
+  getParent()->getInstructions()->remove(this);
+  block = nullptr;
+}
+
+void Instruction::deleteUseList() {
+  for (Use* use : *useList) {
+    use->removeFromValue();
+    delete use;
+  }
+}
+
+void Instruction::cloneUseList(unordered_map<Value*, Value*>& replaceMap,
+                               vector<Use*>* fromUseList) {
+  for (Use* use : *fromUseList) {
+    Value* value = use->value;
+    auto it = replaceMap.find(value);
+    if (it != replaceMap.end()) {
+      value = it->second;
+    }
+    pushValue(value);
+  }
 }
 
 AllocaInst::AllocaInst(Type* type, string name)
-    : Instruction(Type::getPointerType(type), name, VT_ALLOCA), elemType(type) {}
+    : Instruction(Type::getPointerType(type), name, VT_ALLOCA),
+      elemType(type) {}
 
 BinaryOpInst::BinaryOpInst(OpTag opType, Value* op1, Value* op2, string name)
     : Instruction(op1->getType(), name, VT_BOP), bOpType(opType) {
@@ -67,16 +93,24 @@ IcmpInst::IcmpInst(OpTag opType, Value* op1, Value* op2, string name)
   pushValue(op2);
 }
 
+IcmpInst::IcmpInst(OpTag opType, string name)
+    : Instruction(Type::getInt1Type(), name, VT_ICMP), icmpType(opType) {}
+
 FcmpInst::FcmpInst(OpTag opType, Value* op1, Value* op2, string name)
     : Instruction(Type::getInt1Type(), name, VT_FCMP), fcmpType(opType) {
   pushValue(op1);
   pushValue(op2);
 }
+FcmpInst::FcmpInst(OpTag opType, string name)
+    : Instruction(Type::getInt1Type(), name, VT_FCMP), fcmpType(opType) {}
 
 FptosiInst::FptosiInst(Value* src, string name)
     : Instruction(Type::getInt32Type(), name, VT_FPTOSI) {
   pushValue(src);
 }
+
+FptosiInst::FptosiInst(string name)
+    : Instruction(Type::getInt32Type(), name, VT_FPTOSI) {}
 
 GetElemPtrInst::GetElemPtrInst(Value* ptr, Value* idx1, Value* idx2,
                                string name)
@@ -87,6 +121,9 @@ GetElemPtrInst::GetElemPtrInst(Value* ptr, Value* idx1, Value* idx2,
   pushValue(idx1);
   pushValue(idx2);
 }
+
+GetElemPtrInst::GetElemPtrInst(Type* type, PointerType* ptrType_, string name)
+    : Instruction(type, name, VT_GEP), ptrType(ptrType_) {}
 
 GetElemPtrInst::GetElemPtrInst(Value* ptr, Value* idx1, string name)
     : Instruction(ptr->getType(), name, VT_GEP), ptrType(ptr->getType()) {
@@ -121,6 +158,8 @@ SitofpInst::SitofpInst(Value* src, string name)
     : Instruction(Type::getFloatType(), name, VT_SITOFP) {
   pushValue(src);
 }
+SitofpInst::SitofpInst(string name)
+    : Instruction(Type::getFloatType(), name, VT_SITOFP) {}
 
 StoreInst::StoreInst(Value* value, Value* addr) : Instruction(VT_STORE) {
   pushValue(value);
@@ -260,4 +299,95 @@ void ZextInst::printIR(ostream& stream) const {
   Value* src = getRValue(0);
   stream << toString() << " = zext " << src->getType()->toString() << " "
          << src->toString() << " to " << getType()->toString();
+}
+
+Instruction* AllocaInst::clone() {
+  AllocaInst* newInstr = new AllocaInst(getElemType(), getName());
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* BinaryOpInst::clone() {
+  BinaryOpInst* newInstr = new BinaryOpInst(getOpTag(), getType(), getName());
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* BranchInst::clone() {
+  BranchInst* newInstr = new BranchInst();
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* CallInst::clone() {
+  CallInst* newInstr = new CallInst(getFunction(), getName());
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* IcmpInst::clone() {
+  IcmpInst* newInstr = new IcmpInst(getOpTag(), getName());
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* FcmpInst::clone() {
+  FcmpInst* newInstr = new FcmpInst(getOpTag(), getName());
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* FptosiInst::clone() {
+  FptosiInst* newInstr = new FptosiInst(getName());
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* GetElemPtrInst::clone() {
+  GetElemPtrInst* newInstr =
+      new GetElemPtrInst(getType(), (PointerType*)getPtrType(), getName());
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* JumpInst::clone() {
+  JumpInst* newInstr = new JumpInst();
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* LoadInst::clone() {
+  LoadInst* newInstr = new LoadInst(getType(), getName());
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* PhiInst::clone() {
+  PhiInst* newInstr = new PhiInst(getType(), getName());
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* ReturnInst::clone() {
+  ReturnInst* newInstr = new ReturnInst();
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* SitofpInst::clone() {
+  SitofpInst* newInstr = new SitofpInst(getName());
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* StoreInst::clone() {
+  StoreInst* newInstr = new StoreInst();
+  newInstr->setParent(block);
+  return newInstr;
+}
+
+Instruction* ZextInst::clone() {
+  ZextInst* newInstr = new ZextInst(getType(), getName());
+  newInstr->setParent(block);
+  return newInstr;
 }

@@ -1,5 +1,11 @@
 #include "Module.hh"
 
+#include "CSE.hh"
+#include "FunctionPropAnalysis.hh"
+#include "Inlining.hh"
+#include "MemToReg.hh"
+#include "MergeBlock.hh"
+
 using ANTPIE::Module;
 
 Module::Module() {}
@@ -8,7 +14,7 @@ Module::~Module() {
   for (const auto& gv : globalVariables) {
     delete gv;
   }
-  for (const auto& func: functions) {
+  for (const auto& func : functions) {
     delete func;
   }
 }
@@ -21,6 +27,7 @@ void Module::pushGlobalVariable(GlobalVariable* globalVariable) {
 Function* Module::addFunction(FuncType* funcType, string name) {
   Function* func = new Function(funcType, name);
   functions.pushBack(func);
+  func->setParent(this);
   return func;
 }
 
@@ -45,7 +52,7 @@ void Module::printIR(ostream& stream) const {
 
 AllocaInst* Module::addAllocaInst(Type* type, string name) {
   AllocaInst* instr = new AllocaInst(type, name);
-  currBasicBlock->pushInstr(instr);
+  functions.back()->getEntry()->pushInstrAtHead(instr);
   return instr;
 }
 
@@ -174,5 +181,25 @@ GlobalVariable* Module::addGlobalVariable(Type* type, Constant* init,
 void Module::buildCFG() {
   for (const auto& func : functions) {
     func->buildCFG();
+  }
+}
+
+void Module::irOptimize() {
+  LinkedList<Optimization*> optimizations;
+
+  // Add mem2reg Pass
+  optimizations.pushBack(new MemToReg());
+  // Add function analysis pass
+  optimizations.pushBack(new FunctionPropAnalysis());
+  // Add function inlining pass
+  optimizations.pushBack(new Inlining());
+  // Add mergeBlock pass
+  optimizations.pushBack(new MergeBlock());
+  // Add earlyCSE pass
+  optimizations.pushBack(new CommonSubexpElimination());
+
+  // run all pass
+  for (auto& pass : optimizations) {
+    pass->runOnModule(this);
   }
 }

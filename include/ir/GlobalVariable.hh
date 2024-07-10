@@ -8,15 +8,16 @@
 #include "Constant.hh"
 
 class GlobalVariable : public GlobalValue {
- private:
-  Constant* initValue;
+private:
+  Constant *initValue;
 
- public:
+public:
   // zeroinit
-  GlobalVariable(Type* type, string name);
-  GlobalVariable(Type* type, Constant* initValue, string name);
-  void printIR(ostream& stream) const override;
+  GlobalVariable(Type *type, string name);
+  GlobalVariable(Type *type, Constant *initValue, string name);
+  void printIR(ostream &stream) const override;
   string toString() const override { return "@" + getName(); }
+  Constant *getInitValue() const { return initValue; }
 };
 
 #endif

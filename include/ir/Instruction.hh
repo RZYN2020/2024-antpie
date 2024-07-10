@@ -6,10 +6,13 @@
 #ifndef _INSTRUCTION_H_
 #define _INSTRUCTION_H_
 
-#include "Value.hh"
+#include <unordered_map>
 
+#include "Value.hh"
+using std::unordered_map;
 class BasicBlock;
 class Function;
+class PointerType;
 
 enum OpTag {
   ADD,
@@ -40,9 +43,9 @@ enum OpTag {
 };
 
 class Instruction : public Value {
- private:
+ protected:
   unique_ptr<vector<Use*>> useList;
-  unique_ptr<vector<Value*>> valueList;
+  BasicBlock* block;
 
  public:
   Instruction(ValueTag vtag);
@@ -51,7 +54,17 @@ class Instruction : public Value {
   string getOpName(OpTag op) const;
   void pushValue(Value* v);
   Value* getRValue(int idx) const;
-  int getRValueSize() const { return valueList->size(); }
+  int getRValueSize() const { return useList->size(); }
+  BasicBlock* getParent() { return block; }
+  void setParent(BasicBlock* bb) { block = bb; }
+  void eraseFromParent();
+  // delete use operand
+  void deleteUseList();
+  // clone the instruction, not clone useList
+  virtual Instruction* clone() = 0;
+  void cloneUseList(unordered_map<Value*, Value*>& replaceMap,
+                    vector<Use*>* fromUseList);
+  vector<Use*>* getUseList() { return useList.get(); }
 };
 
 class AllocaInst : public Instruction {
@@ -61,21 +74,31 @@ class AllocaInst : public Instruction {
  public:
   AllocaInst(Type* type, string name);
   void printIR(ostream& stream) const override;
+  Type* getElemType() const { return elemType; }
+  Instruction* clone() override;
 };
 
 class BinaryOpInst : public Instruction {
  private:
   OpTag bOpType;
+  BinaryOpInst(OpTag opType, Type* type, string name)
+      : Instruction(type, name, VT_BOP), bOpType(opType){};
 
  public:
   BinaryOpInst(OpTag opType, Value* op1, Value* op2, string name);
   void printIR(ostream& stream) const override;
+  const OpTag getOpTag() const { return bOpType; }
+  Instruction* clone() override;
 };
 
 class BranchInst : public Instruction {
+ private:
+  BranchInst() : Instruction(VT_BR) {}
+
  public:
   BranchInst(Value* cond, BasicBlock* trueBlock, BasicBlock* falseBlock);
   void printIR(ostream& stream) const override;
+  Instruction* clone() override;
 };
 
 class CallInst : public Instruction {
@@ -87,60 +110,82 @@ class CallInst : public Instruction {
   CallInst(Function* func, vector<Value*>& params, string name);
   void pushArgument(Value* value);
   void printIR(ostream& stream) const override;
+  Function* getFunction() const { return function; }
+  Instruction* clone() override;
 };
 
 class IcmpInst : public Instruction {
  private:
   OpTag icmpType;
+  IcmpInst(OpTag opType, string name);
 
  public:
   IcmpInst(OpTag opType, Value* op1, Value* op2, string name);
   void printIR(ostream& stream) const override;
+  const OpTag getOpTag() const { return icmpType; }
+  Instruction* clone() override;
 };
 
 class FcmpInst : public Instruction {
  private:
   OpTag fcmpType;
+  FcmpInst(OpTag opType, string name);
 
  public:
   FcmpInst(OpTag opType, Value* op1, Value* op2, string name);
   void printIR(ostream& stream) const override;
+  const OpTag getOpTag() const { return fcmpType; }
+  Instruction* clone() override;
 };
 
 class FptosiInst : public Instruction {
+  FptosiInst(string name);
+
  public:
   FptosiInst(Value* src, string name);
   void printIR(ostream& stream) const override;
+  Instruction* clone() override;
 };
 
 class GetElemPtrInst : public Instruction {
  private:
   Type* ptrType;
+  GetElemPtrInst(Type* type, PointerType* ptrType_, string name);
 
  public:
-  GetElemPtrInst(Value* ptr, Value* idx1, Value* idx2,
-                 string name);
+  GetElemPtrInst(Value* ptr, Value* idx1, Value* idx2, string name);
   GetElemPtrInst(Value* ptr, Value* idx1, string name);
   void printIR(ostream& stream) const override;
+  const Type* getPtrType() const { return ptrType; }
+  Instruction* clone() override;
 };
 
 class JumpInst : public Instruction {
+  JumpInst() : Instruction(VT_JUMP) {}
+
  public:
   JumpInst(BasicBlock* block);
   void printIR(ostream& stream) const override;
+  Instruction* clone() override;
 };
 
 class LoadInst : public Instruction {
+  LoadInst(Type* type, string name) : Instruction(type, name, VT_LOAD) {}
+
  public:
   LoadInst(Value* addr, string name);
   void printIR(ostream& stream) const override;
+  Instruction* clone() override;
 };
 
 class PhiInst : public Instruction {
+  PhiInst(Type* type, string name) : Instruction(type, name, VT_PHI) {}
+
  public:
   PhiInst(string name);
   void printIR(ostream& stream) const override;
   void pushIncoming(Value* v, BasicBlock* bb);
+  Instruction* clone() override;
 };
 
 class ReturnInst : public Instruction {
@@ -148,33 +193,35 @@ class ReturnInst : public Instruction {
   ReturnInst(Value* retValue);
   ReturnInst();
   void printIR(ostream& stream) const override;
+  Instruction* clone() override;
 };
 
 class SitofpInst : public Instruction {
+ private:
+  SitofpInst(string name);
+
  public:
   SitofpInst(Value* src, string name);
   void printIR(ostream& stream) const override;
+  Instruction* clone() override;
 };
 
 class StoreInst : public Instruction {
+  StoreInst() : Instruction(VT_STORE) {}
+
  public:
   StoreInst(Value* value, Value* addr);
   void printIR(ostream& stream) const override;
+  Instruction* clone() override;
 };
 
-// class UnaryOpInst : public Instruction {
-//  private:
-//   OpTag uOpType;
-
-//  public:
-//   UnaryOpInst(OpTag opType, Value* op1, string name);
-//   void printIR(ostream& stream) const override;
-// };
-
 class ZextInst : public Instruction {
+  ZextInst(Type* dstType, string name) : Instruction(dstType, name, VT_ZEXT) {}
+
  public:
   ZextInst(Value* src, Type* dstType, string name);
   void printIR(ostream& stream) const override;
+  Instruction* clone() override;
 };
 
 #endif
