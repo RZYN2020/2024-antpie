@@ -2,14 +2,18 @@ add_library(
         parser
         SysYParser.cpp
         SysYParser.h
-        SysYParserBaseListener.cpp
         SysYParserBaseListener.h
+        SysYParserBaseListener.cpp
         SysYParserBaseVisitor.cpp
         SysYParserBaseVisitor.h
+        SysYParserLexer.cpp
+        SysYParserLexer.h
         SysYParserListener.cpp
         SysYParserListener.h
-        SysYParserVisitor.cpp
+        SysYParserParser.cpp
+        SysYParserParser.h
         SysYParserVisitor.h
+        SysYParserVisitor.cpp
         VariableTable.cpp
         VariableTable.h
 )

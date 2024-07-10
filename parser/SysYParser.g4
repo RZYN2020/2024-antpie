@@ -1,9 +1,5 @@
 grammar SysYParser;
 
-@header{
-    package fun.eastphoneix.tree;
-}
-
 /*编译单元*/
 compUnit: ( decl | funcDef)* EOF;
 /*声明*/

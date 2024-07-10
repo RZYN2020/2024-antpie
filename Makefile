@@ -48,7 +48,7 @@ clean:
 	rm -rf ./parser/antlr4/*.tokens
 	rm -rf ./parser/antlr4/*.interp
 
-antlr: $(LFILE) $(PFILE)
+antlr: $(PFILE)
 	$(ANTLR) -Dlanguage=Cpp $(PFILE)
 
 
