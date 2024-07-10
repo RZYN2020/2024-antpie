@@ -6,14 +6,17 @@
 //////////////////////////////////////
 //////////////////////////////////////
 
-MInstruction::MInstruction(MITag tag, string name) : VRegister(name) {
+MInstruction::MInstruction(MITag mt, RegTag rt, string name,
+                           bool is_pointer)
+    : VRegister(rt, name, is_pointer, true) {
   oprands = make_unique<vector<Register *>>();
-  this->tag = tag;
+  this->insTag = mt;
 }
 
-MInstruction::MInstruction(MITag tag) : VRegister() {
+MInstruction::MInstruction(MITag insTag, RegTag rt, bool is_pointer)
+    : VRegister(rt, is_pointer, true) {
   oprands = make_unique<vector<Register *>>();
-  this->tag = tag;
+  this->insTag = insTag;
 }
 
 void MInstruction::setTarget(Register *reg) {
@@ -94,7 +97,7 @@ Register *MInstruction::getReg(int idx) const {
   return (*oprands)[idx];
 }
 
-MInstruction::MITag MInstruction::getInsTag() const { return tag; }
+MInstruction::MITag MInstruction::getInsTag() const { return insTag; }
 
 std::ostream &operator<<(std::ostream &os, MInstruction &obj) {
   return obj.printASM(os);
@@ -106,17 +109,27 @@ std::ostream &operator<<(std::ostream &os, MInstruction &obj) {
 //////////////////////////////////////
 //////////////////////////////////////
 
-MHIphi::MHIphi(string name) : MInstruction(MInstruction::MITag::H_PHI, name) {
+MHIphi::MHIphi(string name, RegTag rt, bool is_pointer)
+    : MInstruction(MInstruction::MITag::H_PHI, rt, name, is_pointer) {
   incoming = make_unique<vector<MBasicBlock *>>();
+  opds = make_unique<vector<MIOprand>>();
   setTarget(this);
 }
 
 ostream &MHIphi::printASM(ostream &os) {
   os << getTarget()->getName() << " = phi ";
-  for (int i = 0; i < this->getRegNum(); i++) {
-    os << "[" << this->getReg(i)->getName() << ","
+  for (int i = 0; i < this->getOprandNum(); i++) {
+    string opd;
+    if (this->getOprand(i).tp == MIOprandTp::Reg) {
+      opd = this->getOprand(i).arg.reg->getName();
+    } else if (this->getOprand(i).tp == MIOprandTp::Float) {
+      opd = std::to_string(this->getOprand(i).arg.f);
+    } else {
+      opd = std::to_string(this->getOprand(i).arg.i);
+    }
+    os << "[" << opd << ","
        << this->getIncomingBlock(i)->getName() + "]";
-    if (i < this->getRegNum() - 1) {
+    if (i < this->getOprandNum() - 1) {
       os << ", ";
     }
   }
@@ -124,7 +137,26 @@ ostream &MHIphi::printASM(ostream &os) {
 }
 
 void MHIphi::pushIncoming(Register *reg, MBasicBlock *bb) {
-  this->pushReg(reg);
+  MIOprand opd;
+  opd.tp = MIOprandTp::Reg;
+  opd.arg.reg = reg;
+  opds->push_back(opd);
+  incoming->push_back(bb);
+}
+
+void MHIphi::pushIncoming(float f, MBasicBlock *bb) {
+  MIOprand opd;
+  opd.tp = MIOprandTp::Float;
+  opd.arg.f = f;
+  opds->push_back(opd);
+  incoming->push_back(bb);
+}
+
+void MHIphi::pushIncoming(int i, MBasicBlock *bb) {
+  MIOprand opd;
+  opd.tp = MIOprandTp::Int;
+  opd.arg.i = i;
+  opds->push_back(opd);
   incoming->push_back(bb);
 }
 
@@ -149,7 +181,8 @@ MBasicBlock *MHIphi::getIncomingBlock(int idx) const {
 ////////////////////////////////////////////
 
 MHIalloca::MHIalloca(uint32_t size_, string name)
-    : MInstruction(MInstruction::MITag::H_ALLOCA, name) {
+    : MInstruction(MInstruction::MITag::H_ALLOCA, RegTag::V_IREGISTER, name,
+                   true) {
   size = size_;
   this->setTarget(this);
 }
@@ -159,30 +192,33 @@ ostream &MHIalloca::printASM(ostream &os) {
 }
 ////////////////////////////////////////////
 
-MHIret::MHIret(int imm) : MInstruction(MInstruction::MITag::H_RET) {
-  this->imm = imm;
-  this->ret_type = Int;
+MHIret::MHIret(int imm)
+    : MInstruction(MInstruction::MITag::H_RET, RegTag::NONE) {
+      this->r.tp = MIOprandTp::Int;
+      this->r.arg.i = imm;
 }
 
-MHIret::MHIret(float imm) : MInstruction(MInstruction::MITag::H_RET) {
-  this->fimm = imm;
-  this->ret_type = Int;
+MHIret::MHIret(float imm)
+    : MInstruction(MInstruction::MITag::H_RET, RegTag::NONE) {
+      this->r.tp = MIOprandTp::Float;
+      this->r.arg.f = imm;
 }
-MHIret::MHIret(Register *reg) : MInstruction(MInstruction::MITag::H_RET) {
-  pushReg(reg);
-  this->ret_type = Reg;
+MHIret::MHIret(Register *reg)
+    : MInstruction(MInstruction::MITag::H_RET, RegTag::NONE) {
+      this->r.tp = MIOprandTp::Reg;
+      this->r.arg.reg = reg;
 }
 ostream &MHIret::printASM(ostream &os) {
   os << "ret ";
-  switch (ret_type) {
+  switch (r.tp) {
   case Float:
-    os << fimm;
+    os << r.arg.f;
     break;
   case Int:
-    os << imm;
+    os << r.arg.i;
     break;
   case Reg:
-    os << getReg(0)->getName();
+    os << r.arg.reg->getName();
     break;
   }
   return os;
@@ -190,46 +226,47 @@ ostream &MHIret::printASM(ostream &os) {
 
 ////////////////////////////////////////////
 
-MHIcall::MHIcall(MFunction *func, string name)
-    : MInstruction(MInstruction::MITag::H_CALL, name) {
+MHIcall::MHIcall(MFunction *func, string name, RegTag rt)
+    : MInstruction(MInstruction::MITag::H_CALL, rt, name) {
   this->function = func;
   this->setTarget(this);
-  this->args = make_unique<vector<unique_ptr<CallArg>>>();
+  this->args = make_unique<vector<MIOprand>>();
 }
 
-MHIcall::MHIcall(MFunction *func) : MInstruction(MInstruction::MITag::H_CALL) {
+MHIcall::MHIcall(MFunction *func, RegTag rt)
+    : MInstruction(MInstruction::MITag::H_CALL, rt) {
   this->function = func;
-  this->args = make_unique<vector<unique_ptr<CallArg>>>();
+  this->args = make_unique<vector<MIOprand>>();
 }
 
 void MHIcall::pushArg(float f) {
-  auto arg = make_unique<CallArg>();
-  arg->tp = ArgTp::Float;
-  arg->arg.f = f;
-  this->args->push_back(move(arg));
+  MIOprand arg;
+  arg.tp = MIOprandTp::Float;
+  arg.arg.f = f;
+  this->args->push_back(arg);
 }
 
 void MHIcall::pushArg(int i) {
-  auto arg = make_unique<CallArg>();
-  arg->tp = ArgTp::Int;
-  arg->arg.i = i;
-  this->args->push_back(move(arg));
+  MIOprand arg;
+  arg.tp = MIOprandTp::Int;
+  arg.arg.i = i;
+  this->args->push_back(arg);
 }
 
 void MHIcall::pushArg(Register *r) {
-  auto arg = make_unique<CallArg>();
-  arg->tp = ArgTp::Reg;
-  arg->arg.reg = r;
-  this->args->push_back(move(arg));
+  MIOprand arg;
+  arg.tp = MIOprandTp::Reg;
+  arg.arg.reg = r;
+  this->args->push_back(arg);
 }
 
 int MHIcall::getArgNum() { return this->args->size(); }
 
-MHIcall::CallArg &MHIcall::getArg(int idx) {
+MIOprand &MHIcall::getArg(int idx) {
   if (idx >= this->args->size()) {
     assert(0);
   }
-  return *args->at(idx);
+  return args->at(idx);
 }
 
 ostream &MHIcall::printASM(ostream &os) {
@@ -240,15 +277,15 @@ ostream &MHIcall::printASM(ostream &os) {
   os << "call " << this->function->getName() << "(";
   for (int i = 0; i < this->args->size(); i++) {
     auto &arg = this->args->at(i);
-    switch (arg->tp) {
-    case ArgTp::Float:
-      os << arg->arg.f;
+    switch (arg.tp) {
+    case MIOprandTp::Float:
+      os << arg.arg.f;
       break;
-    case ArgTp::Int:
-      os << arg->arg.i;
+    case MIOprandTp::Int:
+      os << arg.arg.i;
       break;
-    case ArgTp::Reg:
-      os << arg->arg.reg->getName();
+    case MIOprandTp::Reg:
+      os << arg.arg.reg->getName();
       break;
     }
     if (i < this->args->size() - 1) {
@@ -260,7 +297,7 @@ ostream &MHIcall::printASM(ostream &os) {
 }
 
 MHIicmp::MHIicmp(OpTag optag, Register *reg1, Register *reg2, std::string name)
-    : MInstruction(MInstruction::MITag::H_ICMP, name) {
+    : MInstruction(MInstruction::MITag::H_ICMP, RegTag::I_REGISTER, name) {
   this->optag = optag;
   pushReg(reg1);
   pushReg(reg2);
@@ -307,7 +344,7 @@ ostream &MHIicmp::printASM(ostream &os) {
 ////////////////////////////////////////////
 
 MHIbr::MHIbr(Register *reg, MBasicBlock *t_bb, MBasicBlock *f_bb)
-    : MInstruction(MInstruction::MITag::H_BR) {
+    : MInstruction(MInstruction::MITag::H_BR, RegTag::NONE) {
   pushReg(reg);
   this->t_bb = t_bb;
   this->f_bb = f_bb;
@@ -324,21 +361,22 @@ ostream &MHIbr::printASM(ostream &os) {
 
 ////////////////////////////////////////////
 
-#define IMPLEMENT_MI_IMM_CLASS(NAME, TAG, ASM_NAME)                            \
+#define IMPLEMENT_MI_IMM_CLASS(NAME, INS_TAG, REG_TAG, ASM_NAME, IS_POINTER)   \
   MI##NAME::MI##NAME(Register *reg, int32_t imm)                               \
-      : MInstruction(MInstruction::TAG) {                                      \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER) {     \
     this->pushReg(reg);                                                        \
     this->imm = imm;                                                           \
     this->setTarget(this);                                                     \
   }                                                                            \
   MI##NAME::MI##NAME(Register *reg, int32_t imm, std::string name)             \
-      : MInstruction(MInstruction::TAG, name) {                                \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, name,             \
+                     IS_POINTER) {                                             \
     this->pushReg(reg);                                                        \
     this->imm = imm;                                                           \
     this->setTarget(this);                                                     \
   }                                                                            \
   MI##NAME::MI##NAME(Register *reg, int32_t imm, Register *target)             \
-      : MInstruction(MInstruction::TAG) {                                      \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER) {     \
     this->pushReg(reg);                                                        \
     this->imm = imm;                                                           \
     this->setTarget(target);                                                   \
@@ -350,21 +388,22 @@ ostream &MHIbr::printASM(ostream &os) {
     return os << #ASM_NAME << " " << target << ", " << reg << ", " << imm;     \
   }
 
-#define IMPLEMENT_MI_BIN_CLASS(NAME, TAG, ASM_NAME)                            \
+#define IMPLEMENT_MI_BIN_CLASS(NAME, INS_TAG, REG_TAG, ASM_NAME, IS_POINTER)   \
   MI##NAME::MI##NAME(Register *reg1, Register *reg2)                           \
-      : MInstruction(MInstruction::TAG) {                                      \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER) {     \
     this->pushReg(reg1);                                                       \
     this->pushReg(reg2);                                                       \
     this->setTarget(this);                                                     \
   }                                                                            \
   MI##NAME::MI##NAME(Register *reg1, Register *reg2, Register *target)         \
-      : MInstruction(MInstruction::TAG) {                                      \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER) {     \
     this->pushReg(reg1);                                                       \
     this->pushReg(reg2);                                                       \
     this->setTarget(target);                                                   \
   }                                                                            \
-  MI##NAME::MI##NAME(Register *reg1, Register *reg2, std::string name)         \
-      : MInstruction(MInstruction::TAG, name) {                                \
+  MI##NAME::MI##NAME(Register *reg1, Register *reg2, string name)              \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, name,             \
+                     IS_POINTER) {                                             \
     this->pushReg(reg1);                                                       \
     this->pushReg(reg2);                                                       \
     this->setTarget(this);                                                     \
@@ -376,18 +415,20 @@ ostream &MHIbr::printASM(ostream &os) {
     return os << #ASM_NAME << " " << target << ", " << reg1 << ", " << reg2;   \
   }
 
-#define IMPLEMENT_MI_UNA_CLASS(NAME, TAG, ASM_NAME)                            \
-  MI##NAME::MI##NAME(Register *reg) : MInstruction(MInstruction::TAG) {        \
+#define IMPLEMENT_MI_UNA_CLASS(NAME, INS_TAG, REG_TAG, ASM_NAME, IS_POINTER)   \
+  MI##NAME::MI##NAME(Register *reg)                                            \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER) {     \
     this->pushReg(reg);                                                        \
     this->setTarget(this);                                                     \
   }                                                                            \
   MI##NAME::MI##NAME(Register *reg, Register *target)                          \
-      : MInstruction(MInstruction::TAG) {                                      \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER) {     \
     this->pushReg(reg);                                                        \
     this->setTarget(target);                                                   \
   }                                                                            \
-  MI##NAME::MI##NAME(Register *reg, std::string name)                          \
-      : MInstruction(MInstruction::TAG, name) {                                \
+  MI##NAME::MI##NAME(Register *reg, string name)                               \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, name,             \
+                     IS_POINTER) {                                             \
     this->pushReg(reg);                                                        \
     this->setTarget(this);                                                     \
   }                                                                            \
@@ -397,53 +438,57 @@ ostream &MHIbr::printASM(ostream &os) {
     return os << #ASM_NAME << " " << target << ", " << reg;                    \
   }
 
-IMPLEMENT_MI_IMM_CLASS(addi, ADDI, addi)
-IMPLEMENT_MI_BIN_CLASS(add, ADD, add)
-IMPLEMENT_MI_IMM_CLASS(addiw, ADDIW, addiw)
-IMPLEMENT_MI_BIN_CLASS(addw, ADDW, addw)
-IMPLEMENT_MI_BIN_CLASS(subw, SUBW, subw)
-IMPLEMENT_MI_BIN_CLASS(and, AND, and)
-IMPLEMENT_MI_IMM_CLASS(andi, ANDI, andi)
-IMPLEMENT_MI_BIN_CLASS(or, OR, or)
-IMPLEMENT_MI_IMM_CLASS(ori, ORI, ori)
-IMPLEMENT_MI_BIN_CLASS(xor, XOR, xor)
-IMPLEMENT_MI_IMM_CLASS(xori, XORI, xori)
-IMPLEMENT_MI_BIN_CLASS(slt, SLT, slt)
-IMPLEMENT_MI_IMM_CLASS(slti, SLTI, slti)
-IMPLEMENT_MI_BIN_CLASS(sltu, SLTU, sltu)
-IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, sltiu)
+IMPLEMENT_MI_IMM_CLASS(addi, ADDI, V_IREGISTER, addi, true)
+IMPLEMENT_MI_BIN_CLASS(add, ADD, V_IREGISTER, add, true)
+IMPLEMENT_MI_IMM_CLASS(addiw, ADDIW, V_IREGISTER, addiw, false)
+IMPLEMENT_MI_BIN_CLASS(addw, ADDW, V_IREGISTER, addw, false)
+IMPLEMENT_MI_BIN_CLASS(subw, SUBW, V_IREGISTER, subw, false)
+IMPLEMENT_MI_BIN_CLASS(and, AND, V_IREGISTER, and, false)
+IMPLEMENT_MI_IMM_CLASS(andi, ANDI, V_IREGISTER, andi, false)
+IMPLEMENT_MI_BIN_CLASS(or, OR, V_IREGISTER, or, false)
+IMPLEMENT_MI_IMM_CLASS(ori, ORI, V_IREGISTER, ori, false)
+IMPLEMENT_MI_BIN_CLASS(xor, XOR, V_IREGISTER, xor, false)
+IMPLEMENT_MI_IMM_CLASS(xori, XORI, V_IREGISTER, xori, false)
+IMPLEMENT_MI_BIN_CLASS(slt, SLT, V_IREGISTER, slt, false)
+IMPLEMENT_MI_IMM_CLASS(slti, SLTI, V_IREGISTER, slti, false)
+IMPLEMENT_MI_BIN_CLASS(sltu, SLTU, V_IREGISTER, sltu, false)
+IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, V_IREGISTER, sltiu, false)
 
-#define IMPLEMENT_MI_LOAD_CLASS(NAME, TAG)                                     \
+#define IMPLEMENT_MI_LOAD_CLASS(NAME, INS_TAG, REG_TAG, IS_POINTER)            \
   MI##NAME::MI##NAME(MGlobal *global)                                          \
-      : MInstruction(MInstruction::TAG), global(global) {}                     \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER),      \
+        global(global) {}                                                      \
                                                                                \
   MI##NAME::MI##NAME(MGlobal *global, std::string name)                        \
-      : MInstruction(MInstruction::TAG, name), global(global) {                \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, name,             \
+                     IS_POINTER),                                              \
+        global(global) {                                                       \
     this->setTarget(this);                                                     \
   }                                                                            \
                                                                                \
   MI##NAME::MI##NAME(MGlobal *global, Register *target)                        \
-      : MInstruction(MInstruction::TAG) {                                      \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER) {     \
     this->setTarget(target);                                                   \
     this->global = global;                                                     \
   }                                                                            \
                                                                                \
   MI##NAME::MI##NAME(Register *addr, int offset)                               \
-      : MInstruction(MInstruction::TAG) {                                      \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER) {     \
     this->pushReg(addr);                                                       \
     imm = offset;                                                              \
     this->setTarget(this);                                                     \
   }                                                                            \
                                                                                \
   MI##NAME::MI##NAME(Register *addr, int offset, std::string name)             \
-      : MInstruction(MInstruction::TAG, name) {                                \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, name,             \
+                     IS_POINTER) {                                             \
     this->pushReg(addr);                                                       \
     imm = offset;                                                              \
     this->setTarget(this);                                                     \
   }                                                                            \
                                                                                \
   MI##NAME::MI##NAME(Register *addr, int offset, Register *target)             \
-      : MInstruction(MInstruction::TAG) {                                      \
+      : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER) {     \
     this->pushReg(addr);                                                       \
     this->setTarget(target);                                                   \
     imm = offset;                                                              \
@@ -462,15 +507,15 @@ IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, sltiu)
     }                                                                          \
   }
 
-#define IMPLEMENT_MI_STORE_CLASS(NAME, TAG)                                    \
+#define IMPLEMENT_MI_STORE_CLASS(NAME, INS_TAG)                                \
   MI##NAME::MI##NAME(Register *val, MGlobal *global)                           \
-      : MInstruction(MInstruction::TAG) {                                      \
+      : MInstruction(MInstruction::INS_TAG, RegTag::NONE) {                    \
     this->pushReg(val);                                                        \
     this->global = global;                                                     \
   }                                                                            \
                                                                                \
   MI##NAME::MI##NAME(Register *val, int offset, Register *addr)                \
-      : MInstruction(MInstruction::TAG) {                                      \
+      : MInstruction(MInstruction::INS_TAG, RegTag::NONE) {                    \
     this->pushReg(val);                                                        \
     this->pushReg(addr);                                                       \
     imm = offset;                                                              \
@@ -489,35 +534,35 @@ IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, sltiu)
     }                                                                          \
   }
 
-IMPLEMENT_MI_LOAD_CLASS(lw, LW)
+IMPLEMENT_MI_LOAD_CLASS(lw, LW, V_IREGISTER, false)
 IMPLEMENT_MI_STORE_CLASS(sw, SW)
 
-IMPLEMENT_MI_LOAD_CLASS(ld, LD)
+IMPLEMENT_MI_LOAD_CLASS(ld, LD, V_IREGISTER, true)
 IMPLEMENT_MI_STORE_CLASS(sd, SD)
 
-IMPLEMENT_MI_LOAD_CLASS(flw, FLW)
+IMPLEMENT_MI_LOAD_CLASS(flw, FLW, V_FREGISTER, false)
 IMPLEMENT_MI_STORE_CLASS(fsw, FSW)
 
-IMPLEMENT_MI_BIN_CLASS(mul, MUL, mul)
-IMPLEMENT_MI_BIN_CLASS(mulw, MULW, mulw)
-IMPLEMENT_MI_BIN_CLASS(divw, DIVW, divw)
-IMPLEMENT_MI_BIN_CLASS(remw, REMW, remw)
+IMPLEMENT_MI_BIN_CLASS(mul, MUL, V_IREGISTER, mul, true)
+IMPLEMENT_MI_BIN_CLASS(mulw, MULW, V_IREGISTER, mulw, false)
+IMPLEMENT_MI_BIN_CLASS(divw, DIVW, V_IREGISTER, divw, false)
+IMPLEMENT_MI_BIN_CLASS(remw, REMW, V_IREGISTER, remw, false)
 
-IMPLEMENT_MI_BIN_CLASS(fadd_s, FADD_S, fadd.s)
-IMPLEMENT_MI_BIN_CLASS(fsub_s, FSUB_S, fsub.s)
-IMPLEMENT_MI_BIN_CLASS(fmul_s, FMUL_S, fmul.s)
-IMPLEMENT_MI_BIN_CLASS(fdiv_s, FDIV_S, fdiv.s)
+IMPLEMENT_MI_BIN_CLASS(fadd_s, FADD_S, V_FREGISTER, fadd.s, false)
+IMPLEMENT_MI_BIN_CLASS(fsub_s, FSUB_S, V_FREGISTER, fsub.s, false)
+IMPLEMENT_MI_BIN_CLASS(fmul_s, FMUL_S, V_FREGISTER, fmul.s, false)
+IMPLEMENT_MI_BIN_CLASS(fdiv_s, FDIV_S, V_FREGISTER, fdiv.s, false)
 
-IMPLEMENT_MI_UNA_CLASS(fcvts_w, FCVTS_W, fcvt.s.w)
-IMPLEMENT_MI_UNA_CLASS(fcvtw_s, FCVTW_S, fcvt.w.s)
+IMPLEMENT_MI_UNA_CLASS(fcvts_w, FCVTS_W, V_FREGISTER, fcvt.s.w, false)
+IMPLEMENT_MI_UNA_CLASS(fcvtw_s, FCVTW_S, V_IREGISTER, fcvt.w.s, false)
 
-IMPLEMENT_MI_BIN_CLASS(feq_s, FEQ_S, feq.s)
-IMPLEMENT_MI_BIN_CLASS(flt_s, FLT_S, flt.s)
-IMPLEMENT_MI_BIN_CLASS(fle_s, FLE_S, fle.s)
+IMPLEMENT_MI_BIN_CLASS(feq_s, FEQ_S, V_IREGISTER, feq.s, false)
+IMPLEMENT_MI_BIN_CLASS(flt_s, FLT_S, V_IREGISTER, flt.s, false)
+IMPLEMENT_MI_BIN_CLASS(fle_s, FLE_S, V_IREGISTER, fle.s, false)
 
 #define IMPLEMENT_MIT_BRANCH_CLASS(NAME, TAG)                                  \
   MI##NAME::MI##NAME(Register *reg1, Register *reg2, MBasicBlock *targetBB)    \
-      : MInstruction(MInstruction::TAG), targetBB(targetBB) {                  \
+      : MInstruction(MInstruction::TAG, RegTag::NONE), targetBB(targetBB) {    \
     this->pushReg(reg1);                                                       \
     this->pushReg(reg2);                                                       \
   }                                                                            \
@@ -537,7 +582,7 @@ IMPLEMENT_MIT_BRANCH_CLASS(blt, BLT)
 
 // MIj
 MIj::MIj(MBasicBlock *targetBB)
-    : MInstruction(MInstruction::J), targetBB(targetBB) {}
+    : MInstruction(MInstruction::J, RegTag::NONE), targetBB(targetBB) {}
 
 void MIj::setTargetBB(MBasicBlock *bb) { this->targetBB = bb; }
 MBasicBlock *MIj::getTargetBB() { return this->targetBB; }
@@ -548,7 +593,7 @@ ostream &MIj::printASM(ostream &os) {
 
 // MIcall
 MIcall::MIcall(MFunction *func)
-    : MInstruction(MInstruction::CALL), func(func) {}
+    : MInstruction(MInstruction::CALL, RegTag::NONE), func(func) {}
 
 MFunction *MIcall::getFunc() { return this->func; }
 
@@ -557,22 +602,24 @@ ostream &MIcall::printASM(ostream &os) {
 }
 
 // MIret
-MIret::MIret() : MInstruction(MInstruction::RET) {}
+MIret::MIret() : MInstruction(MInstruction::RET, RegTag::NONE) {}
 
 ostream &MIret::printASM(ostream &os) { return os << "ret"; }
 
 // MIli
-MIli::MIli(int32_t imm) : MInstruction(MInstruction::LI) {
+MIli::MIli(int32_t imm) : MInstruction(MInstruction::LI, RegTag::V_IREGISTER) {
   this->imm = imm;
   this->setTarget(this);
 }
 
-MIli::MIli(int32_t imm, string name) : MInstruction(MInstruction::LI, name) {
+MIli::MIli(int32_t imm, string name)
+    : MInstruction(MInstruction::LI, RegTag::V_IREGISTER, name) {
   this->imm = imm;
   this->setTarget(this);
 }
 
-MIli::MIli(int32_t imm, Register *target) : MInstruction(MInstruction::LI) {
+MIli::MIli(int32_t imm, Register *target)
+    : MInstruction(MInstruction::LI, RegTag::V_IREGISTER) {
   this->imm = imm;
   this->setTarget(target);
 }
@@ -582,10 +629,11 @@ ostream &MIli::printASM(ostream &os) {
             << this->getTarget()->getName() + ", " + std::to_string(imm);
 }
 
-IMPLEMENT_MI_UNA_CLASS(mv, MV, mv)
-IMPLEMENT_MI_UNA_CLASS(fmv_s, FMV_S, fmv.s)
+IMPLEMENT_MI_UNA_CLASS(mv, MV, V_IREGISTER, mv, false)
+IMPLEMENT_MI_UNA_CLASS(fmv_s, FMV_S, V_FREGISTER, fmv.s, false)
 
-Mcomment::Mcomment(string comment) : MInstruction(MInstruction::COMMENT) {
+Mcomment::Mcomment(string comment)
+    : MInstruction(MInstruction::COMMENT, RegTag::NONE) {
   this->comment = comment;
 }
 ostream &Mcomment::printASM(ostream &os) { return os << "# " << comment; }
