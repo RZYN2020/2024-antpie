@@ -1,5 +1,6 @@
 grammar SysYParser;
 
+program:compUnit;
 /*编译单元*/
 compUnit: ( decl | funcDef)* EOF;
 /*声明*/
