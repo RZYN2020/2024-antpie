@@ -74,7 +74,7 @@ class MModule;
 class MFunction {
 private:
   FuncType *type;
-  unique_ptr<vector<unique_ptr<ARGRegister>>> arguments;
+  unique_ptr<vector<unique_ptr<ParaRegister>>> parameters;
   string name;
   unique_ptr<vector<unique_ptr<MBasicBlock>>> basicBlocks;
   MBasicBlock *entry;
@@ -95,12 +95,14 @@ public:
   void setMod(MModule *mod);
   MModule *getMod();
 
-  ARGRegister *getArg(int idx);
+  ParaRegister *getPara(int idx);
+  uint getParaSize() {return parameters->size();}
   FuncType *getType();
 
   string getName() const;
   vector<unique_ptr<MBasicBlock>> &getBasicBlocks();
 
+  vector<Register*> &getVariables();
   friend std::ostream &operator<<(std::ostream &os, const MFunction &obj);
 };
 

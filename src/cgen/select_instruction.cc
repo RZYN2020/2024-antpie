@@ -20,49 +20,52 @@ void lowerHIicmp(MFunction *mfunc) {
       auto tb = br->getTBlock();
       auto fb = br->getFBlock();
       auto cond = br->getReg(0);
-      if (cond->getTag() == Register::V_REGISTER) {
-        auto condi = static_cast<MInstruction *>(cond);
-        if (condi->getInsTag() == MInstruction::H_ICMP) {
-          auto icmp = static_cast<MHIicmp *>(cond);
-          auto opd1 = icmp->getReg(0);
-          auto opd2 = icmp->getReg(1);
-          if (cond->getUses().size() == 2) { // only used by itself and br
-            // remove condi and replace jmp
-            MInstruction *mi;
-            switch (icmp->getOpTag()) {
-            case OpTag::EQ: {
-              mi = new MIbeq(opd1, opd2, tb);
-              break;
+      if (cond->getTag() == Register::V_IREGISTER) {
+        auto vreg = static_cast<VRegister *>(cond);
+        if (vreg->isInstruction()) {
+          auto condi = static_cast<MInstruction *>(cond);
+          if (condi->getInsTag() == MInstruction::H_ICMP) {
+            auto icmp = static_cast<MHIicmp *>(cond);
+            auto opd1 = icmp->getReg(0);
+            auto opd2 = icmp->getReg(1);
+            if (cond->getUses().size() == 2) { // only used by itself and br
+              // remove condi and replace jmp
+              MInstruction *mi;
+              switch (icmp->getOpTag()) {
+              case OpTag::EQ: {
+                mi = new MIbeq(opd1, opd2, tb);
+                break;
+              }
+              case OpTag::NE: {
+                mi = new MIbne(opd1, opd2, tb);
+                break;
+              }
+              case OpTag::SLE: {
+                mi = new MIbge(opd2, opd1, tb);
+                break;
+              }
+              case OpTag::SLT: {
+                mi = new MIblt(opd2, opd1, tb);
+                break;
+              }
+              case OpTag::SGE: {
+                mi = new MIbge(opd1, opd2, tb);
+                break;
+              }
+              case OpTag::SGT: {
+                mi = new MIblt(opd2, opd1, tb);
+                break;
+              }
+              default:
+                assert(0);
+              }
+              auto j = new MIj(fb);
+              condi->replaceWith({});
+              mbb->clearJmps();
+              mbb->pushJmp(mi);
+              mbb->pushJmp(j);
+              continue;
             }
-            case OpTag::NE: {
-              mi = new MIbne(opd1, opd2, tb);
-              break;
-            }
-            case OpTag::SLE: {
-              mi = new MIbge(opd2, opd1, tb);
-              break;
-            }
-            case OpTag::SLT: {
-              mi = new MIblt(opd2, opd1, tb);
-              break;
-            }
-            case OpTag::SGE: {
-              mi = new MIbge(opd1, opd2, tb);
-              break;
-            }
-            case OpTag::SGT: {
-              mi = new MIblt(opd2, opd1, tb);
-              break;
-            }
-            default:
-              assert(0);
-            }
-            auto j = new MIj(fb);
-            condi->replaceWith({});
-            mbb->clearJmps();
-            mbb->pushJmp(mi);
-            mbb->pushJmp(j);
-            continue;
           }
         }
       }
@@ -153,7 +156,7 @@ Register *get_vreg(MModule *m, MBasicBlock *mbb, Value *v,
       }
     }
     assert(found);
-    return func->getArg(cnt);
+    return func->getPara(cnt);
   }
 
   if (v->getValueTag() == VT_INTCONST) {
@@ -213,8 +216,10 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     auto basicBlocks = func->getBasicBlocks();
     for (auto it = basicBlocks->begin(); it != basicBlocks->end(); ++it) {
       auto bb = *it;
-      if (bb->isEmpty()) continue;
-      MBasicBlock *mbb = mfunc->addBasicBlock(func->getName() + "." + bb->getName());
+      if (bb->isEmpty())
+        continue;
+      MBasicBlock *mbb =
+          mfunc->addBasicBlock(func->getName() + "." + bb->getName());
       bb_map->insert({bb, mbb});
     }
     mfunc->setEntry(bb_map->at(func->getEntry()));
@@ -223,7 +228,8 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     for (auto it = basicBlocks->begin(); it != basicBlocks->end();
          ++it) { // Begin BB Loop
       auto bb = *it;
-      if (bb->isEmpty()) continue;
+      if (bb->isEmpty())
+        continue;
       MBasicBlock *mbb = bb_map->at(bb);
 
       auto instrs = bb->getInstructions();
@@ -313,9 +319,25 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           break;
         }
         case VT_CALL: {
+          // return type can not be pointer in sysy
           CallInst *call = static_cast<CallInst *>(ins);
+          Register::RegTag retTag;
+          switch (call->getType()->getTypeTag()) {
+          case TT_INT1:
+          case TT_INT32:
+          case TT_POINTER: {
+            retTag = Register::RegTag::I_REGISTER;
+            break;
+          }
+          case TT_FLOAT: {
+            retTag = Register::RegTag::I_REGISTER;
+            break;
+          }
+          default:
+            assert(0);
+          }
           auto callee = func_map->at(call->getFunction());
-          ADD_INSTR(mcall, MHIcall, callee, call->getName());
+          ADD_INSTR(mcall, MHIcall, callee, call->getName(), retTag);
           for (int i = 0; i < call->getRValueSize(); i++) {
             auto arg = call->getRValue(i);
             if (arg->getValueTag() == VT_FLOATCONST) {
@@ -448,14 +470,41 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
         }
         case VT_PHI: {
           PhiInst *phi = static_cast<PhiInst *>(ins);
-          MHIphi *mphi = new MHIphi(phi->getName());
+          Register::RegTag retTag;
+          bool is_pointer = false;
+          switch (phi->getRValue(0)->getType()->getTypeTag()) {
+          case TT_INT1:
+          case TT_INT32: {
+            retTag = Register::RegTag::V_IREGISTER;
+            break;
+          }
+          case TT_POINTER: {
+            is_pointer = true;
+            retTag = Register::RegTag::V_IREGISTER;
+            break;
+          }
+          case TT_FLOAT: {
+            retTag = Register::RegTag::V_FREGISTER;
+            break;
+          }
+          default:
+            assert(0);
+          }
+          auto mphi = new MHIphi(phi->getName(), retTag, is_pointer);
           for (int i = 0; i < phi->getRValueSize(); i += 2) {
             Value *opd = phi->getRValue(i);
             BasicBlock *pred_bb =
                 static_cast<BasicBlock *>(phi->getRValue(i + 1));
-            auto *mvreg = GET_VREG(opd);
             auto *mbb = bb_map->at(pred_bb);
-            mphi->pushIncoming(mvreg, mbb);
+            if (opd->getValueTag() == VT_FLOATCONST) {
+              auto f = static_cast<FloatConstant *>(opd)->getValue();
+              mphi->pushIncoming(f, mbb);
+            } else if (opd->getValueTag() == VT_INTCONST) {
+              auto i = static_cast<IntegerConstant *>(opd)->getValue();
+              mphi->pushIncoming(i, mbb);
+            } else {
+              mphi->pushIncoming(GET_VREG(opd), mbb);
+            }
           }
           mbb->pushPhi(mphi);
           instr_map->insert({ins, mphi});
@@ -530,7 +579,7 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
         }
       } // End Instruction Loop
     } // End BB Loop
-    
+
     // std::cout << "Reslove IRRegisters to VRegisters" << endl;
     // 1. Reslove IRRegisters to VRegisters
     for (auto &mbb : mfunc->getBasicBlocks()) {
@@ -538,7 +587,6 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
         mins->replaceIRRegister(*instr_map);
       }
     }
-
 
     // std::cout << "lower H_ICMP and BR" << endl;
     // 2. lower H_ICMP and BR

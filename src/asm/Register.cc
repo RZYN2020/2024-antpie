@@ -141,18 +141,24 @@ IRRegister::IRRegister(Instruction *ins)
   this->ir_reg = ins;
 }
 
-
 static string gen_new() {
   static int id = 0;
   string res = "_t" + std::to_string(id++);
   return res;
 }
 
-ARGRegister::ARGRegister(Argument *arg) : Register(arg->getName(), A_REGISTER) {
-  this->arg = arg;
+VRegister::VRegister(RegTag tag, bool is_pointer, bool is_instruction)
+    : Register(gen_new(), tag) {
+  this->is_pointer = is_pointer;
+  this->is_instruction = is_instruction;
 }
-VRegister::VRegister() : Register(gen_new(), V_REGISTER) {}
-VRegister::VRegister(string name) : Register(name, V_REGISTER) {}
+
+VRegister::VRegister(RegTag tag, string name, bool is_pointer,
+                     bool is_instruction)
+    : Register(name, tag) {
+  this->is_pointer = is_pointer;
+  this->is_instruction = is_instruction;
+}
 
 IRegister::IRegister(int id, string n) : Register(n, I_REGISTER) {
   this->id = id;
