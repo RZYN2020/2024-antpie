@@ -3,6 +3,7 @@
 
 #include <assert.h>
 
+#include <functional>
 #include <map>
 #include <queue>
 #include <unordered_set>
@@ -44,6 +45,8 @@ class DomTree {
   void buildDomTree();
   BasicBlock* getDominator(BasicBlock* bb) { return dominators.at(bb); }
   BBListPtr getDomChildren(BasicBlock* bb) { return domChildren[bb]; }
+  bool dominates(BasicBlock* parent, BasicBlock* block);
+  BBListPtr postOrder();
   void testDomTree();
 
   void calculateDF();

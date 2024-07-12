@@ -2,8 +2,12 @@ add_library(
     opt
     DomTree.cc
     MemToReg.cc
-    CSE.cc
+    CommonSubexpElimination.cc
     MergeBlock.cc
     Inlining.cc
     FunctionPropAnalysis.cc
+    AliasAnalysis.cc
+    LoopAnalysis.cc
+    LoopSimplify.cc
+    LoopInvariantCodeMotion.cc
 )

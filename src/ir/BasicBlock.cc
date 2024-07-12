@@ -62,3 +62,53 @@ BasicBlock* BasicBlock::split(LinkedList<Instruction*>::Iterator iter) {
   splitBlock->function = function;
   return splitBlock;
 }
+
+// This method introduces at least one new basic block into the function and
+// moves some of the predecessors of BB to be predecessors of the new block.
+BasicBlock* BasicBlock::splitBlockPredecessors(vector<BasicBlock*>& preds) {
+  BasicBlock* newBlock = new BasicBlock(getName() + "_pred");
+  JumpInst* jumpInst = new JumpInst(this);
+  newBlock->pushInstr(jumpInst);
+  function->insertBasicBlockBefore(newBlock, this);
+
+  CFG* cfg = function->getCFG();
+  if (cfg) {
+    cfg->addNode(newBlock);
+    cfg->addEdge(newBlock, this);
+  }
+
+  for (BasicBlock* pred : preds) {
+    Instruction* tailInstr = pred->getTailInstr();
+    if (!tailInstr) {
+      JumpInst* jump = new JumpInst(newBlock);
+      pred->pushInstr(jump);
+      if (cfg) {
+        cfg->addEdge(pred, newBlock);
+      }
+    } else if (tailInstr->isa(VT_JUMP)) {
+      JumpInst* jump = dynamic_cast<JumpInst*>(tailInstr);
+      jump->replaceDestinationWith(this, newBlock);
+    } else if (tailInstr->isa(VT_BR)) {
+      BranchInst* branch = dynamic_cast<BranchInst*>(tailInstr);
+      branch->replaceDestinationWith(this, newBlock);
+    }
+  }
+
+  // Modify PHI
+  for (Instruction* instr : *getInstructions()) {
+    PhiInst* phiInstr;
+    if (phiInstr = dynamic_cast<PhiInst*>(instr)) {
+      PhiInst* newPhi = new PhiInst(phiInstr->getName() + "pre_clone");
+      for (BasicBlock* pred: preds) {
+        Value* fromValue = phiInstr->deleteIncomingFrom(pred);
+        newPhi->pushIncoming(fromValue, pred);
+      }
+      phiInstr->pushIncoming(newPhi, newBlock);
+      newBlock->pushInstrAtHead(newPhi);
+    } else {
+      break;
+    }
+  }
+
+  return newBlock;
+}

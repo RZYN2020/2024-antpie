@@ -1,4 +1,4 @@
-#include "CSE.hh"
+#include "CommonSubexpElimination.hh"
 
 string CommonSubexpElimination::hashToString(Instruction* instr) {
   assert(isSimpleExpr(instr));
