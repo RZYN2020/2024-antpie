@@ -52,6 +52,7 @@ public:
   void insertAfterInstructionWith(MInstruction *ins,
                                   vector<MInstruction *> instrs);
 
+  vector<MInstruction*> getAllInstructions();
   vector<unique_ptr<MInstruction>> &getInstructions();
   vector<unique_ptr<MInstruction>> &getJmps();
 

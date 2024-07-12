@@ -112,7 +112,6 @@ void MBasicBlock::pushPhi(MHIphi *phi) {
   phis->push_back(std::unique_ptr<MHIphi>(phi));
 }
 
-vector<unique_ptr<MHIphi>> &MBasicBlock::getPhis() { return *phis; }
 
 void MBasicBlock::removeIncoming(MBasicBlock *bb) {
   auto it = incoming->begin();
@@ -287,8 +286,21 @@ void MBasicBlock::insertAfterInstructionWith(MInstruction *ins,
   }
 }
 
+vector<unique_ptr<MHIphi>> &MBasicBlock::getPhis() { return *phis; }
+
 vector<unique_ptr<MInstruction>> &MBasicBlock::getInstructions() {
   return *instructions;
+}
+
+vector<MInstruction*> MBasicBlock::getAllInstructions() {
+  vector<MInstruction*> res = {};
+  for (auto &ins : *instructions) {
+    res.push_back(ins.get());
+  }
+  for (auto &ins : *jmps) {
+    res.push_back(ins.get());
+  }
+  return res;
 }
 
 vector<unique_ptr<MInstruction>> &MBasicBlock::getJmps() { return *jmps; }

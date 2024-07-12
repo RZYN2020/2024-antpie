@@ -24,7 +24,6 @@ public:
     H_ALLOCA,
     H_RET,
     H_CALL,
-    H_DEF_ARG,
     
     H_BR,
     H_ICMP,
