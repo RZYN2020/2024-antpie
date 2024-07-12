@@ -62,6 +62,16 @@ CFG* Function::buildCFG() {
 DomTree* Function::buildDT() {
   dt = new DomTree(this);
   dt->buildDomTree();
-  dt->calculateDF();
   return dt;
+}
+
+void Function::insertBasicBlockBefore(BasicBlock* newBlock, BasicBlock* loc) {
+  newBlock->setParent(this);
+  for (auto it = basicBlocks.begin(); it != basicBlocks.end(); ++it) {
+    if (*it == loc) {
+      basicBlocks.insertBefore(it, newBlock);
+      return;
+    }
+  }
+  assert(0);
 }
