@@ -72,6 +72,7 @@ class Value {
   Type* getType() const { return vType; }
   virtual string toString() const { return "%" + vName; }
   bool isa(ValueTag vt_) { return vt_ == vTag; }
+  bool isPointer();
 
   Use* getUseHead() const { return useHead; }
   void addUser(Use* use) {
@@ -90,6 +91,7 @@ class Value {
     for (Use* use : tmpUse) {
       value->addUser(use);
     }
+    useHead = nullptr;
   }
 };
 

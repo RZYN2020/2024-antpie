@@ -36,6 +36,7 @@ class BasicBlock : public Value {
   BasicBlock* clone(unordered_map<Value*, Value*>& replaceMap);
   bool isEmpty() { return empty; }
   BasicBlock* split(LinkedList<Instruction*>::Iterator iter);
+  BasicBlock* splitBlockPredecessors(vector<BasicBlock*>& preds);
 };
 
 struct BasicBlockPtrHash {
@@ -49,6 +50,5 @@ struct BasicBlockPtrEqual {
     return lhs == rhs;
   }
 };
-
 
 #endif

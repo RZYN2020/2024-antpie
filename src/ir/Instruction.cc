@@ -5,19 +5,7 @@
 #include "Function.hh"
 #include "Type.hh"
 
-Instruction::Instruction(ValueTag vTag) : Value(Type::getVoidType(), vTag) {
-  useList = make_unique<vector<Use*>>();
-}
-
-Instruction::Instruction(string name, ValueTag vTag)
-    : Value(Type::getVoidType(), name, vTag) {
-  useList = make_unique<vector<Use*>>();
-}
-
-Instruction::Instruction(Type* t, string name, ValueTag vTag)
-    : Value(t, name, vTag) {
-  useList = make_unique<vector<Use*>>();
-}
+/******************** Utils Function ******************************/
 
 void Instruction::pushValue(Value* v) {
   Use* use = new Use(this, v);
@@ -42,6 +30,47 @@ void Instruction::deleteUseList() {
   }
 }
 
+bool BranchInst::replaceDestinationWith(BasicBlock* oldBlock,
+                                        BasicBlock* newBlock) {
+  for (int i = 1; i < 3; i++) {
+    BasicBlock* expectOldBB = dynamic_cast<BasicBlock*>(getRValue(i));
+    if (expectOldBB == oldBlock) {
+      Use* use = useList->at(i);
+      use->removeFromValue();
+      use->value = newBlock;
+      newBlock->addUser(use);
+
+      // Modify cfg
+      BasicBlock* block = getParent();
+      CFG* cfg = block->getParent()->getCFG();
+      if (cfg) {
+        cfg->eraseEdge(block, oldBlock);
+        cfg->addEdge(block, newBlock);
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+bool JumpInst::replaceDestinationWith(BasicBlock* oldBlock,
+                                      BasicBlock* newBlock) {
+  assert(oldBlock == dynamic_cast<BasicBlock*>(getRValue(0)));
+  Use* use = useList->at(0);
+  use->removeFromValue();
+  use->value = newBlock;
+  newBlock->addUser(use);
+
+  // Modify cfg
+  BasicBlock* block = getParent();
+  CFG* cfg = block->getParent()->getCFG();
+  if (cfg) {
+    cfg->eraseEdge(block, oldBlock);
+    cfg->addEdge(block, newBlock);
+  }
+  return true;
+}
+
 void Instruction::cloneUseList(unordered_map<Value*, Value*>& replaceMap,
                                vector<Use*>* fromUseList) {
   for (Use* use : *fromUseList) {
@@ -52,6 +81,47 @@ void Instruction::cloneUseList(unordered_map<Value*, Value*>& replaceMap,
     }
     pushValue(value);
   }
+}
+
+bool Instruction::deleteRValueAt(int idx) {
+  Use* use = useList->at(idx);
+  use->removeFromValue();
+  useList->erase(useList->begin() + idx);
+  return true;
+}
+
+Value* PhiInst::deleteIncomingFrom(BasicBlock* block) {
+  int icSize = getRValueSize() / 2;
+  int loc = -1;
+  for (int i = 0; i < icSize; i++) {
+    if (getRValue(i * 2 + 1) == (Value*)block) {
+      loc = i;
+      break;
+    }
+  }
+
+  if (loc == -1) return nullptr;
+  Value* oldValue = getRValue(2 * loc);
+  deleteRValueAt(2 * loc + 1);
+  deleteRValueAt(2 * loc);
+
+  return oldValue;
+}
+
+/*********************** Constructor ******************************/
+
+Instruction::Instruction(ValueTag vTag) : Value(Type::getVoidType(), vTag) {
+  useList = make_unique<vector<Use*>>();
+}
+
+Instruction::Instruction(string name, ValueTag vTag)
+    : Value(Type::getVoidType(), name, vTag) {
+  useList = make_unique<vector<Use*>>();
+}
+
+Instruction::Instruction(Type* t, string name, ValueTag vTag)
+    : Value(t, name, vTag) {
+  useList = make_unique<vector<Use*>>();
 }
 
 AllocaInst::AllocaInst(Type* type, string name)
@@ -170,6 +240,8 @@ ZextInst::ZextInst(Value* src, Type* dstType, string name)
     : Instruction(dstType, name, VT_ZEXT) {
   pushValue(src);
 }
+
+/********************* Print Function ********************************/
 
 void AllocaInst::printIR(ostream& stream) const {
   stream << "%" << getName() << " = alloca " << elemType->toString();
@@ -300,6 +372,8 @@ void ZextInst::printIR(ostream& stream) const {
   stream << toString() << " = zext " << src->getType()->toString() << " "
          << src->toString() << " to " << getType()->toString();
 }
+
+/*********************** Clone Function ******************************/
 
 Instruction* AllocaInst::clone() {
   AllocaInst* newInstr = new AllocaInst(getElemType(), getName());

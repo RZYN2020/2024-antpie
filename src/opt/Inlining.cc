@@ -17,9 +17,12 @@ bool Inlining::runOnFunction(Function* func) {
     BasicBlock* block = *blockIter;
     LinkedList<Instruction*>* instructions = block->getInstructions();
     for (auto instrIter = instructions->begin();
-         instrIter != instructions->end(); ++instrIter) {
+         instrIter != instructions->end();) {
       Instruction* instr = *instrIter;
-      if (!instr->isa(VT_CALL)) continue;
+      if (!instr->isa(VT_CALL)) {
+        ++instrIter;
+        continue;
+      }
 
       CallInst* callInst = dynamic_cast<CallInst*>(instr);
       Function* callee = callInst->getFunction();
@@ -32,7 +35,7 @@ bool Inlining::runOnFunction(Function* func) {
       unordered_map<BasicBlock*, BasicBlock*> blockMap;
 
       BasicBlock* splitBlock = block->split(instrIter);
-
+      ++instrIter;
       FuncType* funcType = dynamic_cast<FuncType*>(callee->getType());
       int argSize = funcType->getArgSize();
       assert(argSize == callInst->getRValueSize());

@@ -6,11 +6,13 @@
 #ifndef _FUNCTION_H_
 #define _FUNCTION_H_
 
+#include "AliasAnalysisResult.hh"
 #include "BasicBlock.hh"
 #include "DomTree.hh"
 #include "Type.hh"
 #include "Value.hh"
 
+struct LoopInfoBase;
 class CFG;
 namespace ANTPIE {
 class Module;
@@ -18,16 +20,22 @@ class Module;
 
 class Function : public GlobalValue {
  private:
+  // Basic structure
   LinkedList<BasicBlock*> basicBlocks;
-  CFG* cfg = 0;
-  DomTree* dt = 0;
   BasicBlock *entry, *exit;
   ANTPIE::Module* module;
 
+  // Analysis result structure
+  CFG* cfg = 0;
+  DomTree* dt = 0;
+  AliasAnalysisResult* aaResult;
+  LoopInfoBase* loopInfoBase;
   struct FunctionProperties {
     bool isRecursive : 1;
     bool hasSideEffects : 1;
     bool pureFunction : 1;
+    bool memRead : 1;
+    bool memWrite : 1;
     size_t lineSize;
     unordered_set<Function*> callerFunctions;
     unordered_set<Function*> calledFunctions;
@@ -46,6 +54,7 @@ class Function : public GlobalValue {
   ~Function();
   void pushBasicBlock(BasicBlock* bb);
   void pushBasicBlockAtHead(BasicBlock* bb);
+  void insertBasicBlockBefore(BasicBlock* newBlock, BasicBlock* loc);
   void printIR(ostream& stream) const override;
   void setParent(ANTPIE::Module* module_) { module = module_; }
   ANTPIE::Module* getParent() const { return module; }
@@ -55,22 +64,29 @@ class Function : public GlobalValue {
   BasicBlock* getEntry() const { return entry; }
   BasicBlock* getExit() const { return exit; }
 
+  // Control Flow Graph
   CFG* buildCFG();
   CFG* getCFG() { return cfg; }
   void resetCFG() { cfg = 0; }
 
+  // Dominance Tree
   DomTree* buildDT();
   DomTree* getDT() { return dt; }
   void resetDT() { dt = 0; }
 
+  // Function propertites analysis
   bool isRecursive() { return props.isRecursive; }
   bool hasSideEffects() { return props.hasSideEffects; }
   bool isPureFunction() { return props.pureFunction; }
+  bool hasMemRead() { return props.memRead; }
+  bool hasMemWrite() { return props.memWrite; }
   size_t getLineSize() { return props.lineSize; }
 
   void setRecursive(bool isRecure) { props.isRecursive = isRecure; }
   void setSideEffects(bool sideEffect) { props.hasSideEffects = sideEffect; }
   void setPureFunction(bool pureFunction) { props.pureFunction = pureFunction; }
+  void setMemRead(bool mr) { props.memRead = mr; }
+  void setMemWrite(bool mw) { props.memWrite = mw; }
   void setSize(size_t size) { props.lineSize = size; }
 
   unordered_set<Function*>& getCallers() { return props.callerFunctions; }
@@ -84,6 +100,13 @@ class Function : public GlobalValue {
     caller->props.addCalled(callee);
     callee->props.addCaller(caller);
   }
-};
 
+  // Alias Analysis
+  AliasAnalysisResult* getAliasAnalysisResult() { return aaResult; }
+  void setAliasAnalysisResult(AliasAnalysisResult* ret) { aaResult = ret; }
+
+  // Loop Analysis
+  LoopInfoBase* getLoopInfoBase() { return loopInfoBase; }
+  void setLoopInfoBase(LoopInfoBase* LI) { loopInfoBase = LI; }
+};
 #endif
