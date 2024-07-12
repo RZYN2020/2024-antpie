@@ -83,6 +83,7 @@ private:
   MModule* mod;
 
 public:
+  unique_ptr<vector<MBasicBlock*>> domtPreOrder;
   int stack_offset;
   MFunction(FuncType *fType, string name);
   MBasicBlock *addBasicBlock(string name);

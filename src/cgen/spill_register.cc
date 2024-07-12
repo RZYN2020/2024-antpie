@@ -1,7 +1,7 @@
 #include "Machine.hh"
 #include <set>
 
-void out_of_ssa(MModule *mod) {
+static void out_of_ssa(MModule *mod) {
   for (auto &func : mod->getFunctions()) {
     for (auto &bb : func->getBasicBlocks()) {
       for (auto &phi : bb->getPhis()) {

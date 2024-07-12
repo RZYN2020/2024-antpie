@@ -9,5 +9,5 @@ void generate_code(MModule *res, ANTPIE::Module *ir) {
   out_s.open("tests/test.phi.s");
   out_s << *res;
 
-  allocate_register(res, nullptr);
+  allocate_register(res);
 }
