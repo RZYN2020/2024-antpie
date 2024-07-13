@@ -6,7 +6,9 @@
 #include <cassert>
 #include <memory>
 #include <vector>
+#include <set>
 
+using std::set;
 using std::ostream;
 using std::unique_ptr;
 
@@ -24,7 +26,7 @@ public:
     H_ALLOCA,
     H_RET,
     H_CALL,
-    
+
     H_BR,
     H_ICMP,
     COMMENT,
@@ -96,6 +98,8 @@ public:
     //// Load and Store
     FLW,
     FSW,
+    FLD,
+    FSD,
     //// Conversion
     FCVTS_W,
     // FCVTS_WU,
@@ -173,10 +177,10 @@ public:
   void pushIncoming(Register *reg, MBasicBlock *bb);
   void pushIncoming(int i, MBasicBlock *bb);
   void pushIncoming(float f, MBasicBlock *bb);
-  void replaceIncoming(MBasicBlock* oldbb, MBasicBlock* newbb);
+  void replaceIncoming(MBasicBlock *oldbb, MBasicBlock *newbb);
   MBasicBlock *getIncomingBlock(int idx) const;
-  MIOprand getOprand(int idx) const {return opds->at(idx);};
-  int getOprandNum() const {return opds->size(); };
+  MIOprand getOprand(int idx) const { return opds->at(idx); };
+  int getOprandNum() const { return opds->size(); };
 };
 
 class MHIalloca : public MInstruction {
@@ -186,7 +190,7 @@ private:
 public:
   MHIalloca(uint32_t size, string name);
   ostream &printASM(ostream &stream) override;
-  uint32_t getSize() {return size;}
+  uint32_t getSize() { return size; }
 };
 
 class MHIret : public MInstruction {
@@ -213,7 +217,9 @@ public:
   int getArgNum();
   MIOprand &getArg(int idx);
   ostream &printASM(ostream &stream) override;
-  vector<MInstruction*> generateCallSequence(MFunction *func, int stack_offset, map<Register *, int> *allocation);
+  vector<MInstruction *> generateCallSequence(
+      MFunction *func, int stack_offset, map<Register *, int> *spill,
+      map<Register *, Register *> *allocation, set<Register *>* lineIn);
 };
 
 class MHIbr : public MInstruction {
@@ -290,15 +296,15 @@ DEFINE_MI_IMM_CLASS(sltiu)
   class MI##NAME : public MInstruction {                                       \
   private:                                                                     \
     MGlobal *global = nullptr;                                                 \
-    int imm;                                                              \
+    int imm;                                                                   \
                                                                                \
   public:                                                                      \
     MI##NAME(MGlobal *global);                                                 \
     MI##NAME(MGlobal *global, std::string name);                               \
     MI##NAME(MGlobal *global, Register *target);                               \
-    MI##NAME(Register *addr, int offset);                                 \
-    MI##NAME(Register *addr, int offset, std::string name);               \
-    MI##NAME(Register *addr, int offset, Register *target);               \
+    MI##NAME(Register *addr, int offset);                                      \
+    MI##NAME(Register *addr, int offset, std::string name);                    \
+    MI##NAME(Register *addr, int offset, Register *target);                    \
     MGlobal *getGlobal();                                                      \
     ostream &printASM(ostream &stream) override;                               \
   };
@@ -307,11 +313,11 @@ DEFINE_MI_IMM_CLASS(sltiu)
   class MI##NAME : public MInstruction {                                       \
   private:                                                                     \
     MGlobal *global = nullptr;                                                 \
-    int imm;                                                              \
+    int imm;                                                                   \
                                                                                \
   public:                                                                      \
     MI##NAME(Register *val, MGlobal *global);                                  \
-    MI##NAME(Register *val, int offset, Register *addr);                  \
+    MI##NAME(Register *val, int offset, Register *addr);                       \
     MGlobal *getGlobal();                                                      \
     ostream &printASM(ostream &stream) override;                               \
   };
@@ -322,6 +328,8 @@ DEFINE_MI_LOAD_CLASS(ld)
 DEFINE_MI_STORE_CLASS(sd)
 DEFINE_MI_LOAD_CLASS(flw)
 DEFINE_MI_STORE_CLASS(fsw)
+DEFINE_MI_LOAD_CLASS(fld)
+DEFINE_MI_STORE_CLASS(fsd)
 
 DEFINE_MI_BIN_CLASS(mul);
 DEFINE_MI_BIN_CLASS(mulw);

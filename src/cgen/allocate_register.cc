@@ -1,11 +1,4 @@
-#include "DomTree.hh"
-#include "Machine.hh"
-#include <set>
-
-using std::pair;
-using std::set;
-
-using LivenessInfo = map<MInstruction *, set<Register *>>;
+#include "allocate_register.hh"
 
 #define GETUSES(NAME, RegisterTag)                                             \
   std::vector<Register *> getUses##NAME(MInstruction *ins) {                   \
@@ -78,88 +71,6 @@ GETDEFS(V_IRegister, V_IREGISTER)
 GETPHIDEFS(V_FRegister, V_FREGISTER)
 GETPHIDEFS(V_IRegister, V_IREGISTER)
 
-#define SCAN_BACK(NAME, GET_DEFS, GET_PHIS)                                    \
-  void scan_back##NAME(Register *r, MBasicBlock *bb,                           \
-                       vector<MInstruction *> instrs, int pos,                 \
-                       map<MInstruction *, set<Register *>> *liveness) {       \
-    for (int i = pos; i >= 0; i--) {                                           \
-      auto ins = instrs[i];                                                    \
-      if ((*liveness)[ins].find(r) != (*liveness)[ins].end()) {                \
-        return;                                                                \
-      }                                                                        \
-      auto defRegs = GET_DEFS(ins);                                            \
-      for (auto defReg : defRegs) {                                            \
-        if (defReg == r) {                                                     \
-          return;                                                              \
-        }                                                                      \
-      }                                                                        \
-      (*liveness)[ins].insert(r);                                              \
-    }                                                                          \
-    vector<Register *> phiDefs = GET_PHIS(bb);                                 \
-    for (auto phiDef : phiDefs) {                                              \
-      if (phiDef == r) {                                                       \
-        return;                                                                \
-      }                                                                        \
-    }                                                                          \
-    for (auto pred : bb->getIncomings()) {                                     \
-      scan_back##NAME(r, pred, pred->getAllInstructions(),                     \
-                      pred->getAllInstructions().size() - 1, liveness);        \
-    }                                                                          \
-  }
-
-SCAN_BACK(F, getDefsV_FRegister, getPhiDefsV_FRegister)
-SCAN_BACK(I, getDefsV_IRegister, getPhiDefsV_IRegister)
-
-// todo: two pass liveness analysis:
-// https://inria.hal.science/inria-00558509v2/document
-// https://dl.acm.org/doi/abs/10.1007/978-3-319-07959-2_15
-// We use a simple Path Exploration Algorithm currently
-void ssa_liveness_analysis(MFunction *func, LivenessInfo *liveness_i,
-                           LivenessInfo *liveness_f) {
-  for (auto &bb : func->getBasicBlocks()) {
-    auto instrs = bb->getAllInstructions();
-    for (auto ins : instrs) {
-      (*liveness_i)[ins] = set<Register *>();
-      (*liveness_f)[ins] = set<Register *>();
-    }
-  }
-
-  for (auto &bb : func->getBasicBlocks()) {
-    auto instrs = bb->getAllInstructions(); // without phi
-    for (int i = static_cast<int>(instrs.size()) - 1; i >= 0; i--) {
-      auto ins = instrs[i];
-      for (auto r : getUsesV_IRegister(ins)) {
-        scan_backI(r, bb.get(), instrs, i, liveness_i);
-      }
-      for (auto r : getUsesV_FRegister(ins)) {
-        scan_backF(r, bb.get(), instrs, i, liveness_f);
-      }
-    }
-    // a lazy handle of phi function...
-    // merge the program point of all phi and the first instuction together
-    auto first = instrs[0];
-    for (auto &phi : bb->getPhis()) {
-      for (int i = 0; i < phi->getOprandNum(); i++) {
-        auto pred = phi->getIncomingBlock(i);
-        auto opd = phi->getOprand(i);
-        if (opd.tp == MIOprandTp::Reg) {
-          if (opd.arg.reg->getTag() == Register::V_IREGISTER) {
-            (*liveness_i)[first].insert(opd.arg.reg);
-            scan_backI(static_cast<FRegister *>(opd.arg.reg), pred,
-                       pred->getAllInstructions(),
-                       pred->getAllInstructions().size() - 1, liveness_f);
-          } else {
-            (*liveness_f)[first].insert(opd.arg.reg);
-            scan_backF(static_cast<IRegister *>(opd.arg.reg), pred,
-                       pred->getAllInstructions(),
-                       pred->getAllInstructions().size() - 1, liveness_i);
-          }
-        }
-      }
-    }
-  }
-}
-
 void printLivenessInfo(MFunction *func, LivenessInfo *liveness_ireg,
                        LivenessInfo *liveness_freg) {
   std::cout << "Liveness Information for Function: " << func->getName()
@@ -188,353 +99,7 @@ void printLivenessInfo(MFunction *func, LivenessInfo *liveness_ireg,
   std::cout << std::endl << std::endl;
 }
 
-#define MAX_I_REG_NUM 23 // without t0 t1 t2, zero ra sp gp tp s0
-#define MAX_F_REG_NUM 29 // without ft0 ft1 ft2
-
-void spill_registers(int &stk_offset, map<Register *, int> *spilled,
-                     LivenessInfo *liveness_ireg, LivenessInfo *liveness_freg) {
-  // random spill now...
-  // todo: more spill strategy
-  for (auto &pair : *liveness_ireg) {
-    vector<Register *> regs;
-    for (Register *reg : pair.second) {
-      if (spilled->find(reg) != spilled->end()) {
-        regs.push_back(reg); // register which haven't been spilled
-      }
-    }
-    while (regs.size() >= MAX_I_REG_NUM) {
-      auto reg = static_cast<VRegister *>(*regs.end());
-      regs.pop_back();
-
-      if (!reg->isInstruction()) {
-        auto para = static_cast<ParaRegister *>(reg);
-        spilled->insert({reg, -para->getOffset()});
-      } else {
-        if (reg->isPointer()) {
-          stk_offset += 8;
-        } else {
-          stk_offset += 4;
-        }
-        spilled->insert({reg, stk_offset});
-      }
-    }
-  }
-  for (auto &pair : *liveness_freg) {
-    vector<Register *> regs;
-    for (Register *reg : pair.second) {
-      if (spilled->find(reg) != spilled->end()) {
-        regs.push_back(reg); // register which haven't been spilled
-      }
-    }
-    while (regs.size() >= MAX_F_REG_NUM) {
-      auto reg = static_cast<VRegister *>(*regs.end());
-      regs.pop_back();
-      if (!reg->isInstruction()) {
-        auto para = static_cast<ParaRegister *>(reg);
-        spilled->insert({reg, -para->getOffset()});
-      } else {
-        stk_offset += 4;
-        spilled->insert({reg, stk_offset});
-      }
-    }
-  }
-}
-
-Register *getOneIRegiter(set<Register *> *used) {
-  static set<Register *> all_registers = {
-      Register::reg_s0, Register::reg_s1, Register::reg_s2,  Register::reg_s3,
-      Register::reg_s4, Register::reg_s5, Register::reg_s6,  Register::reg_s7,
-      Register::reg_s8, Register::reg_s9, Register::reg_s10, Register::reg_s11,
-      Register::reg_t3, Register::reg_t4, Register::reg_t5,  Register::reg_t6,
-      Register::reg_a0, Register::reg_a1, Register::reg_a2,  Register::reg_a3,
-      Register::reg_a4, Register::reg_a5, Register::reg_a6,  Register::reg_a7,
-  };
-  for (Register *reg : all_registers) {
-    if (used->find(reg) == used->end()) {
-      return reg;
-    }
-  }
-  assert(0);
-}
-
-Register *getOneFRegiter(set<Register *> *used) {
-  static set<Register *> all_registers = {
-      Register::reg_ft3,  Register::reg_ft4,  Register::reg_ft5,
-      Register::reg_ft6,  Register::reg_ft7,  Register::reg_fs0,
-      Register::reg_fs1,  Register::reg_fs2,  Register::reg_fs3,
-      Register::reg_fs4,  Register::reg_fs5,  Register::reg_fs6,
-      Register::reg_fs7,  Register::reg_fs8,  Register::reg_fs9,
-      Register::reg_fs10, Register::reg_fs11, Register::reg_ft8,
-      Register::reg_ft9,  Register::reg_ft10, Register::reg_ft11,
-      Register::reg_fa0,  Register::reg_fa1,  Register::reg_fa2,
-      Register::reg_fa3,  Register::reg_fa4,  Register::reg_fa5,
-      Register::reg_fa6,  Register::reg_fa7,
-  };
-  for (Register *reg : all_registers) {
-    if (used->find(reg) == used->end()) {
-      return reg;
-    }
-  }
-  assert(0);
-}
-
-void setUsedtoLiveIn(MInstruction *ins, set<Register *> *used,
-                     map<Register *, Register *> *allocation,
-                     LivenessInfo *liveness_ireg, LivenessInfo *liveness_freg) {
-  used->clear();
-  auto iregs = liveness_ireg->at(ins);
-  auto fregs = liveness_freg->at(ins);
-  for (auto reg : iregs) {
-    used->insert(allocation->at(reg));
-  }
-  for (auto reg : fregs) {
-    used->insert(allocation->at(reg));
-  }
-}
-
-// void allocate(MFunction *func, map<Register *, Register *> *allocation,
-//               map<Register *, int> *spill, LivenessInfo *liveness_ireg,
-//               LivenessInfo *liveness_freg) {
-//   set<Register *> used;
-//   int ireg_cnt = 9;
-//   int freg_cnt = 3;
-//   // allocate parameters
-//   // don't allocate for unused parameters
-//   MInstruction *first = func->getEntry()->getInstructions().at(0).get();
-//   for (auto reg : liveness_ireg->at(first)) {
-//     auto para = static_cast<ParaRegister *>(reg);
-//     if (spill->find(para) == spill->end()) {
-//       if (para->getRegister() != nullptr &&
-//           used.find(para->getRegister()) == used.end()) {
-//         allocation->insert({para, para->getRegister()});
-//         used.insert(para->getRegister());
-//       } else {
-//         while (auto tryr = Register::getIRegister(ireg_cnt++)) {
-//           if (used.find(tryr) != used.end()) {
-//             allocation->insert({para, tryr});
-//             used.insert(tryr);
-//             break;
-//           }
-//         }
-//       }
-//     }
-//   }
-//   for (auto reg : liveness_freg->at(first)) {
-//     auto para = static_cast<ParaRegister *>(reg);
-//     if (spill->find(para) == spill->end()) {
-//       if (para->getRegister() != nullptr &&
-//           used.find(para->getRegister()) == used.end()) {
-//         allocation->insert({para, para->getRegister()});
-//         used.insert(para->getRegister());
-//       } else {
-//         while (auto tryr = Register::getFRegister(freg_cnt++)) {
-//           if (used.find(tryr) != used.end()) {
-//             allocation->insert({para, tryr});
-//             used.insert(tryr);
-//             break;
-//           }
-//         }
-//       }
-//     }
-//   }
-
-//   // allocate instruction registers
-//   for (auto bb : *func->domtPreOrder) {
-//     MInstruction *first = bb->getInstructions().at(0).get();
-//     setUsedtoLiveIn(first, &used, allocation, liveness_ireg, liveness_freg);
-//     // the way we allcate (aggrate all phi together) can increase the
-//     register
-//     // pressure on phi.. but make the allocation more simple
-//     for (auto &phi : bb->getPhis()) {
-//       Register *phyreg;
-//       if (spill->find(phi.get()) == spill->end()) {
-//         if (phi->getTag() == Register::V_FREGISTER) {
-//           phyreg = getOneFRegiter(&used);
-//         } else {
-//           phyreg = getOneIRegiter(&used);
-//         }
-//         used.insert(phyreg);
-//         allocation->insert({phi.get(), phyreg});
-//       }
-//     }
-//     for (auto &instr : bb->getInstructions()) {
-//       if (instr->getTarget() != nullptr) {
-//         if (spill->find(instr->getTarget()) == spill->end()) {
-//           setUsedtoLiveIn(instr.get(), &used, allocation, liveness_ireg,
-//                           liveness_freg);
-//           auto instrreg = instr->getTarget();
-//           Register *phyreg;
-//           if (instrreg->getTag() == Register::V_FREGISTER) {
-//             phyreg = getOneFRegiter(&used);
-//           } else {
-//             phyreg = getOneIRegiter(&used);
-//           }
-//           allocation->insert({instrreg, phyreg});
-//         }
-//       }
-//     }
-//   }
-// }
-
-void allocate(MFunction *func, map<Register *, Register *> *allocation,
-              map<Register *, int> *spill, LivenessInfo *liveness_ireg,
-              LivenessInfo *liveness_freg) {
-  // std::cout << "Entering allocate function." << std::endl;
-  set<Register *> used;
-  int ireg_cnt = 9;
-  int freg_cnt = 3;
-  // std::cout << "Initialized ireg_cnt to " << ireg_cnt << " and freg_cnt to "
-  //           << freg_cnt << "." << std::endl;
-
-  // allocate parameters
-  // don't allocate for unused parameters
-  MInstruction *first = func->getEntry()->getAllInstructions().at(0);
-  // std::cout << "Allocating parameters..." << std::endl;
-  for (auto reg : liveness_ireg->at(first)) {
-    auto para = static_cast<ParaRegister *>(reg);
-    if (spill->find(para) == spill->end()) {
-      if (para->getRegister() != nullptr &&
-          used.find(para->getRegister()) == used.end()) {
-        allocation->insert({para, para->getRegister()});
-        used.insert(para->getRegister());
-        // std::cout << "Allocated parameter register: " << para->getName() <<
-        // "->"
-        //           << para->getRegister()->getName() << std::endl;
-      } else {
-        while (auto tryr = Register::getIRegister(ireg_cnt++)) {
-          if (used.find(tryr) == used.end()) {
-            allocation->insert({para, tryr});
-            used.insert(tryr);
-            // std::cout << "Allocated parameter register: " << para->getName()
-            //           << "->" << tryr->getName() << std::endl;
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  for (auto reg : liveness_freg->at(first)) {
-    auto para = static_cast<ParaRegister *>(reg);
-    if (spill->find(para) == spill->end()) {
-      if (para->getRegister() != nullptr &&
-          used.find(para->getRegister()) == used.end()) {
-        allocation->insert({para, para->getRegister()});
-        used.insert(para->getRegister());
-        // std::cout << "Allocated parameter register: "
-        //           << para->getRegister()->getName() << std::endl;
-      } else {
-        while (auto tryr = Register::getFRegister(freg_cnt++)) {
-          if (used.find(tryr) != used.end()) {
-            allocation->insert({para, tryr});
-            used.insert(tryr);
-            // std::cout << "Allocated parameter register: " << tryr->getName()
-            //           << std::endl;
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  // allocate instruction registers
-  // std::cout << "Allocating instruction registers..." << std::endl;
-  for (auto bb : *func->domtPreOrder) {
-    MInstruction *first = bb->getAllInstructions().at(0);
-    // setUsedtoLiveIn(first, &used, allocation, liveness_ireg, liveness_freg);
-    // can not use setUsedtoLiveIn, beacuse phi def is also in LiveIn!
-    // todo: maybe i should add a virtual parrel phi instruction...(as a super
-    // instruction in normal instrucion vector)
-    used.clear();
-    auto iregs = liveness_ireg->at(first);
-    auto fregs = liveness_freg->at(first);
-    set<MHIphi*> phis;
-    for (auto &phi : bb->getPhis()) {
-      phis.insert(phi.get());
-    }
-    for (auto reg : iregs) {
-      // if (reg->getTag() == Register::V_IREGISTER) {
-      //   auto vreg = static_cast<VRegister*>(reg);
-      //   if (vreg->isInstruction()) {
-      //     auto ins = static_cast<MInstruction*>()
-      //   }
-      // }
-      if (phis.find(static_cast<MHIphi*>(reg)) != phis.end()) {
-        continue;
-      }
-      used.insert(allocation->at(reg));
-    }
-    for (auto reg : fregs) {
-      if (phis.find(static_cast<MHIphi*>(reg)) != phis.end()) {
-        continue;
-      }
-      used.insert(allocation->at(reg));
-    }
-
-    // the way we allcate (aggrate all phi together) can increase the register
-    // pressure on phi.. but make the allocation more simple
-    std::cout << "Allocating phi registers for basic block " << bb->getName()
-              << "..." << std::endl;
-    for (auto phi : phis) {
-      Register *phyreg;
-      if (spill->find(phi) == spill->end()) {
-        if (phi->getTag() == Register::V_FREGISTER) {
-          phyreg = getOneFRegiter(&used);
-        } else {
-          phyreg = getOneIRegiter(&used);
-        }
-        used.insert(phyreg);
-        allocation->insert({phi, phyreg});
-        std::cout << "Allocated phi register: " << phyreg->getName()
-                  << std::endl;
-      }
-    }
-    std::cout << "Allocating instruction registers for basic block "
-              << bb->getName() << "..." << std::endl;
-    for (auto &instr : bb->getInstructions()) {
-      std::cout << "  Processing instruction: " << *instr << std::endl;
-
-      if (instr->getTarget() != nullptr) {
-        std::cout << "    Instruction has a target register: "
-                  << instr->getTarget()->getName() << std::endl;
-
-        if (spill->find(instr->getTarget()) == spill->end()) {
-          std::cout << "    Target register is not in the spill set"
-                    << std::endl;
-          setUsedtoLiveIn(instr.get(), &used, allocation, liveness_ireg,
-                          liveness_freg);
-          auto instrreg = instr->getTarget();
-          Register *phyreg;
-
-          if (instrreg->getTag() == Register::V_FREGISTER) {
-            std::cout << "    Target register is a floating-point register"
-                      << std::endl;
-            phyreg = getOneFRegiter(&used);
-          } else {
-            std::cout << "    Target register is an integer register"
-                      << std::endl;
-            phyreg = getOneIRegiter(&used);
-          }
-
-          allocation->insert({instrreg, phyreg});
-          std::cout << "    Allocated instruction register: "
-                    << phyreg->getName() << std::endl;
-        } else {
-          std::cout << "    Target register is in the spill set" << std::endl;
-        }
-      } else {
-        std::cout << "    Instruction does not have a target register"
-                  << std::endl;
-      }
-    }
-    std::cout << "LOOP OVER" << endl;
-  }
-
-  std::cout << "Exiting allocate function." << std::endl;
-}
-
-// almost same with the one in spill_register.cc
-static void out_of_ssa(MFunction *func) {
+void out_of_ssa(MFunction *func) {
   for (auto &bb : func->getBasicBlocks()) {
     for (auto &phi : bb->getPhis()) {
       for (int i = 0; i < phi->getOprandNum(); i++) {
@@ -571,22 +136,16 @@ static void out_of_ssa(MFunction *func) {
   }
 }
 
-// almost same with the one in spill_register.cc
-static void rewrite_program_spill(MFunction *func,
-                                  map<Register *, int> *spill) {
+void rewrite_program_spill(MFunction *func, map<Register *, int> *spill) {
   for (auto &bb : func->getBasicBlocks()) {
     auto instrs = vector<MInstruction *>() = bb->getAllInstructions();
     for (auto ins : instrs) {
-      // std::cout << "  rewrite " << *ins << endl;
       int float_cnt = 0;
       int int_cnt = 5;
       auto loads = vector<MInstruction *>();
       auto regs = std::vector<Register *>();
       for (int i = 0; i < ins->getRegNum(); i++) {
         auto reg = ins->getReg(i);
-        // std::cout << "    check reg  " << reg->getName() << " " <<
-        // reg->getTag()
-        // << endl;
         if (spill->find(reg) != spill->end()) {
           regs.push_back(reg);
         }
@@ -624,7 +183,6 @@ static void rewrite_program_spill(MFunction *func,
           (spill->find(ins->getTarget()) != spill->end())) {
         auto stores = vector<MInstruction *>();
         auto reg = ins->getTarget();
-        // std::cout << "    check target  " << reg->getName() << endl;
         auto vreg = static_cast<VRegister *>(reg);
         MInstruction *store;
         if (vreg->getTag() == Register::V_FREGISTER) {
@@ -687,8 +245,7 @@ void rewrite_program_allocate(MFunction *func,
   }
 }
 
-// exactly same with the one in spill_register.cc
-static void lower_alloca(MFunction *func, int &stack_offset) {
+void lower_alloca(MFunction *func, int &stack_offset) {
   for (auto &bb : func->getBasicBlocks()) {
     for (auto &ins : bb->getInstructions()) {
       if (ins->getInsTag() == MInstruction::H_ALLOCA) {
@@ -704,56 +261,432 @@ static void lower_alloca(MFunction *func, int &stack_offset) {
   }
 }
 
-// Register Allocation on SSA Form
-void allocate_register(MModule *mod) {
-  for (auto &func : mod->getFunctions()) {
-    // step1. Liveness Analysis
-    auto liveness_ireg = make_unique<LivenessInfo>();
-    auto liveness_freg = make_unique<LivenessInfo>();
-    ssa_liveness_analysis(func.get(), liveness_ireg.get(), liveness_freg.get());
-    std::cout << "Function: " << func->getName() << endl;
-
-    printLivenessInfo(func.get(), liveness_ireg.get(), liveness_freg.get());
-
-    // step2. Spill
-    int offset = 0; // from sp, upward->minus
-    auto spill = make_unique<map<Register *, int>>();
-    spill_registers(offset, spill.get(), liveness_ireg.get(),
-                    liveness_freg.get());
-
-    std::cout << "Spill to Memory:" << endl;
-    for (auto &[reg, offset] : *spill) {
-      std::cout << "  " << reg->getName() << " -> " << offset << endl;
+Register *getOneIRegiter(set<Register *> *used) {
+  static set<Register *> all_registers = {
+      Register::reg_s1, Register::reg_s2,  Register::reg_s3,  Register::reg_s4,
+      Register::reg_s5, Register::reg_s6,  Register::reg_s7,  Register::reg_s8,
+      Register::reg_s9, Register::reg_s10, Register::reg_s11, Register::reg_t3,
+      Register::reg_t4, Register::reg_t5,  Register::reg_t6,  Register::reg_a0,
+      Register::reg_a1, Register::reg_a2,  Register::reg_a3,  Register::reg_a4,
+      Register::reg_a5, Register::reg_a6,  Register::reg_a7,
+  };
+  for (Register *reg : all_registers) {
+    if (used->find(reg) == used->end()) {
+      return reg;
     }
-    std::cout << endl;
-
-    // // step3. Allocate
-    auto allocation = make_unique<map<Register *, Register *>>();
-    allocate(func.get(), allocation.get(), spill.get(), liveness_ireg.get(),
-             liveness_freg.get());
-
-    std::cout << "Register Allocation:" << endl;
-    for (auto &[logical_reg, physical_reg] : *allocation) {
-      std::cout << "  " << logical_reg->getName() << " -> "
-                << physical_reg->getName() << endl;
-    }
-    std::cout << endl << endl;
-
-    // step4. Rewrite program
-    // 4.1 Remove Phi -> push move instruction to the end of the bb
-    out_of_ssa(func.get());
-    // 4.2 !Allocate Registers
-    rewrite_program_allocate(func.get(), allocation.get());
-    // 4.3 !Spill Registers
-    rewrite_program_spill(func.get(), spill.get());
-    // 4.4 lower alloca
-    lower_alloca(func.get(), offset);
-    // 4.5 Lower call instruction
-    // todo: more complex beacuse we may use some arugment passing arguments...
-    // 4.6 add_prelude
-    // todo: more complex beacuse we should store some callee saved registes
-    // 4.7 add_conclude
-    // todo: more complex beacuse we should reload some callee saved registes
   }
-  mod->ssa_out();
+  assert(0);
+}
+
+Register *getOneFRegiter(set<Register *> *used) {
+  static set<Register *> all_registers = {
+      Register::reg_ft3,  Register::reg_ft4,  Register::reg_ft5,
+      Register::reg_ft6,  Register::reg_ft7,  Register::reg_fs0,
+      Register::reg_fs1,  Register::reg_fs2,  Register::reg_fs3,
+      Register::reg_fs4,  Register::reg_fs5,  Register::reg_fs6,
+      Register::reg_fs7,  Register::reg_fs8,  Register::reg_fs9,
+      Register::reg_fs10, Register::reg_fs11, Register::reg_ft8,
+      Register::reg_ft9,  Register::reg_ft10, Register::reg_ft11,
+      Register::reg_fa0,  Register::reg_fa1,  Register::reg_fa2,
+      Register::reg_fa3,  Register::reg_fa4,  Register::reg_fa5,
+      Register::reg_fa6,  Register::reg_fa7,
+  };
+  for (Register *reg : all_registers) {
+    if (used->find(reg) == used->end()) {
+      return reg;
+    }
+  }
+  assert(0);
+}
+
+set<Register *>
+getActuallCalleeSavedRegisters(map<Register *, Register *> *allocation) {
+  static set<Register *> saved_registers = {
+      Register::reg_gp,   Register::reg_tp,  Register::reg_s1,
+      Register::reg_s2,   Register::reg_s3,  Register::reg_s4,
+      Register::reg_s5,   Register::reg_s6,  Register::reg_s7,
+      Register::reg_s8,   Register::reg_s9,  Register::reg_s10,
+      Register::reg_s11,  Register::reg_fs0, Register::reg_fs1,
+      Register::reg_fs2,  Register::reg_fs3, Register::reg_fs4,
+      Register::reg_fs5,  Register::reg_fs6, Register::reg_fs7,
+      Register::reg_fs8,  Register::reg_fs9, Register::reg_fs10,
+      Register::reg_fs11,
+  };
+
+  set<Register *> actual_saved;
+  for (auto pair : *allocation) {
+    auto reg = pair.first;
+    auto phyreg = allocation->at(reg);
+    if (saved_registers.find(phyreg) != saved_registers.end()) {
+      actual_saved.insert(phyreg);
+    }
+  }
+  return actual_saved;
+}
+
+set<Register *>
+getActuallCallerSavedRegisters(map<Register *, Register *> *allocation,
+                               set<Register *> liveInOfcallsite) {
+  static set<Register *> saved_registers = {
+      Register::reg_t0,   Register::reg_t1,   Register::reg_t2,
+      Register::reg_a0,   Register::reg_a1,   Register::reg_a2,
+      Register::reg_a3,   Register::reg_a4,   Register::reg_a5,
+      Register::reg_a6,   Register::reg_a7,   Register::reg_t3,
+      Register::reg_t4,   Register::reg_t5,   Register::reg_t6,
+      Register::reg_ft0,  Register::reg_ft1,  Register::reg_ft2,
+      Register::reg_ft3,  Register::reg_ft4,  Register::reg_ft5,
+      Register::reg_ft6,  Register::reg_ft7,  Register::reg_fa0,
+      Register::reg_fa1,  Register::reg_fa2,  Register::reg_fa3,
+      Register::reg_fa4,  Register::reg_fa5,  Register::reg_fa6,
+      Register::reg_fa7,  Register::reg_ft8,  Register::reg_ft9,
+      Register::reg_ft10, Register::reg_ft11,
+  };
+  set<Register *> intersection;
+  for (auto reg : liveInOfcallsite) {
+    if (allocation->find(reg) != allocation->end()) {
+      auto phyreg = allocation->at(reg);
+      if (saved_registers.find(reg) != saved_registers.end()) {
+        intersection.insert(reg);
+      }
+    }
+  }
+  return intersection;
+}
+
+vector<MInstruction *> MHIcall::generateCallSequence(
+    MFunction *func, int stack_offset, map<Register *, int> *spill,
+    map<Register *, Register *> *allocation, set<Register *> *caller_saved) {
+
+  vector<MInstruction *> push_callee_saved;
+  vector<MInstruction *> pop_callee_saved;
+  int stack_inc_sz = 0;
+  for (auto reg : *caller_saved) {
+    auto vreg = static_cast<VRegister *>(reg);
+    if (vreg->isPointer()) {
+      stack_inc_sz += 8;
+    } else {
+      stack_inc_sz += 4;
+    }
+    assert(allocation->find(vreg) != allocation->end());
+    // maybe this piece of logic could be extrat away
+    if (vreg->getTag() == V_FREGISTER) {
+      push_callee_saved.push_back(
+          new MIfsw(reg, -stack_inc_sz, Register::reg_sp));
+      pop_callee_saved.push_back(
+          new MIflw(Register::reg_sp, -stack_inc_sz, reg));
+    } else if (vreg->isPointer()) {
+      push_callee_saved.push_back(
+          new MIsd(reg, -stack_inc_sz, Register::reg_sp));
+      pop_callee_saved.push_back(
+          new MIld(Register::reg_sp, -stack_inc_sz, reg));
+    } else {
+      push_callee_saved.push_back(
+          new MIsw(reg, -stack_inc_sz, Register::reg_sp));
+      pop_callee_saved.push_back(
+          new MIlw(Register::reg_sp, -stack_inc_sz, reg));
+    }
+  }
+
+  vector<MInstruction *> res;
+  for (int i = 0; i < function->getParaSize(); i++) {
+    auto funp = function->getPara(i);
+    if (funp->getRegister() == nullptr) {
+      stack_inc_sz += funp->getSize();
+    }
+  }
+  int new_stack_pos = roundUp(stack_offset + stack_inc_sz, 16);
+
+  int shift = new_stack_pos - stack_offset;
+  res.push_back(new MIaddi(Register::reg_sp, -shift, Register::reg_sp));
+
+  // load function arguments
+  // conctruct map
+  auto para2arg = make_unique<map<ParaRegister *, MIOprand>>();
+  auto para2phyarg = make_unique<map<ParaRegister *, Register *>>();
+  auto phyarg2para = make_unique<map<Register *, set<ParaRegister *>>>();
+
+  vector<ParaRegister *> worklist;
+  // set up datastructure
+  for (int i = 0; i < function->getParaSize(); i++) {
+    auto para = function->getPara(i);
+    auto arg = args->at(i);
+    if (para->getRegister() == nullptr) {
+      switch (arg.tp) {
+      case MIOprandTp::Float: {
+        auto g = func->getMod()->addGlobalFloat(new FloatConstant(arg.arg.f));
+        res.push_back(new MIflw(g, Register::reg_ft0));
+        res.push_back(
+            new MIfsw(Register::reg_ft0, para->getOffset(), Register::reg_sp));
+      }
+      case MIOprandTp::Int: {
+        res.push_back(new MIli(arg.arg.i, Register::reg_t0));
+        res.push_back(
+            new MIsw(Register::reg_t0, para->getOffset(), Register::reg_sp));
+      }
+      case MIOprandTp::Reg: {
+        auto reg = static_cast<VRegister *>(arg.arg.reg);
+        if (reg->getTag() == Register::V_FREGISTER) {
+          res.push_back(new MIfsw(reg, para->getOffset(), Register::reg_sp));
+        } else if (reg->isPointer()) {
+          assert(reg->getTag() == Register::V_IREGISTER);
+          res.push_back(new MIsd(reg, para->getOffset(), Register::reg_sp));
+        } else {
+          assert(reg->getTag() == Register::V_IREGISTER);
+          res.push_back(new MIsw(reg, para->getOffset(), Register::reg_sp));
+        }
+      }
+      }
+    } else {
+      para2arg->insert({para, arg});
+      para2phyarg->insert({para, para->getRegister()});
+      if ((arg.tp == Reg) &&
+          (allocation->find(arg.arg.reg) != allocation->end())) {
+        auto phyarg = allocation->at(arg.arg.reg);
+        if (phyarg2para->find(phyarg) == phyarg2para->end()) {
+          phyarg2para->insert({phyarg, {}});
+        }
+        phyarg2para->at(phyarg).insert(para);
+      }
+      worklist.push_back(para);
+    }
+  }
+
+  // todo: abstract the rearrange away
+  set<Register *> handled;
+  while (worklist.size() != 0) {
+    auto para = *worklist.end();
+    worklist.pop_back();
+    if (handled.find(para) == handled.end()) {
+      continue;
+    }
+    auto phyarg = para2phyarg->at(para); // target
+    if (phyarg2para->find(phyarg) !=
+        phyarg2para->end()) { // if target was used by other instr
+      auto para_which_use_phyarg = phyarg2para->at(phyarg);
+      if (para_which_use_phyarg.find(para) !=
+          para_which_use_phyarg.end()) { // a0 = a0
+        para_which_use_phyarg.erase(para);
+        handled.insert(para);
+        phyarg2para->erase(phyarg);
+        continue;
+      }
+      if (para_which_use_phyarg.size() != 0) {
+        if (phyarg->getTag() == I_REGISTER) {
+          res.push_back(new MIfmv_s(phyarg, Register::reg_ft0));
+        } else {
+          res.push_back(new MImv(phyarg, Register::reg_t0));
+        }
+      }
+      for (auto upara : para_which_use_phyarg) {
+        (*para2phyarg)[para] = Register::reg_ft0;
+        (*para2phyarg)[para] = Register::reg_t0;
+        worklist.push_back(upara);
+      }
+      phyarg2para->erase(phyarg);
+      continue;
+    }
+
+    auto arg = para2arg->at(para);
+    switch (arg.tp) {
+    case Float: {
+      auto g = func->getMod()->addGlobalFloat(new FloatConstant(arg.arg.f));
+      res.push_back(new MIflw(g, para->getRegister()));
+    }
+    case Int: {
+      res.push_back(new MIli(arg.arg.i, para->getRegister()));
+    }
+    case Reg: {
+      auto phyreg = para2phyarg->at(para);
+      if (phyreg->getTag() == Register::F_REGISTER) {
+        res.push_back(new MIfmv_s(phyreg, para->getRegister()));
+      } else {
+        assert(phyreg->getTag() == Register::V_IREGISTER);
+        res.push_back(new MImv(phyreg, para->getRegister()));
+      }
+    }
+    }
+    handled.insert(para);
+  }
+
+  res.push_back(new MIcall(function));
+  res.push_back(new MIaddi(Register::reg_sp, shift, Register::reg_sp));
+
+  std::vector<MInstruction *> merged;
+  merged.insert(merged.end(), push_callee_saved.begin(),
+                push_callee_saved.end());
+  merged.insert(merged.end(), res.begin(), res.end());
+  merged.insert(merged.end(), pop_callee_saved.begin(), pop_callee_saved.end());
+  return merged;
+}
+
+void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
+                 map<Register *, int> *spill, int stack_offset,
+                 set<Register *> *callee_saved) {
+  int stack_zs = stack_offset;
+  auto entry = func->getEntry();
+  auto sub_sp = new MIaddi(Register::reg_sp, -stack_zs, Register::reg_sp);
+  auto store_ra = new MIsd(Register::reg_ra, stack_zs - 8, Register::reg_sp);
+  auto store_fp = new MIsd(Register::reg_s0, stack_zs - 16, Register::reg_sp);
+  auto get_fp = new MIaddi(Register::reg_sp, stack_zs, Register::reg_s0);
+  auto prelude = vector<MInstruction *>({sub_sp, store_ra, store_fp, get_fp});
+
+  int offset = 16;
+  for (auto reg : *callee_saved) {
+    offset += 8;
+    if (reg->getTag() == Register::I_REGISTER) {
+      prelude.push_back(new MIsd(reg, -offset, Register::reg_s0));
+    } else {
+      prelude.push_back(new MIfsd(reg, -offset, Register::reg_s0));
+    }
+  }
+
+  // load function arguments
+  // conctruct map
+  auto para2phyarg = make_unique<map<ParaRegister *, Register *>>();
+  auto phyarg2para = make_unique<map<Register *, set<ParaRegister *>>>();
+
+  vector<ParaRegister *> worklist;
+  // set up datastructure
+  for (int i = 0; i < func->getParaSize(); i++) {
+    auto para = func->getPara(i);
+    if (spill->find(para) != spill->end()) {
+      auto addr = spill->at(para);
+      if (para->getTag() == Register::V_FREGISTER) {
+        prelude.push_back(new MIfsw(para, -addr, Register::reg_s0));
+      } else if (para->isPointer()) {
+        prelude.push_back(new MIsd(para, -addr, Register::reg_s0));
+      } else {
+        prelude.push_back(new MIsw(para, -addr, Register::reg_s0));
+      }
+    } else {
+      para2phyarg->insert({para, para->getRegister()});
+      auto phyarg = allocation->at(para);
+      if (phyarg2para->find(phyarg) == phyarg2para->end()) {
+        phyarg2para->insert({phyarg, {}});
+      }
+      phyarg2para->at(phyarg).insert(para);
+      worklist.push_back(para);
+    }
+  }
+
+  // todo: abstract the rearrange away
+  set<Register *> handled;
+  while (worklist.size() != 0) {
+    auto para = *worklist.end();
+    worklist.pop_back();
+    if (handled.find(para) == handled.end()) {
+      continue;
+    }
+    auto phyarg = para2phyarg->at(para); // target
+    if (phyarg2para->find(phyarg) !=
+        phyarg2para->end()) { // if target was used by other instr
+      auto para_which_use_phyarg = phyarg2para->at(phyarg);
+      if (para_which_use_phyarg.find(para) !=
+          para_which_use_phyarg.end()) { // a0 = a0
+        para_which_use_phyarg.erase(para);
+        handled.insert(para);
+        phyarg2para->erase(phyarg);
+        continue;
+      }
+      if (para_which_use_phyarg.size() != 0) {
+        if (phyarg->getTag() == Register::I_REGISTER) {
+          prelude.push_back(new MIfmv_s(phyarg, Register::reg_ft0));
+        } else {
+          prelude.push_back(new MImv(phyarg, Register::reg_t0));
+        }
+      }
+      for (auto upara : para_which_use_phyarg) {
+        (*para2phyarg)[para] = Register::reg_ft0;
+        (*para2phyarg)[para] = Register::reg_t0;
+        worklist.push_back(upara);
+      }
+      phyarg2para->erase(phyarg);
+      continue;
+    }
+
+    auto phyreg = para2phyarg->at(para);
+    if (phyreg->getTag() == Register::F_REGISTER) {
+      prelude.push_back(new MIfmv_s(phyreg, para->getRegister()));
+    } else {
+      assert(phyreg->getTag() == Register::V_IREGISTER);
+      prelude.push_back(new MImv(phyreg, para->getRegister()));
+    }
+    handled.insert(para);
+  }
+  entry->pushInstrsAtHead(prelude);
+}
+
+void add_conclude(MFunction *func, map<Register *, Register *> *allocation,
+                  map<Register *, int> *spill, int stack_offset,
+                  set<Register *> *callee_saved) {
+
+  for (auto &bb : func->getBasicBlocks()) {
+    for (auto &jmp : bb->getJmps()) {
+      if (jmp->getInsTag() == MInstruction::H_RET) {
+        auto hret = static_cast<MHIret *>(jmp.get());
+        switch (hret->r.tp) {
+        case MIOprandTp::Float: {
+          auto g =
+              func->getMod()->addGlobalFloat(new FloatConstant(hret->r.arg.f));
+          bb->pushInstr(new MIflw(g, Register::reg_fa0));
+          break;
+        }
+        case MIOprandTp::Int: {
+          bb->pushInstr(new MIli(hret->r.arg.i, Register::reg_a0));
+          break;
+        }
+        case MIOprandTp::Reg: {
+          auto reg = hret->r.arg.reg;
+          if (allocation->find(reg) != allocation->end()) {
+            auto phyreg = allocation->at(reg);
+            if (reg->getTag() == Register::F_REGISTER) {
+              bb->pushInstr(new MIfmv_s(phyreg, Register::reg_fa0));
+            } else {
+              bb->pushInstr(new MImv(phyreg, Register::reg_a0));
+            }
+          } else {
+            auto addr = spill->at(reg);
+            if (reg->getTag() == Register::F_REGISTER) {
+              bb->pushInstr(
+                  new MIflw(Register::reg_s0, -addr, Register::reg_fa0));
+            } else {
+              bb->pushInstr(
+                  new MIlw(Register::reg_s0, -addr, Register::reg_a0));
+            }
+          }
+          break;
+        }
+        }
+        hret->replaceWith({new MIret()});
+      }
+    }
+  }
+
+  auto exit = func->addBasicBlock(func->getName() + "_exit");
+  int offset = 16;
+  for (auto reg : *callee_saved) {
+    offset += 8;
+    if (reg->getTag() == Register::I_REGISTER) {
+      exit->pushInstr(new MIld(Register::reg_s0, -offset, reg));
+    } else {
+      exit->pushInstr(new MIfld(Register::reg_s0, -offset, reg));
+    }
+  }
+
+  int stack_sz = stack_offset;
+  auto load_ra = new MIld(Register::reg_sp, stack_sz - 8, Register::reg_ra);
+  auto load_fp = new MIld(Register::reg_sp, stack_sz - 16, Register::reg_s0);
+  auto add_sp = new MIaddi(Register::reg_sp, stack_sz, Register::reg_sp);
+  auto ret = new MIret();
+  exit->pushInstrs({load_ra, load_fp, add_sp, ret});
+
+  for (auto &bb : func->getBasicBlocks()) {
+    if (bb.get() == exit)
+      continue;
+    for (auto &i : bb->getJmps()) {
+      if (i->getInsTag() == MInstruction::RET) {
+        i->replaceWith({new MIj(exit)});
+      }
+    }
+  }
 }
