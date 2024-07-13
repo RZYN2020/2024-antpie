@@ -10,20 +10,20 @@
 #include <string>
 
 typedef struct variableTable{
-    std::map<String,antlrcpp::Any*> table;
+    std::map<String,Value*> table;
     struct variableTable* parent;
     variableTable(struct variableTable* prt){
         parent = prt;
-        table=std::map<String,antlrcpp::Any*>();
+        table=std::map<String,Value*>();
     }
 public:
-    void* get(String tar);
-    void put(String name,antlrcpp::Any* tar);
+    Value* get(String tar);
+    void put(String name,Value* tar);
 
 }VariableTable;
 
-void *VariableTable::get(String tar) {
-    void* target = table[tar];
+Value *VariableTable::get(String tar) {
+    Value* target = table[tar];
     if(target== nullptr){
         if(parent!= nullptr){
             return parent->get(tar);
@@ -35,7 +35,7 @@ void *VariableTable::get(String tar) {
     }
 }
 
-void VariableTable::put(String name,antlrcpp::Any* tar){
+void VariableTable::put(String name,Value* tar){
     table[name]=tar;
 }
 

@@ -6,9 +6,9 @@ FloatType* Type::floatType = new FloatType();
 VoidType* Type::voidType = new VoidType();
 
 //
-PointerType* Type::getPointerType(Type* elemType) { 
-  return new PointerType(elemType); 
-} 
+PointerType* Type::getPointerType(Type* elemType) {
+  return new PointerType(elemType);
+}
 
 //
 ArrayType* Type::getArrayType(int n, Type* elemType) {
@@ -18,16 +18,14 @@ ArrayType* Type::getArrayType(int n, Type* elemType) {
 //
 FuncType* Type::getFuncType(Type* retType, vector<Argument*>& args) {
   FuncType* funcType = new FuncType(retType);
-  for (auto arg: args) {
+  for (auto arg : args) {
     funcType->pushArgument(arg);
   }
   return funcType;
 }
 
 //
-FuncType* Type::getFuncType(Type* retType) {
-  return new FuncType(retType);
-}
+FuncType* Type::getFuncType(Type* retType) { return new FuncType(retType); }
 
 string VoidType::toString() const { return "void"; }
 
@@ -50,3 +48,5 @@ FuncType::FuncType(Type* rType) : Type(TT_FUNCTION), retType(rType) {
 void FuncType::pushArgument(Argument* arg) {
   arguments->push_back(unique_ptr<Argument>(arg));
 }
+
+bool Value::isPointer() { return vType && vType->getTypeTag() == TT_POINTER; }

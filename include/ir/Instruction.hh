@@ -54,6 +54,7 @@ class Instruction : public Value {
   string getOpName(OpTag op) const;
   void pushValue(Value* v);
   Value* getRValue(int idx) const;
+  bool deleteRValueAt(int idx);
   int getRValueSize() const { return useList->size(); }
   BasicBlock* getParent() { return block; }
   void setParent(BasicBlock* bb) { block = bb; }
@@ -97,6 +98,7 @@ class BranchInst : public Instruction {
 
  public:
   BranchInst(Value* cond, BasicBlock* trueBlock, BasicBlock* falseBlock);
+  bool replaceDestinationWith(BasicBlock* oldBlock, BasicBlock* newBlock);
   void printIR(ostream& stream) const override;
   Instruction* clone() override;
 };
@@ -165,6 +167,7 @@ class JumpInst : public Instruction {
 
  public:
   JumpInst(BasicBlock* block);
+  bool replaceDestinationWith(BasicBlock* oldBlock, BasicBlock* newBlock);
   void printIR(ostream& stream) const override;
   Instruction* clone() override;
 };
@@ -185,6 +188,7 @@ class PhiInst : public Instruction {
   PhiInst(string name);
   void printIR(ostream& stream) const override;
   void pushIncoming(Value* v, BasicBlock* bb);
+  Value* deleteIncomingFrom(BasicBlock* block);
   Instruction* clone() override;
 };
 

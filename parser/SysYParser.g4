@@ -1,5 +1,6 @@
 grammar SysYParser;
 
+program:compUnit;
 /*编译单元*/
 compUnit: ( decl | funcDef)* EOF;
 /*声明*/
@@ -11,7 +12,7 @@ bType: 'int' | 'float';
 /*常数定义*/
 constDef
     : Identifier  '=' constInitVal                        #constDefSingle
-    | Identifier ( '[' constExp ']' )+ '=' constInitVal   #constDefArray
+    | initLVal '=' constInitVal   #constDefArray
     ;
 /*常量初值*/
 constInitVal
@@ -23,10 +24,11 @@ varDecl: bType varDef ( ',' varDef )* ';';
 /*变量定义*/
 varDef
     : Identifier                                          #varDefSingle
-    | Identifier ( '[' constExp ']' )+                    #varDefArray
+    | initLVal                    #varDefArray
     | Identifier '=' initVal                              #varDefSingleInitVal
-    | Identifier ( '[' constExp ']' )+ '=' initVal        #varDefArrayInitVal
+    | initLVal '=' initVal        #varDefArrayInitVal
     ;
+initLVal:Identifier ('['constExp']')+;
 /*变量初值*/
 initVal
     : exp                                                 #initValSingle

@@ -22,6 +22,7 @@ int main() {
   //       x = -1;
   //   return x;
   // }
+  
   Type* i32Type = Type::getInt32Type();
   ArrayType* arrType = Type::getArrayType(10, Type::getInt32Type());
 

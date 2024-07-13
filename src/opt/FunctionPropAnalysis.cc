@@ -44,6 +44,14 @@ bool FunctionPropAnalysis::runOnFunction(Function* func) {
           func->setPureFunction(false);
           changed = true;
         }
+        if (!func->hasMemRead() && !callee->hasMemRead()) {
+          func->setMemRead(true);
+          changed = true;
+        }
+        if (!func->hasMemWrite() && !callee->hasMemWrite()) {
+          func->setMemWrite(true);
+          changed = true;
+        }
         Function::addCall(func, callee);
       } else if (instr->isa(VT_STORE)) {
         /**
@@ -63,12 +71,20 @@ bool FunctionPropAnalysis::runOnFunction(Function* func) {
           func->setPureFunction(false);
           changed = true;
         }
-      } else if (instr->isa(VT_STORE)) {
+        if (!func->hasMemWrite()) {
+          func->setMemWrite(true);
+          changed = true;
+        }
+      } else if (instr->isa(VT_LOAD)) {
         /**
          * FIXME: Same problem like load
          */
         if (func->isPureFunction()) {
           func->setPureFunction(false);
+          changed = true;
+        }
+        if (!func->hasMemRead()) {
+          func->setMemRead(true);
           changed = true;
         }
       }

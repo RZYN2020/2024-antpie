@@ -1,11 +1,14 @@
 #include "Module.hh"
 
-#include "CSE.hh"
+#include "AliasAnalysis.hh"
+#include "CommonSubexpElimination.hh"
 #include "FunctionPropAnalysis.hh"
 #include "Inlining.hh"
+#include "LoopAnalysis.hh"
+#include "LoopInvariantCodeMotion.hh"
+#include "LoopSimplify.hh"
 #include "MemToReg.hh"
 #include "MergeBlock.hh"
-
 using ANTPIE::Module;
 
 Module::Module() {}
@@ -192,11 +195,19 @@ void Module::irOptimize() {
   // Add function analysis pass
   optimizations.pushBack(new FunctionPropAnalysis());
   // Add function inlining pass
-  optimizations.pushBack(new Inlining());
+  // optimizations.pushBack(new Inlining());
   // Add mergeBlock pass
   optimizations.pushBack(new MergeBlock());
   // Add earlyCSE pass
   optimizations.pushBack(new CommonSubexpElimination());
+  // Add loop Analysis
+  optimizations.pushBack(new LoopAnalysis());
+  // Add loop simplify pass
+  optimizations.pushBack(new LoopSimplify());
+  // Add alias analysis pass
+  optimizations.pushBack(new AliasAnalysis());
+  // Add LICM pass
+  optimizations.pushBack(new LoopInvariantCodeMotion());
 
   // run all pass
   for (auto& pass : optimizations) {

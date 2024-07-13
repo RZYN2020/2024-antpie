@@ -101,6 +101,7 @@ void DomTree::buildDomTree() {
     domChildren[dfnToBB[iDom[i]]]->pushBack(dfnToBB[i]);
   }
   dtActive = true;
+  dfActive = false;
 }
 
 DomTree::DomTree(Function *func) : dtActive(false) {
@@ -180,25 +181,37 @@ void DomTree::calculateIDF(BBListPtr src, BBListPtr result) {
 void DomTree::mergeChildrenTo(BasicBlock *src, BasicBlock *dest) {
   BBListPtr srcList = domChildren[src];
   BBListPtr destList = domChildren[dest];
-  for (BasicBlock *domChild : *srcList) {
+  for (BasicBlock* domChild : *srcList) {
     destList->pushBack(domChild);
     setDominator(domChild, dest);
   }
   domChildren.erase(src);
 }
 
-void DomTree::preOrderTraversal(BasicBlock *node,
-                                std::vector<BasicBlock *> &result) {
-  result.push_back(node);
-  for (BasicBlock *child : *getDomChildren(node)) {
-    preOrderTraversal(child, result);
-  }
+BBListPtr DomTree::postOrder() {
+  BBListPtr postOrderList = new LinkedList<BasicBlock*>();
+
+  std::function<void(BasicBlock*)> postDfs = [&](BasicBlock* node) -> void {
+    for (BasicBlock* child : *getDomChildren(node)) {
+      postDfs(child);
+    }
+    postOrderList->pushBack(node);
+  };
+
+  postDfs(cfg->getEntry());
+  return postOrderList;
 }
 
-std::vector<BasicBlock *> DomTree::getDomTreePreOrder() {
-  std::vector<BasicBlock *> result;
-  preOrderTraversal(cfg->getEntry(), result);
-  return result;
+bool DomTree::dominates(BasicBlock* parent, BasicBlock* block) {
+  BasicBlock* ptr = block;
+  while (ptr != parent) {
+    auto it = dominators.find(ptr);
+    if (it == dominators.end()) {
+      break;
+    }
+    ptr = it->second;
+  }
+  return ptr == parent;
 }
 
 void DomTree::testDomTree() {
