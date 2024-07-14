@@ -1,5 +1,8 @@
+#include "DomTree.hh"
 #include "Machine.hh"
 #include "Module.hh"
+#include <algorithm>
+
 
 ///////// Macro Defs /////////
 // capture (res)
@@ -223,6 +226,17 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
       bb_map->insert({bb, mbb});
     }
     mfunc->setEntry(bb_map->at(func->getEntry()));
+
+    auto domt = func->getDT();
+    auto pr = domt->postOrder();
+    auto mdompr = new vector<MBasicBlock *>();
+    for (auto bb : *pr) {
+      if (bb->isEmpty())
+        continue;
+      mdompr->push_back(bb_map->at(bb));
+    }
+    std::reverse(mdompr->begin(), mdompr->end());
+    mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock*>>(mdompr);
 
     // Select every Instruction
     for (auto it = basicBlocks->begin(); it != basicBlocks->end();
