@@ -1,7 +1,7 @@
 #include "allocate_register.hh"
 #include <set>
 
-void allocate_registers(MFunction *func, map<Register *, int> *spill,
+void spill_registers(MFunction *func, map<Register *, int> *spill,
                         int &stack_offset) {
   // allocate arguments
   auto ftp = func->getType();
@@ -44,7 +44,7 @@ void allocate_registers(MFunction *func, map<Register *, int> *spill,
   }
 }
 
-static void lower_call(MFunction *func, map<Register *, int> *spill,
+static void lower_call_spill_only(MFunction *func, map<Register *, int> *spill,
                        int &stack_offset) {
   map<Register *, Register *> allocation;
   set<Register *> caller_saved;
@@ -60,34 +60,20 @@ static void lower_call(MFunction *func, map<Register *, int> *spill,
 }
 
 void spill_register_for_func(MFunction *func) {
-
-  // std::cout << "spill_register_for_func " << func->getName() << endl;
-
-  // 3.1 allocate register
-  int stack_offset = 16; // with ra and sp
   auto spill = make_unique<map<Register *, int>>();
-  allocate_registers(func, spill.get(), stack_offset);
-
-  // for (auto it = spill->begin(); it != spill->end(); ++it) {
-  //   std::cout << "Reg: " << it->first->getName() << ", Addr: " << it->second
-  //             << std::endl;
-  // }
-
-  // 3.2 rewrite program
-
-  lower_alloca(func, stack_offset);
-  lower_call(func, spill.get(), stack_offset);
   map<Register *, Register *> allocation;
   set<Register *> callee_saved;
+  int stack_offset = 16; // with ra and sp
+
+  spill_registers(func, spill.get(), stack_offset);
+  lower_alloca(func, stack_offset);
+  lower_call_spill_only(func, spill.get(), stack_offset);
   add_prelude(func, &allocation, spill.get(), stack_offset, &callee_saved);
   add_conclude(func, &allocation, spill.get(), stack_offset, &callee_saved);
   rewrite_program_spill(func, spill.get());
 }
 
 void spill_all_register(MModule *mod) {
-  // step1. out-of-ssa
-
-  // step2: spill registers
   for (auto &func : mod->getFunctions()) {
     out_of_ssa(func.get());
     spill_register_for_func(func.get());
