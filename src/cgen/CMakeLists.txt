@@ -1,6 +1,8 @@
 add_library(
     cgen
     cgen.cc
-    allocate_register.cc
     select_instruction.cc
+    allocate_register.cc
+    spill_allocation.cc
+    saa_allocation.cc
 )
