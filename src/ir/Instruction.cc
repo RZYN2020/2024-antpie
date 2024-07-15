@@ -108,6 +108,13 @@ Value* PhiInst::deleteIncomingFrom(BasicBlock* block) {
   return oldValue;
 }
 
+void Instruction::moveBefore(Instruction* instr) {
+  eraseFromParent();
+  BasicBlock* destBlock = instr->getParent();
+  setParent(destBlock);
+  destBlock->getInstructions()->insertBefore(instr, this);
+}
+
 /*********************** Constructor ******************************/
 
 Instruction::Instruction(ValueTag vTag) : Value(Type::getVoidType(), vTag) {

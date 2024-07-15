@@ -18,17 +18,32 @@ using std::unordered_set;
 
 class Function;
 
+struct DomTreeNode {
+  BasicBlock* dominator;
+  BBListPtr domChildren;
+  BBListPtr dominanceFrontier;
+  uint32_t depth;
+
+  DomTreeNode() {
+    dominator = nullptr;
+    domChildren = new LinkedList<BasicBlock*>();
+    dominanceFrontier = new LinkedList<BasicBlock*>();
+  }
+};
+
 class DomTree {
-private:
-  const LinkedList<BasicBlock *> *blocks;
-  CFG *cfg;
-  map<BasicBlock *, BasicBlock *> dominators;
-  map<BasicBlock *, BBListPtr> domChildren;
-  map<BasicBlock *, BBListPtr> dominanceFrontier;
+ private:
+  const LinkedList<BasicBlock*>* blocks;
+  CFG* cfg;
+  unordered_map<BasicBlock*, DomTreeNode*> dtNodeMap;
+  // map<BasicBlock*, BasicBlock*> dominators;
+  // map<BasicBlock*, BBListPtr> domChildren;
+  // map<BasicBlock*, BBListPtr> dominanceFrontier;
   bool dtActive = 0;
   bool dfActive = 0;
-  vector<BasicBlock *> dfnToBB;
-  map<BasicBlock *, int> bbToDfn;
+  bool depthActive = 0;
+  vector<BasicBlock*> dfnToBB;
+  map<BasicBlock*, int> bbToDfn;
   vector<int> iDom;
   void dfs(BasicBlock *node, int &d, CFG *cfg);
 
@@ -38,26 +53,42 @@ public:
 
   bool dtReady() { return dtActive; }
   bool dfReady() { return dfActive; }
+  bool depthReady() { return depthActive; }
 
-  void setDominator(BasicBlock *bb, BasicBlock *domNode) {
-    dominators[bb] = domNode;
+  void setDominator(BasicBlock* bb, BasicBlock* domNode) {
+    dtNodeMap[bb]->dominator = domNode;
   }
   void buildDomTree();
-  BasicBlock* getDominator(BasicBlock* bb) { return dominators.at(bb); }
-  BBListPtr getDomChildren(BasicBlock* bb) { return domChildren[bb]; }
+  BasicBlock* getDominator(BasicBlock* bb) {
+    return dtNodeMap.at(bb)->dominator;
+  }
+  BBListPtr getDomChildren(BasicBlock* bb) {
+    return dtNodeMap.at(bb)->domChildren;
+  }
   bool dominates(BasicBlock* parent, BasicBlock* block);
   BBListPtr postOrder();
+  BasicBlock* getRoot() { return cfg->getEntry(); }
   void testDomTree();
 
   void calculateDF();
-  BBListPtr getDF(BasicBlock *bb) const { return dominanceFrontier.at(bb); }
+  BBListPtr getDF(BasicBlock* bb) const {
+    return dtNodeMap.at(bb)->dominanceFrontier;
+  }
 
-  void mergeChildrenTo(BasicBlock *src, BasicBlock *dest);
-  void deleteChildren(BasicBlock *block) { domChildren[block]->clear(); }
-  void deleteParent(BasicBlock *block) { dominators.erase(block); }
+  void mergeChildrenTo(BasicBlock* src, BasicBlock* dest);
+  void deleteChildren(BasicBlock* block) {
+    dtNodeMap.at(block)->domChildren->clear();
+  }
+  void deleteParent(BasicBlock* block) {
+    dtNodeMap.at(block)->dominator = nullptr;
+  }
   void draw();
 
   void calculateIDF(BBListPtr src, BBListPtr result);
+  BasicBlock* findLCA(BasicBlock* bbx, BasicBlock* bby);
+
+  void calculateDepth();
+  uint32_t getDepth(BasicBlock* block) { return dtNodeMap.at(block)->depth; }
 };
 
 #endif
