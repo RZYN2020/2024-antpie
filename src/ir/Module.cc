@@ -3,12 +3,15 @@
 #include "AliasAnalysis.hh"
 #include "CommonSubexpElimination.hh"
 #include "FunctionPropAnalysis.hh"
+#include "GlobalCodeMotion.h"
+#include "GlobalValueNumbering.hh"
 #include "Inlining.hh"
 #include "LoopAnalysis.hh"
 #include "LoopInvariantCodeMotion.hh"
 #include "LoopSimplify.hh"
 #include "MemToReg.hh"
 #include "MergeBlock.hh"
+
 using ANTPIE::Module;
 
 Module::Module() {}
@@ -195,7 +198,7 @@ void Module::irOptimize() {
   // Add function analysis pass
   optimizations.pushBack(new FunctionPropAnalysis());
   // Add function inlining pass
-  // optimizations.pushBack(new Inlining());
+  optimizations.pushBack(new Inlining());
   // Add mergeBlock pass
   optimizations.pushBack(new MergeBlock());
   // Add earlyCSE pass
@@ -208,6 +211,11 @@ void Module::irOptimize() {
   optimizations.pushBack(new AliasAnalysis());
   // Add LICM pass
   optimizations.pushBack(new LoopInvariantCodeMotion());
+  // GVM and GCM need DCE
+  // // Add GVM pass
+  // optimizations.pushBack(new GlobalValueNumbering());
+  // // Add GCM pass
+  // optimizations.pushBack(new GlobalCodeMotion());
 
   // run all pass
   for (auto& pass : optimizations) {
