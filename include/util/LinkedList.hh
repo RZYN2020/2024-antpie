@@ -181,6 +181,31 @@ class LinkedList {
     size++;
   }
 
+  void insertBefore(const T& loc, const T& data) {
+    if (head && loc == head->data) {
+      pushFront(data);
+      return;
+    }
+
+    Node<T>* newNode = new Node<T>(data);
+    Node<T>* current = head;
+    Node<T>* previous = nullptr;
+
+    while (current != nullptr && current->data != loc) {
+      previous = current;
+      current = current->next;
+    }
+
+    if (current == nullptr) {
+      delete newNode;
+      return;
+    }
+
+    previous->next = newNode;
+    newNode->next = current;
+    size++;
+  }
+
   void insertAfter(const Iterator& it, const T& data) {
     if (it == end()) {
       return;

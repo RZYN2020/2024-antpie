@@ -10,4 +10,7 @@ add_library(
     LoopAnalysis.cc
     LoopSimplify.cc
     LoopInvariantCodeMotion.cc
+    GlobalCodeMotion.cc
+    LoopInfo.cc
+    GlobalValueNumbering.cc
 )
