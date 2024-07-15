@@ -45,10 +45,10 @@ class DomTree {
   vector<BasicBlock*> dfnToBB;
   map<BasicBlock*, int> bbToDfn;
   vector<int> iDom;
-  void dfs(BasicBlock* node, int& d, CFG* cfg);
+  void dfs(BasicBlock *node, int &d, CFG *cfg);
 
- public:
-  DomTree(Function* func);
+public:
+  DomTree(Function *func);
   DomTree() : dtActive(false) {}
 
   bool dtReady() { return dtActive; }

@@ -2,16 +2,16 @@
 
 #include "Function.hh"
 
-vector<BasicBlock*> dfsPred;  // fth
+vector<BasicBlock *> dfsPred; // fth
 vector<int> dsTree;           // fa
 vector<int> sDom;             // sdom
 vector<int> mn;
 vector<vector<int>> sDomSucc;
 
-void DomTree::dfs(BasicBlock* node, int& d, CFG* cfg) {
+void DomTree::dfs(BasicBlock *node, int &d, CFG *cfg) {
   dfnToBB.push_back(node);
   bbToDfn[node] = d++;
-  for (BasicBlock* succ : *cfg->getSuccOf(node)) {
+  for (BasicBlock *succ : *cfg->getSuccOf(node)) {
     if (bbToDfn.find(succ) == bbToDfn.end()) {
       dfsPred[d] = node;
       dfs(succ, d, cfg);
@@ -38,7 +38,7 @@ void DomTree::buildDomTree() {
 
   bbToDfn.clear();
 
-  dfsPred = vector<BasicBlock*>(size);
+  dfsPred = vector<BasicBlock *>(size);
 
   dsTree.clear();
   dsTree.reserve(size);
@@ -62,9 +62,9 @@ void DomTree::buildDomTree() {
   }
 
   for (int i = depth - 1; i >= 1; i--) {
-    BasicBlock* bb = dfnToBB[i];
+    BasicBlock *bb = dfnToBB[i];
     int res = i;
-    for (BasicBlock* pred : *cfg->getPredOf(bb)) {
+    for (BasicBlock *pred : *cfg->getPredOf(bb)) {
       auto item = bbToDfn.find(pred);
       if (item == bbToDfn.end()) {
         // Unuse block
@@ -104,7 +104,7 @@ void DomTree::buildDomTree() {
   dfActive = false;
 }
 
-DomTree::DomTree(Function* func) : dtActive(false) {
+DomTree::DomTree(Function *func) : dtActive(false) {
   blocks = func->getBasicBlocks();
   cfg = func->getCFG();
   assert(cfg);
@@ -130,11 +130,11 @@ void DomTree::calculateDF() {
   for (BasicBlock* bb : *blocks) {
     dtNodeMap[bb]->dominanceFrontier = new LinkedList<BasicBlock*>();
   }
-  for (BasicBlock* bb : *blocks) {
+  for (BasicBlock *bb : *blocks) {
     if (cfg->getPredOf(bb)->getSize() > 1) {
-      for (BasicBlock* pred : *cfg->getPredOf(bb)) {
-        BasicBlock* runner = pred;
-        BasicBlock* idom = getDominator(bb);
+      for (BasicBlock *pred : *cfg->getPredOf(bb)) {
+        BasicBlock *runner = pred;
+        BasicBlock *idom = getDominator(bb);
         while (runner != idom) {
           dtNodeMap[runner]->dominanceFrontier->pushBack(bb);
           runner = getDominator(runner);
@@ -144,9 +144,9 @@ void DomTree::calculateDF() {
   }
   dfActive = true;
 #ifdef DEBUG_MODE
-  for (BasicBlock* bb : *blocks) {
+  for (BasicBlock *bb : *blocks) {
     std::cout << bb->getName() << ": ";
-    for (BasicBlock* df : *getDF(bb)) {
+    for (BasicBlock *df : *getDF(bb)) {
       std::cout << df->getName() << " ";
     }
     std::cout << std::endl;
@@ -155,25 +155,25 @@ void DomTree::calculateDF() {
 }
 
 void DomTree::calculateIDF(BBListPtr src, BBListPtr result) {
-  unordered_set<BasicBlock*> resultSet;
-  queue<BasicBlock*> worklist;
-  for (BasicBlock* bb : *src) {
-    for (BasicBlock* df : *getDF(bb)) {
+  unordered_set<BasicBlock *> resultSet;
+  queue<BasicBlock *> worklist;
+  for (BasicBlock *bb : *src) {
+    for (BasicBlock *df : *getDF(bb)) {
       resultSet.insert(df);
       worklist.push(df);
     }
   }
   while (!worklist.empty()) {
-    BasicBlock* bb = worklist.front();
+    BasicBlock *bb = worklist.front();
     worklist.pop();
-    for (BasicBlock* df : *getDF(bb)) {
+    for (BasicBlock *df : *getDF(bb)) {
       if (resultSet.count(df) == 0) {
         resultSet.insert(df);
         worklist.push(df);
       }
     }
   }
-  for (BasicBlock* bb : resultSet) {
+  for (BasicBlock *bb : resultSet) {
     result->pushBack(bb);
   }
 }

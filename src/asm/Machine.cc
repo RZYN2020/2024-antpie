@@ -112,8 +112,6 @@ void MBasicBlock::pushPhi(MHIphi *phi) {
   phis->push_back(std::unique_ptr<MHIphi>(phi));
 }
 
-vector<unique_ptr<MHIphi>> &MBasicBlock::getPhis() { return *phis; }
-
 void MBasicBlock::removeIncoming(MBasicBlock *bb) {
   auto it = incoming->begin();
   while (it != incoming->end()) {
@@ -287,8 +285,21 @@ void MBasicBlock::insertAfterInstructionWith(MInstruction *ins,
   }
 }
 
+vector<unique_ptr<MHIphi>> &MBasicBlock::getPhis() { return *phis; }
+
 vector<unique_ptr<MInstruction>> &MBasicBlock::getInstructions() {
   return *instructions;
+}
+
+vector<MInstruction *> MBasicBlock::getAllInstructions() {
+  vector<MInstruction *> res = {};
+  for (auto &ins : *instructions) {
+    res.push_back(ins.get());
+  }
+  for (auto &ins : *jmps) {
+    res.push_back(ins.get());
+  }
+  return res;
 }
 
 vector<unique_ptr<MInstruction>> &MBasicBlock::getJmps() { return *jmps; }
@@ -406,22 +417,22 @@ MFunction::MFunction(FuncType *type, string name) {
   this->name = name;
   this->basicBlocks = make_unique<vector<unique_ptr<MBasicBlock>>>();
   this->parameters = make_unique<vector<unique_ptr<ParaRegister>>>();
+  int float_cnt = 10;
+  int int_cnt = 10;
+  int offset = 0;
   for (int i = 0; i < type->getArgSize(); i++) {
     auto arg = type->getArgument(i);
     auto tp = arg->getType();
-    int float_cnt = 10;
-    int int_cnt = 10;
-    int offset = 0;
     ParaRegister *argr;
     switch (tp->getTypeTag()) {
     case TT_INT1:
     case TT_INT32: {
       if (int_cnt <= 17) {
         argr = new ParaRegister(Register::getIRegister(int_cnt++),
-                               arg->getName(), Register::V_IREGISTER, false);
+                                arg->getName(), Register::V_IREGISTER, false);
       } else {
-        argr = new ParaRegister(offset, 4, arg->getName(), Register::V_IREGISTER,
-                               false);
+        argr = new ParaRegister(offset, 4, arg->getName(),
+                                Register::V_IREGISTER, false);
         offset += 4;
       }
       break;
@@ -429,10 +440,10 @@ MFunction::MFunction(FuncType *type, string name) {
     case TT_FLOAT: {
       if (int_cnt <= 17) {
         argr = new ParaRegister(Register::getFRegister(int_cnt++),
-                               arg->getName(), Register::V_FREGISTER, false);
+                                arg->getName(), Register::V_FREGISTER, false);
       } else {
-        argr = new ParaRegister(offset, 4, arg->getName(), Register::V_FREGISTER,
-                               false);
+        argr = new ParaRegister(offset, 4, arg->getName(),
+                                Register::V_FREGISTER, false);
         offset += 4;
       }
       break;
@@ -440,10 +451,10 @@ MFunction::MFunction(FuncType *type, string name) {
     case TT_POINTER: {
       if (int_cnt <= 17) {
         argr = new ParaRegister(Register::getIRegister(int_cnt++),
-                               arg->getName(), Register::V_IREGISTER, false);
+                                arg->getName(), Register::V_IREGISTER, false);
       } else {
-        argr = new ParaRegister(offset, 8, arg->getName(), Register::V_IREGISTER,
-                               false);
+        argr = new ParaRegister(offset, 8, arg->getName(),
+                                Register::V_IREGISTER, false);
         offset += 8;
       }
       break;
