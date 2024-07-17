@@ -2,16 +2,16 @@
 
 #include "Function.hh"
 
-vector<BasicBlock*> dfsPred;  // fth
+vector<BasicBlock *> dfsPred; // fth
 vector<int> dsTree;           // fa
 vector<int> sDom;             // sdom
 vector<int> mn;
 vector<vector<int>> sDomSucc;
 
-void DomTree::dfs(BasicBlock* node, int& d, CFG* cfg) {
+void DomTree::dfs(BasicBlock *node, int &d, CFG *cfg) {
   dfnToBB.push_back(node);
   bbToDfn[node] = d++;
-  for (BasicBlock* succ : *cfg->getSuccOf(node)) {
+  for (BasicBlock *succ : *cfg->getSuccOf(node)) {
     if (bbToDfn.find(succ) == bbToDfn.end()) {
       dfsPred[d] = node;
       dfs(succ, d, cfg);
@@ -38,7 +38,7 @@ void DomTree::buildDomTree() {
 
   bbToDfn.clear();
 
-  dfsPred = vector<BasicBlock*>(size);
+  dfsPred = vector<BasicBlock *>(size);
 
   dsTree.clear();
   dsTree.reserve(size);
@@ -62,9 +62,9 @@ void DomTree::buildDomTree() {
   }
 
   for (int i = depth - 1; i >= 1; i--) {
-    BasicBlock* bb = dfnToBB[i];
+    BasicBlock *bb = dfnToBB[i];
     int res = i;
-    for (BasicBlock* pred : *cfg->getPredOf(bb)) {
+    for (BasicBlock *pred : *cfg->getPredOf(bb)) {
       auto item = bbToDfn.find(pred);
       if (item == bbToDfn.end()) {
         // Unuse block
@@ -98,25 +98,25 @@ void DomTree::buildDomTree() {
       iDom[i] = iDom[iDom[i]];
     }
     setDominator(dfnToBB[i], dfnToBB[iDom[i]]);
-    domChildren[dfnToBB[iDom[i]]]->pushBack(dfnToBB[i]);
+    dtNodeMap[dfnToBB[iDom[i]]]->domChildren->pushBack(dfnToBB[i]);
   }
   dtActive = true;
   dfActive = false;
 }
 
-DomTree::DomTree(Function* func) : dtActive(false) {
+DomTree::DomTree(Function *func) : dtActive(false) {
   blocks = func->getBasicBlocks();
   cfg = func->getCFG();
   assert(cfg);
   for (BasicBlock* bb : *blocks) {
-    domChildren[bb] = new LinkedList<BasicBlock*>();
+    dtNodeMap[bb] = new DomTreeNode();
   }
 }
 
 void DomTree::draw() {
   vector<std::pair<string, string>> edges;
-  for (auto& item : dominators) {
-    edges.push_back({item.second->getName(), item.first->getName()});
+  for (auto& item : dtNodeMap) {
+    edges.push_back({item.second->dominator->getName(), item.first->getName()});
   }
   visualizeGraph(edges);
 }
@@ -128,15 +128,15 @@ void DomTree::calculateDF() {
     buildDomTree();
   }
   for (BasicBlock* bb : *blocks) {
-    dominanceFrontier[bb] = new LinkedList<BasicBlock*>();
+    dtNodeMap[bb]->dominanceFrontier = new LinkedList<BasicBlock*>();
   }
-  for (BasicBlock* bb : *blocks) {
+  for (BasicBlock *bb : *blocks) {
     if (cfg->getPredOf(bb)->getSize() > 1) {
-      for (BasicBlock* pred : *cfg->getPredOf(bb)) {
-        BasicBlock* runner = pred;
-        BasicBlock* idom = getDominator(bb);
+      for (BasicBlock *pred : *cfg->getPredOf(bb)) {
+        BasicBlock *runner = pred;
+        BasicBlock *idom = getDominator(bb);
         while (runner != idom) {
-          dominanceFrontier[runner]->pushBack(bb);
+          dtNodeMap[runner]->dominanceFrontier->pushBack(bb);
           runner = getDominator(runner);
         }
       }
@@ -144,9 +144,9 @@ void DomTree::calculateDF() {
   }
   dfActive = true;
 #ifdef DEBUG_MODE
-  for (BasicBlock* bb : *blocks) {
+  for (BasicBlock *bb : *blocks) {
     std::cout << bb->getName() << ": ";
-    for (BasicBlock* df : *getDF(bb)) {
+    for (BasicBlock *df : *getDF(bb)) {
       std::cout << df->getName() << " ";
     }
     std::cout << std::endl;
@@ -155,37 +155,37 @@ void DomTree::calculateDF() {
 }
 
 void DomTree::calculateIDF(BBListPtr src, BBListPtr result) {
-  unordered_set<BasicBlock*> resultSet;
-  queue<BasicBlock*> worklist;
-  for (BasicBlock* bb : *src) {
-    for (BasicBlock* df : *getDF(bb)) {
+  unordered_set<BasicBlock *> resultSet;
+  queue<BasicBlock *> worklist;
+  for (BasicBlock *bb : *src) {
+    for (BasicBlock *df : *getDF(bb)) {
       resultSet.insert(df);
       worklist.push(df);
     }
   }
   while (!worklist.empty()) {
-    BasicBlock* bb = worklist.front();
+    BasicBlock *bb = worklist.front();
     worklist.pop();
-    for (BasicBlock* df : *getDF(bb)) {
+    for (BasicBlock *df : *getDF(bb)) {
       if (resultSet.count(df) == 0) {
         resultSet.insert(df);
         worklist.push(df);
       }
     }
   }
-  for (BasicBlock* bb : resultSet) {
+  for (BasicBlock *bb : resultSet) {
     result->pushBack(bb);
   }
 }
 
 void DomTree::mergeChildrenTo(BasicBlock* src, BasicBlock* dest) {
-  BBListPtr srcList = domChildren[src];
-  BBListPtr destList = domChildren[dest];
+  BBListPtr srcList = dtNodeMap[src]->domChildren;
+  BBListPtr destList = dtNodeMap[dest]->domChildren;
   for (BasicBlock* domChild : *srcList) {
     destList->pushBack(domChild);
     setDominator(domChild, dest);
   }
-  domChildren.erase(src);
+  dtNodeMap[src]->domChildren->clear();
 }
 
 BBListPtr DomTree::postOrder() {
@@ -205,91 +205,40 @@ BBListPtr DomTree::postOrder() {
 bool DomTree::dominates(BasicBlock* parent, BasicBlock* block) {
   BasicBlock* ptr = block;
   while (ptr != parent) {
-    auto it = dominators.find(ptr);
-    if (it == dominators.end()) {
+    auto it = dtNodeMap.find(ptr);
+    if (it->second->dominator == nullptr) {
       break;
     }
-    ptr = it->second;
+    ptr = it->second->dominator;
   }
   return ptr == parent;
 }
 
-void DomTree::testDomTree() {
-  cfg = new CFG();
-  BasicBlock* R = new BasicBlock("R", true);
-  BasicBlock* A = new BasicBlock("A", true);
-  BasicBlock* B = new BasicBlock("B", true);
-  BasicBlock* C = new BasicBlock("C", true);
-  BasicBlock* D = new BasicBlock("D", true);
-  BasicBlock* E = new BasicBlock("E", true);
-  BasicBlock* F = new BasicBlock("F", true);
-  BasicBlock* G = new BasicBlock("G", true);
-  BasicBlock* H = new BasicBlock("H", true);
-  BasicBlock* I = new BasicBlock("I", true);
-  BasicBlock* J = new BasicBlock("J", true);
-  BasicBlock* K = new BasicBlock("K", true);
-  BasicBlock* L = new BasicBlock("L", true);
+void DomTree::calculateDepth() {
+  depthActive = 1;
+  std::function<void(DomTreeNode*, uint32_t)> dfs = [&](DomTreeNode* node,
+                                                        uint32_t depth) {
+    node->depth = depth;
+    for (BasicBlock* child : *node->domChildren) {
+      dfs(dtNodeMap[child], depth + 1);
+    }
+  };
 
-  cfg->addNode(R);
-  cfg->addNode(A);
-  cfg->addNode(B);
-  cfg->addNode(C);
-  cfg->addNode(D);
-  cfg->addNode(E);
-  cfg->addNode(F);
-  cfg->addNode(G);
-  cfg->addNode(H);
-  cfg->addNode(I);
-  cfg->addNode(J);
-  cfg->addNode(K);
-  cfg->addNode(L);
+  dfs(dtNodeMap[cfg->getEntry()], 0);
+}
 
-  cfg->addEdge(R, A);
-  cfg->addEdge(R, B);
-  cfg->addEdge(R, C);
-  cfg->addEdge(R, K);
-
-  cfg->addEdge(A, D);
-  cfg->addEdge(B, A);
-  cfg->addEdge(B, D);
-  cfg->addEdge(B, E);
-
-  cfg->addEdge(C, G);
-  cfg->addEdge(C, F);
-
-  cfg->addEdge(D, L);
-
-  cfg->addEdge(E, H);
-
-  cfg->addEdge(F, I);
-
-  cfg->addEdge(G, I);
-  cfg->addEdge(G, J);
-
-  cfg->addEdge(H, E);
-  cfg->addEdge(H, K);
-
-  cfg->addEdge(I, K);
-
-  cfg->addEdge(J, I);
-
-  cfg->addEdge(K, R);
-  cfg->addEdge(K, I);
-
-  cfg->addEdge(L, H);
-
-  cfg->setEntry(R);
-  cfg->setExit(K);
-
-  blocks = cfg->getBlocks();
-
-  buildDomTree();
-
-  for (auto& item : dominators) {
-    std::cout << item.first->getName() << ": " << item.second->getName()
-              << std::endl;
+BasicBlock* DomTree::findLCA(BasicBlock* bbx, BasicBlock* bby) {
+  int delta = getDepth(bbx) - getDepth(bby);
+  if (delta < 0) {
+    std::swap(bbx, bby);
+    delta = -delta;
   }
-  dtActive = true;
-  draw();
-  calculateDF();
+  for (int i = 0; i < delta; i++) {
+    bbx = getDominator(bbx);
+  }
+  while (bbx != bby) {
+    bbx = getDominator(bbx);
+    bby = getDominator(bby);
+  }
+  return bbx;
 }

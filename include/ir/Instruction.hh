@@ -66,6 +66,7 @@ class Instruction : public Value {
   void cloneUseList(unordered_map<Value*, Value*>& replaceMap,
                     vector<Use*>* fromUseList);
   vector<Use*>* getUseList() { return useList.get(); }
+  void moveBefore(Instruction* instr);
 };
 
 class AllocaInst : public Instruction {

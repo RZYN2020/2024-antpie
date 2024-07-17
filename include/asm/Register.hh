@@ -161,3 +161,6 @@ private:
 public:
   FRegister(int id, string n);
 };
+
+
+#define IS_VIRTUAL_REG(reg) ((reg)->getTag() == Register::V_FREGISTER || (reg)->getTag() == Register::V_IREGISTER)

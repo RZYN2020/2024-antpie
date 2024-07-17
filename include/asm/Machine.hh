@@ -52,6 +52,7 @@ public:
   void insertAfterInstructionWith(MInstruction *ins,
                                   vector<MInstruction *> instrs);
 
+  vector<MInstruction*> getAllInstructions();
   vector<unique_ptr<MInstruction>> &getInstructions();
   vector<unique_ptr<MInstruction>> &getJmps();
 
@@ -82,6 +83,7 @@ private:
   MModule* mod;
 
 public:
+  unique_ptr<vector<MBasicBlock*>> domtPreOrder;
   int stack_offset;
   MFunction(FuncType *fType, string name);
   MBasicBlock *addBasicBlock(string name);
