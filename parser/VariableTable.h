@@ -11,6 +11,7 @@
 
 typedef struct variableTable{
     std::map<String,Value*> table;
+    vector<string> FParams;
     struct variableTable* parent;
     variableTable(struct variableTable* prt){
         parent = prt;
@@ -38,5 +39,6 @@ Value *VariableTable::get(String tar) {
 void VariableTable::put(String name,Value* tar){
     table[name]=tar;
 }
+
 
 #endif //ANTPIE_VARIABLETABLE_H

@@ -34,6 +34,7 @@ using std::string;
 using ANTPIE::Module;
 using std::stof;
 using std::stack;
+
 class MySysYParserVisitor: SysYParserBaseVisitor {
 public:
     void setModule(Module m);
@@ -47,7 +48,35 @@ public:
     BasicBlock* falseBasicBlock;
     stack<WhileBlockInfo *> loopLayer;
     Function* currentIn;
+    map<string,OpTag> Integer_Operator_OpTag_Table;
+    map<string,OpTag> F_Operator_OpTag_Table;
+    map<string,OpTag> Logic_Operator_OpTag_Table;
     antlrcpp::Any visitProgram(SysYParserParser::ProgramContext *ctx) override{
+        Integer_Operator_OpTag_Table = map<string,OpTag>();
+        Logic_Operator_OpTag_Table=map<string,OpTag>();
+        Integer_Operator_OpTag_Table["+"] = OpTag::ADD;
+        Integer_Operator_OpTag_Table["-"] = OpTag::SUB;
+        Integer_Operator_OpTag_Table["*"] = OpTag::MUL;
+        Integer_Operator_OpTag_Table["/"] = OpTag::SDIV;
+        Integer_Operator_OpTag_Table["%"] = OpTag::SREM;
+        Integer_Operator_OpTag_Table[">"] = OpTag::SGT;
+        Integer_Operator_OpTag_Table["<"] = OpTag::SLT;
+        Integer_Operator_OpTag_Table[">="] = OpTag::SGE;
+        Integer_Operator_OpTag_Table["<="] = OpTag::SLE;
+        Logic_Operator_OpTag_Table["!="] = OpTag::NE;
+        Logic_Operator_OpTag_Table["=="] = OpTag::EQ;
+        Logic_Operator_OpTag_Table["&&"] = OpTag::AND;
+        Logic_Operator_OpTag_Table["||"] = OpTag::OR;
+        F_Operator_OpTag_Table = map<string,OpTag>();
+        F_Operator_OpTag_Table["+"] = OpTag::FADD;
+        F_Operator_OpTag_Table["-"] = OpTag::FSUB;
+        F_Operator_OpTag_Table["*"] = OpTag::FMUL;
+        F_Operator_OpTag_Table["/"] = OpTag::FDIV;
+        F_Operator_OpTag_Table["%"] = OpTag::FREM;
+        F_Operator_OpTag_Table[">"] = OpTag::OGT;
+        F_Operator_OpTag_Table["<"] = OpTag::OLT;
+        F_Operator_OpTag_Table[">="] = OpTag::OGE;
+        F_Operator_OpTag_Table["<="] = OpTag::OLE;
         loopLayer=stack<WhileBlockInfo *>();
         current=VariableTable(nullptr);
         visit(ctx->compUnit());
@@ -166,13 +195,19 @@ public:
                     bt = new ArrayType(stoi(currentRet->toString()),bt);
                 }
                 Type* prt = new PointerType(bt);
-                args.push_back(new Argument(ac->Identifier()->getText(),prt));
+                Argument* argu = new Argument(ac->Identifier()->getText(),prt);
+                args.push_back(argu);
+                current.put(ac->Identifier()->getText(),argu);
             }else{
                 string nm = st->Identifier()->getText();
                 if(st->bType()->getText().compare("int")==0){
-                    args.push_back(new Argument(nm,Type::getInt32Type()));
+                    Argument* argu =new Argument(nm,Type::getInt32Type());
+                    args.push_back(argu);
+                    current.put(nm,argu);
                 }else{
-                    args.push_back(new Argument(nm,Type::getFloatType()));
+                    Argument* argu=new Argument(nm,Type::getFloatType());
+                    args.push_back(argu);
+                    current.put(nm,argu);
                 }
             }
         }
@@ -196,6 +231,9 @@ public:
         //退出函数参数定义范围内
     }
 
+
+
+
     antlrcpp::Any visitBlock(SysYParserParser::BlockContext *ctx) override{
         VariableTable scope = VariableTable(current);
         current=scope;
@@ -205,13 +243,13 @@ public:
         current=current.parent;
     }
 
-    antlrcpp::Any visitStmtCond(SysYParserParser::StmtCondContext *ctx) override{
-        BasicBlock* trueBlock = module.addBasicBlock(currentIn, "if.true");
-        BasicBlock* falseBlock = module.addBasicBlock(currentIn, "if.false");
-        BasicBlock* exitBlock;
-        if(ctx->stmt().size()==2){
+    antlrcpp::Any visitStmtCond(SysYParserParser::StmtCondContext *ctx) override {
+        BasicBlock *trueBlock = module.addBasicBlock(currentIn, "if.true");
+        BasicBlock *falseBlock = module.addBasicBlock(currentIn, "if.false");
+        BasicBlock *exitBlock;
+        if (ctx->stmt().size() == 2) {
             exitBlock = module.addBasicBlock(currentIn, "if.end");
-        }else{
+        } else {
             exitBlock = falseBlock;
         }
         trueBasicBlock = trueBlock;
@@ -227,6 +265,9 @@ public:
         }
         return nullptr;
     }
+
+
+
 
     antlrcpp::Any visitStmtWhile(SysYParserParser::StmtWhileContext *ctx) override{
         BasicBlock* condBlock = module.addBasicBlock(currentIn, "while.begin");
@@ -245,6 +286,8 @@ public:
         loopLayer.pop();
         return nullptr;
     }
+
+
 
     antlrcpp::Any visitStmtBreak(SysYParserParser::StmtBreakContext *ctx) override{
         module.addJumpInst(loopLayer.top()->exitBlock);
@@ -295,9 +338,225 @@ public:
             }
         }
         return nullptr;
-
     }
 
+    antlrcpp::Any visitUnaryExpFuncR(SysYParserParser::UnaryExpFuncRContext *ctx) override{
+        vector<Value*> args = vector<Value*>();
+        for (SysYParserParser::FuncRParamContext* c:ctx->funcRParams()->funcRParam()) {
+            visit(c);
+            args.push_back(currentRet);
+        }
+        currentRet=module.addCallInst((Function*)current.get(ctx->Identifier()->getText()),args,"call"+ctx
+        ->Identifier()->getText());
+    }
+
+
+    antlrcpp::Any visitAddExp(SysYParserParser::AddExpContext *ctx) override{
+        visit(ctx->left);
+        Value* l_Val = currentRet;
+        Value* r_Val;
+        if(l_Val->isPointer()){
+        LoadInst* li = module.addLoadInst(l_Val,"lval");
+        l_Val=li;
+        }
+        for (int i = 0; i < ctx->op.size(); ++i) {
+            visit(ctx->right[i]);
+            r_Val=currentRet;
+            if(r_Val->isPointer()){
+               r_Val = module.addLoadInst(r_Val,"rval");
+            }
+            OpTag t;
+            if((l_Val->getType()->getTypeTag()==TypeTag::TT_FLOAT)||(r_Val->getType()->getTypeTag()==TypeTag::TT_FLOAT)){
+                t = F_Operator_OpTag_Table[ctx->op[i]->getText()];
+                if(l_Val->getType()->getTypeTag()==TypeTag::TT_INT32){
+                    l_Val = module.addSitofpInst(l_Val,"lval");
+                }
+                if(r_Val->getType()->getTypeTag()==TypeTag::TT_INT32){
+                    r_Val = module.addSitofpInst(r_Val,"lval");
+                }
+                l_Val = module.addBinaryOpInst(t,l_Val,r_Val,"addres");
+            }else{
+                t = Integer_Operator_OpTag_Table[ctx->op[i]->getText()];
+                l_Val = module.addBinaryOpInst(t,l_Val,r_Val,"addres");
+            }
+        }
+        currentRet=l_Val;
+    }
+    antlrcpp::Any visitMulExp(SysYParserParser::MulExpContext *ctx) override{
+        visit(ctx->left);
+        Value* l_Val = currentRet;
+        Value* r_Val;
+        if(l_Val->isPointer()){
+            LoadInst* li = module.addLoadInst(l_Val,"lval");
+            l_Val=li;
+        }
+        for (int i = 0; i < ctx->op.size(); ++i) {
+            visit(ctx->right[i]);
+            r_Val=currentRet;
+            if(r_Val->isPointer()){
+                r_Val = module.addLoadInst(r_Val,"rval");
+            }
+            OpTag t;
+            if((l_Val->getType()->getTypeTag()==TypeTag::TT_FLOAT)||(r_Val->getType()->getTypeTag()==TypeTag::TT_FLOAT)){
+                t = F_Operator_OpTag_Table[ctx->op[i]->getText()];
+                if(l_Val->getType()->getTypeTag()==TypeTag::TT_INT32){
+                    l_Val = module.addSitofpInst(l_Val,"lval");
+                }
+                if(r_Val->getType()->getTypeTag()==TypeTag::TT_INT32){
+                    r_Val = module.addSitofpInst(r_Val,"lval");
+                }
+                l_Val = module.addBinaryOpInst(t,l_Val,r_Val,"addres");
+            }else{
+                t = Integer_Operator_OpTag_Table[ctx->op[i]->getText()];
+                l_Val = module.addBinaryOpInst(t,l_Val,r_Val,"addres");
+            }
+        }
+        currentRet=l_Val;
+    }
+
+    antlrcpp::Any visitRelExp(SysYParserParser::RelExpContext *ctx) override{
+        visit(ctx->left);
+        Value* l_Val = currentRet;
+        Value* r_Val;
+        if(l_Val->isPointer()){
+            LoadInst* li = module.addLoadInst(l_Val,"lval");
+            l_Val=li;
+        }
+        for (int i = 0; i < ctx->op.size(); ++i) {
+            visit(ctx->right[i]);
+            r_Val=currentRet;
+            if(r_Val->isPointer()){
+                r_Val = module.addLoadInst(r_Val,"rval");
+            }
+            OpTag t;
+            if((l_Val->getType()->getTypeTag()==TypeTag::TT_FLOAT)||(r_Val->getType()->getTypeTag()==TypeTag::TT_FLOAT)){
+                t = F_Operator_OpTag_Table[ctx->op[i]->getText()];
+                if(l_Val->getType()->getTypeTag()==TypeTag::TT_INT32){
+                    l_Val = module.addSitofpInst(l_Val,"lval");
+                }else if(l_Val->getType()->getTypeTag()==TypeTag::TT_INT1){
+                    l_Val = module.addZextInst(l_Val,Type::getInt32Type(),"lVal");
+                    l_Val = module.addSitofpInst(l_Val,"lval");
+                }
+                if(r_Val->getType()->getTypeTag()==TypeTag::TT_INT32){
+                    r_Val = module.addSitofpInst(r_Val,"rval");
+                }else if(r_Val->getType()->getTypeTag()==TypeTag::TT_INT1){
+                    r_Val = module.addZextInst(r_Val,Type::getInt32Type(),"rVal");
+                    r_Val = module.addSitofpInst(r_Val,"rval");
+                }
+                if(i>0){
+                    l_Val = module.addZextInst(l_Val,Type::getInt32Type(),"lval");
+                }
+                l_Val = module.addBinaryOpInst(t,l_Val,r_Val,"addres");
+            }else{
+                t = Integer_Operator_OpTag_Table[ctx->op[i]->getText()];
+                if(i>0){
+                    l_Val = module.addZextInst(l_Val,Type::getInt32Type(),"lval");
+                }
+                l_Val = module.addBinaryOpInst(t,l_Val,r_Val,"addres");
+            }
+        }
+        currentRet=l_Val;
+    }
+
+    antlrcpp::Any visitEqExp(SysYParserParser::EqExpContext *ctx) override{
+        visit(ctx->left);
+        Value* l_Val = currentRet;
+        Value* r_Val;
+        if(l_Val->isPointer()){
+            LoadInst* li = module.addLoadInst(l_Val,"lval");
+            l_Val=li;
+        }
+        for (int i = 0; i < ctx->op.size(); ++i) {
+            visit(ctx->right[i]);
+            r_Val=currentRet;
+            if(r_Val->isPointer()){
+                r_Val = module.addLoadInst(r_Val,"rval");
+            }
+            OpTag t=Logic_Operator_OpTag_Table[ctx->op[i]->getText()];
+            if((l_Val->getType()->getTypeTag()==TypeTag::TT_FLOAT)||(r_Val->getType()->getTypeTag()==TypeTag::TT_FLOAT)){
+                if(l_Val->getType()->getTypeTag()==TypeTag::TT_INT32){
+                    l_Val = module.addSitofpInst(l_Val,"lval");
+                }else if(l_Val->getType()->getTypeTag()==TypeTag::TT_INT1){
+                    l_Val = module.addZextInst(l_Val,Type::getInt32Type(),"lVal");
+                    l_Val = module.addSitofpInst(l_Val,"lval");
+                }
+                if(r_Val->getType()->getTypeTag()==TypeTag::TT_INT32){
+                    r_Val = module.addSitofpInst(r_Val,"rval");
+                }else if(r_Val->getType()->getTypeTag()==TypeTag::TT_INT1){
+                    r_Val = module.addZextInst(r_Val,Type::getInt32Type(),"rVal");
+                    r_Val = module.addSitofpInst(r_Val,"rval");
+                }
+                if(i>0){
+                    l_Val = module.addZextInst(l_Val,Type::getInt32Type(),"lval");
+                }
+                l_Val = module.addBinaryOpInst(t,l_Val,r_Val,"addres");
+            }else{
+                if(i>0){
+                    l_Val = module.addZextInst(l_Val,Type::getInt32Type(),"lval");
+                }
+                l_Val = module.addBinaryOpInst(t,l_Val,r_Val,"addres");
+            }
+        }
+        currentRet=l_Val;
+    }
+    antlrcpp::Any visitLValSingle(SysYParserParser::LValSingleContext *ctx) override{
+        Value* get = current.get(ctx->getText());
+        if(get->isPointer()){
+            currentRet = module.addLoadInst(get,"get");
+        }else{
+            currentRet = get;
+        }
+    }
+
+    antlrcpp::Any visitLValArray(SysYParserParser::LValArrayContext *ctx) override{
+        Value* ptr = current.get(ctx->Identifier()->getText());
+        if(ptr->getValueTag()==ValueTag::VT_ARG){
+            visit(ctx->exp(0));
+            ptr = module.addGetElemPtrInst(ptr,currentRet,"ret");
+            for (int i = 1; i < ctx->exp().size(); ++i) {
+                visit(ctx->exp(i));
+                ptr = module.addGetElemPtrInst(ptr,new IntegerConstant(0),currentRet,"ret");
+            }
+        }else{
+            for (int i = 0; i < ctx->exp().size(); ++i) {
+                visit(ctx->exp(i));
+                ptr = module.addGetElemPtrInst(ptr,new IntegerConstant(0),currentRet,"ret");
+            }
+        }
+        if(ptr->getType()->getTypeTag()!=TypeTag::TT_ARRAY){
+            Value * realValue = module.addLoadInst(ptr,"int");
+            currentRet = realValue;
+        }else {
+            currentRet = ptr;
+        }
+    }
+
+    antlrcpp::Any visitStmtAssign(SysYParserParser::StmtAssignContext *ctx) override{
+        auto* lVal = dynamic_cast<SysYParserParser::LValSingleContext*>(ctx->lVal());
+        if(lVal!= nullptr){
+            Value* addr = current.get(lVal->Identifier()->getText());
+            visit(ctx->exp());
+            module.addStoreInst(currentRet,addr);
+        }else{
+            auto* lVal = dynamic_cast<SysYParserParser::LValArrayContext*>(ctx->lVal());
+            Value* ptr = current.get(lVal->Identifier()->getText());
+            if(ptr->getValueTag()==ValueTag::VT_ARG){
+                visit(lVal->exp(0));
+                ptr = module.addGetElemPtrInst(ptr,currentRet,"ret");
+                for (int i = 1; i < lVal->exp().size(); ++i) {
+                    visit(lVal->exp(i));
+                    ptr = module.addGetElemPtrInst(ptr,new IntegerConstant(0),currentRet,"ret");
+                }
+            }else{
+                for (int i = 0; i < lVal->exp().size(); ++i) {
+                    visit(lVal->exp(i));
+                    ptr = module.addGetElemPtrInst(ptr,new IntegerConstant(0),currentRet,"ret");
+                }
+            }
+            visit(ctx->exp());
+            module.addStoreInst(currentRet,ptr);
+        }
+    }
 
 
 
