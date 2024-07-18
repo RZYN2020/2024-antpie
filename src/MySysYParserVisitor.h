@@ -37,6 +37,8 @@ using std::stack;
 
 class MySysYParserVisitor: SysYParserBaseVisitor {
 public:
+    MySysYParserVisitor(VariableTable current);
+
     void setModule(Module m);
     Module module;
     VariableTable current;
@@ -594,6 +596,11 @@ void MySysYParserVisitor::buildVariable(std::string name,Type* type) {
 
 void MySysYParserVisitor::setModule(ANTPIE::Module m) {
     module=m;
+}
+
+MySysYParserVisitor::MySysYParserVisitor(VariableTable current) : current(current) {
+
+
 }
 
 
