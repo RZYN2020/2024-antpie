@@ -1,5 +1,6 @@
-#include "Argument.hh"
-#include "Type.hh"
+#include
+#include "ir/Type.hh"
+#include "ir/Argument.hh"
 
 string Argument::toString() const {
   return "%" + getName();
