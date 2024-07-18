@@ -180,38 +180,59 @@ public:
         VariableTable newScope = VariableTable(current);
         current=newScope;
         vector<Argument*> args= vector<Argument*>();
-        //在函数参数定义范围内
-        for (SysYParserParser::FuncFParamContext* co:ctx->funcFParams()->funcFParam()) {
-            SysYParserParser::FuncFParamSingleContext* st = dynamic_cast<SysYParserParser::FuncFParamSingleContext*>(co);
-            if(st== nullptr){
-                SysYParserParser::FuncFParamArrayContext* ac = dynamic_cast<SysYParserParser::FuncFParamArrayContext*>(co);
-                Type* bt;
-                if(ac->bType()->getText().compare("int")==0){
-                    bt=Type::getInt32Type();
-                }else{
-                    bt=Type::getFloatType();
-                }
-                int dimens =ac->exp().size();
-                for (int i = dimens-1; i >=0 ; i--) {
-                    visit(ac->exp(i));
-                    bt = new ArrayType(stoi(currentRet->toString()),bt);
-                }
-                Type* prt = new PointerType(bt);
-                Argument* argu = new Argument(ac->Identifier()->getText(),prt);
-                args.push_back(argu);
-                current.put(ac->Identifier()->getText(),argu);
-            }else{
-                string nm = st->Identifier()->getText();
-                if(st->bType()->getText().compare("int")==0){
-                    Argument* argu =new Argument(nm,Type::getInt32Type());
+        if(ctx->funcFParams()!=nullptr) {
+            //在函数参数定义范围内
+            for (SysYParserParser::FuncFParamContext *co: ctx->funcFParams()->funcFParam()) {
+                SysYParserParser::FuncFParamSingleContext *st = dynamic_cast<SysYParserParser::FuncFParamSingleContext *>(co);
+                if (st == nullptr) {
+                    SysYParserParser::FuncFParamArrayContext *ac = dynamic_cast<SysYParserParser::FuncFParamArrayContext *>(co);
+                    Type *bt;
+                    if (ac->bType()->getText().compare("int") == 0) {
+                        bt = Type::getInt32Type();
+                    } else {
+                        bt = Type::getFloatType();
+                    }
+                    int dimens = ac->exp().size();
+                    for (int i = dimens - 1; i >= 0; i--) {
+                        visit(ac->exp(i));
+                        bt = new ArrayType(stoi(currentRet->toString()), bt);
+                    }
+                    Type *prt = new PointerType(bt);
+                    Argument *argu = new Argument(ac->Identifier()->getText(), prt);
                     args.push_back(argu);
-                    current.put(nm,argu);
-                }else{
-                    Argument* argu=new Argument(nm,Type::getFloatType());
-                    args.push_back(argu);
-                    current.put(nm,argu);
+                    current.put(ac->Identifier()->getText(), argu);
+                } else {
+                    string nm = st->Identifier()->getText();
+                    if (st->bType()->getText().compare("int") == 0) {
+                        Argument *argu = new Argument(nm, Type::getInt32Type());
+                        args.push_back(argu);
+                        current.put(nm, argu);
+                    } else {
+                        Argument *argu = new Argument(nm, Type::getFloatType());
+                        args.push_back(argu);
+                        current.put(nm, argu);
+                    }
                 }
             }
+        }else{
+            Type * rt;
+            if(ctx->funcType()->getText()=="int"){
+                rt=Type::getInt32Type();
+            }else if(ctx->funcType()->getText()=="float"){
+                rt = Type::getFloatType();
+            }else{
+                rt = Type::getVoidType();
+            }
+            FuncType* funcType = Type::getFuncType(rt);
+            Function* mFunction = module.addFunction(funcType, ctx->Identifier()->getText());
+            currentIn=mFunction;
+            BasicBlock* basicBlock = module.addBasicBlock(mFunction, "entry");
+            module.setCurrBasicBlock(basicBlock);
+            for (SysYParserParser::BlockItemContext *bc:ctx->block()->blockItem()) {
+                visit(bc);
+            }
+            current = current.parent;
+            return nullptr;
         }
         Type * rt;
         if(ctx->funcType()->getText()=="int"){
