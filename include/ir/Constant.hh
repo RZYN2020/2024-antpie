@@ -65,8 +65,10 @@ public:
   ArrayConstant(Type *type) : Constant(true, type, VT_ARRCONST) {
     elems = make_unique<map<int, Constant *>>();
   }
+
   string toString() const override;
   void put(int loc, Constant *v);
+
   Constant *getElemInit(int loc) {
     auto it = elems->find(loc);
     if (it != elems->end()) {
@@ -76,6 +78,7 @@ public:
           static_cast<ArrayType *>(getType())->getElemType());
     }
   }
+
   static ArrayConstant *getConstArray(ArrayType *arrType) {
     return new ArrayConstant(arrType);
   }
