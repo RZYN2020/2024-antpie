@@ -14,9 +14,12 @@
 #include "antlr4-runtime.h"
 #include "cgen.hh"
 
+
 int main() {
 
-  std::ifstream source("./test/test.c");
+  std::ifstream source("./tests/test.c");
+  assert(source);
+
   antlr4::ANTLRInputStream input(source);
 
   SysYParserLexer lexer(&input);
@@ -25,7 +28,14 @@ int main() {
   SysYParserParser parser(&tokens);
 
   auto visitor = new MySysYParserVisitor(variableTable(nullptr));
-  visitor->visitProgram(parser.program());
+
+  auto prgc= parser.program();
+
+  std::cout << "helloccc!\n";
+
+  visitor->visitProgram(prgc);
+
+  std::cout << "hello!\n";
 
   ANTPIE::Module *module = &visitor->module;
   std::ofstream out_ll;

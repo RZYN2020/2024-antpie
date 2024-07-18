@@ -1,5 +1,10 @@
 project(antpie)
 
+find_library(ANTLR4_LIBRARY
+  NAMES antlr4-runtime antlr-runtime
+  PATHS /usr/local/lib
+  REQUIRED)
+
 cmake_minimum_required(VERSION 3.16)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -26,15 +31,10 @@ add_subdirectory(parser)
 add_executable(
         compiler
         src/main.cc
-        src/main.cc
-        src/MySysYParserVisitor.cpp
-        src/MySysYParserVisitor.h
-        src/MySysYParserVisitor.cpp
-        src/MySysYParserVisitor.h
 )
 
 target_link_libraries(
-        compiler
+        compiler PRIVATE
         asm
         cgen
         opt
@@ -42,6 +42,7 @@ target_link_libraries(
         opt
         util
         parser
+        ${ANTLR4_LIBRARY}
 )
 
 install(
