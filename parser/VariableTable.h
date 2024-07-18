@@ -6,6 +6,7 @@
 #define ANTPIE_VARIABLETABLE_H
 #define String std::string
 #define any antlrcpp::Any
+#include "Value.hh"
 #include <map>
 #include <string>
 
