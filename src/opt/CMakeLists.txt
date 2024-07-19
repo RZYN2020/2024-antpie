@@ -13,4 +13,6 @@ add_library(
     GlobalCodeMotion.cc
     LoopInfo.cc
     GlobalValueNumbering.cc
+    LoopUnroll.cc
+    TailRecursionElimination.cc
 )

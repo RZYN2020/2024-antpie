@@ -8,13 +8,14 @@
 #include "Constant.hh"
 
 class GlobalVariable : public GlobalValue {
-private:
+ private:
   Constant *initValue;
 
-public:
+ public:
   // zeroinit
   GlobalVariable(Type *type, string name);
   GlobalVariable(Type *type, Constant *initValue, string name);
+  void setInitValue(Constant *initValue_) { initValue = initValue_; }
   void printIR(ostream &stream) const override;
   string toString() const override { return "@" + getName(); }
   Constant *getInitValue() const { return initValue; }

@@ -28,8 +28,27 @@ bool LoopAnalysis::runOnFunction(Function* func) {
 
     if (!latches.empty()) {
       LoopInfo* loopInfo = new LoopInfo(header);
+      loopInfo->setLatches(latches);
       discoverAndMapSubloop(loopInfo, latches, loopInfoBase, dt, cfg);
       loopInfoBase->addLoopInfo(loopInfo);
+      for (BasicBlock* block : loopInfo->blocks) {
+        Instruction* tailInstr = block->getTailInstr();
+        if (JumpInst* jumpInst = dynamic_cast<JumpInst*>(tailInstr)) {
+          BasicBlock* succBlock = (BasicBlock*)jumpInst->getRValue(0);
+          if (!loopInfo->containBlockInChildren(succBlock)) {
+            loopInfo->addExiting(block);
+            loopInfo->addExit(succBlock);
+          }
+        } else if (BranchInst* branchInst = dynamic_cast<BranchInst*>(tailInstr)) {
+          for (int i = 1; i <= 2; i++) {
+            BasicBlock* succBlock = (BasicBlock*)branchInst->getRValue(i);
+            if (!loopInfo->containBlockInChildren(succBlock)) {
+              loopInfo->addExiting(block);
+              loopInfo->addExit(succBlock);
+            }
+          }
+        }
+      }
     }
   }
   func->setLoopInfoBase(loopInfoBase);

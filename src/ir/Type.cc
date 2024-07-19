@@ -1,5 +1,7 @@
 #include "Type.hh"
 
+#include "Constant.hh"
+
 Int1Type* Type::int1Type = new Int1Type();
 Int32Type* Type::int32Type = new Int32Type();
 FloatType* Type::floatType = new FloatType();
@@ -50,3 +52,11 @@ void FuncType::pushArgument(Argument* arg) {
 }
 
 bool Value::isPointer() { return vType && vType->getTypeTag() == TT_POINTER; }
+
+Constant* Int32Type::getZeroInit() { return IntegerConstant::getConstInt(0); }
+
+Constant* FloatType::getZeroInit() { return FloatConstant::getConstFloat(0); }
+
+Constant* ArrayType::getZeroInit() {
+  return ArrayConstant::getConstArray(this);
+}

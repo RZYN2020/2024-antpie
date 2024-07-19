@@ -4,8 +4,8 @@
  */
 #ifndef _BASIC_BLOCK_H
 #define _BASIC_BLOCK_H
-
 #include "Instruction.hh"
+#include "LabelManager.hh"
 #include "LinkedList.hh"
 #include "Value.hh"
 
@@ -33,6 +33,8 @@ class BasicBlock : public Value {
     return &instructions;
   }
   LinkedList<Instruction*>* getInstructions() { return &instructions; }
+  uint32_t getInstrSize() const { return instructions.getSize(); }
+  Instruction* getInstructionAt(uint32_t idx) { return instructions.at(idx); }
   BasicBlock* clone(unordered_map<Value*, Value*>& replaceMap);
   bool isEmpty() { return empty; }
   BasicBlock* split(LinkedList<Instruction*>::Iterator iter);

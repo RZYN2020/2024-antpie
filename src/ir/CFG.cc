@@ -8,6 +8,12 @@ void CFG::addNode(BasicBlock* bb) {
   blkSuccMap[bb] = new LinkedList<BasicBlock*>();
 }
 void CFG::addEdge(BasicBlock* src, BasicBlock* dest) {
+  if (blkPredMap.find(src) == blkPredMap.end()) {
+    addNode(src);
+  }
+  if (blkPredMap.find(dest) == blkPredMap.end()) {
+    addNode(dest);
+  }
   blkPredMap[dest]->pushBack(src);
   blkSuccMap[src]->pushBack(dest);
 }
@@ -27,8 +33,10 @@ void CFG::eraseNode(BasicBlock* bb) {
 }
 
 void CFG::eraseEdge(BasicBlock* src, BasicBlock* dest) {
-  blkSuccMap[src]->remove(dest);
-  blkPredMap[dest]->remove(src);
+  auto it = blkSuccMap.find(src);
+  if (it != blkSuccMap.end()) it->second->remove(dest);
+  it = blkPredMap.find(dest);
+  if (it != blkPredMap.end()) it->second->remove(src);
 }
 
 // build CFG

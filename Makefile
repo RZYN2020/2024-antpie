@@ -1,5 +1,5 @@
 .IGNORE: llvm-test
-.PHONY: clean all
+.PHONY: clean all 
 
 DEBUG ?= 0
 CMAKE_FLAGS := -DCMAKE_BUILD_TYPE=$(if $(DEBUG),Debug,Release)
@@ -14,7 +14,7 @@ all:
 BIN_DIR = build
 IRFile = tests/test.ll
 run:
-	$(BIN_DIR)/compiler
+	$(BIN_DIR)/compiler tests/test.sy -o tests/test.ll -l
 
 debug:
 	@cmake $(CMAKE_FLAGS) -DCMAKE_CXX_FLAGS="-DDEBUG_MODE" -B build
@@ -59,3 +59,13 @@ gcc-riscv64:
 
 # todo: official docker test
 # https://pan.educg.net/#/s/V2oiq?path=%2F
+
+MODE := LLVM
+test:
+	$(shell [ -d tests/compiler2023 ] || git clone https://gitlab.eduxiji.net/csc1/nscscc/compiler2023.git tests/compiler2023)
+	python3 tests/scripts/test.py $(MODE)
+
+# single-test:
+# 	gdb build/compiler -x init.gdb
+
+	

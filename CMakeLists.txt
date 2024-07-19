@@ -16,6 +16,7 @@ INCLUDE_DIRECTORIES(
     include/cgen
     include/opt
     include/util
+    include/frontend
     include
     parser
     /usr/local/include/antlr4-runtime

@@ -1,14 +1,17 @@
 #ifndef _LINKEDLIST_H_
 #define _LINKEDLIST_H_
 
+#include <assert.h>
+
 #include <memory>
 
 template <typename T>
 struct Node {
   T data;
   Node* next;
+  Node* prev;
 
-  Node(const T& data) : data(data), next(nullptr) {}
+  Node(const T& data) : data(data), next(nullptr), prev(nullptr) {}
 };
 
 template <typename T>
@@ -39,29 +42,33 @@ class LinkedList {
   void pushFront(const T& data) {
     Node<T>* newNode = new Node<T>(data);
     newNode->next = head;
+    if (head != nullptr) {
+      head->prev = newNode;
+    }
     head = newNode;
     if (tail == nullptr) {
       tail = newNode;
     }
     size++;
   }
+
   void pushBack(const T& data) {
     Node<T>* newNode = new Node<T>(data);
+    newNode->prev = tail;
+    if (tail != nullptr) {
+      tail->next = newNode;
+    }
+    tail = newNode;
     if (head == nullptr) {
       head = newNode;
-      tail = newNode;
-    } else {
-      tail->next = newNode;
-      tail = newNode;
     }
     size++;
   }
+
   void remove(const T& data) {
     Node<T>* current = head;
-    Node<T>* previous = nullptr;
 
     while (current != nullptr && current->data != data) {
-      previous = current;
       current = current->next;
     }
 
@@ -69,22 +76,22 @@ class LinkedList {
       return;
     }
 
-    if (previous == nullptr) {
-      head = current->next;
+    if (current->prev != nullptr) {
+      current->prev->next = current->next;
     } else {
-      previous->next = current->next;
+      head = current->next;
     }
 
-    if (current == tail) {
-      tail = previous;
+    if (current->next != nullptr) {
+      current->next->prev = current->prev;
+    } else {
+      tail = current->prev;
     }
 
     delete current;
     size--;
   }
 
-  // it is better not use this function
-  // It's O(n), but popFront() is O(1)
   T popBack() {
     T old = tail->data;
     remove(old);
@@ -116,8 +123,7 @@ class LinkedList {
     size = 0;
   }
 
-  // defin iterator class
-  class Iterator : public std::iterator<std::forward_iterator_tag, T> {
+  class Iterator {
    private:
     Node<T>* current;
 
@@ -131,10 +137,25 @@ class LinkedList {
       return *this;
     }
 
+    Iterator& operator--() {
+      if (current) {
+        current = current->prev;
+      }
+      return *this;
+    }
+
     Iterator operator+(int n) const {
       Iterator temp = *this;
       for (int i = 0; i < n && temp.current; ++i) {
         temp.current = temp.current->next;
+      }
+      return temp;
+    }
+
+    Iterator operator-(int n) const {
+      Iterator temp = *this;
+      for (int i = 0; i < n && temp.current; ++i) {
+        temp.current = temp.current->prev;
       }
       return temp;
     }
@@ -163,36 +184,42 @@ class LinkedList {
     }
 
     Node<T>* newNode = new Node<T>(data);
-    Node<T>* current = head;
-    Node<T>* previous = nullptr;
+    Node<T>* current = it.getCurrentNode();
+    Node<T>* previous = current->prev;
 
-    while (current != nullptr && current != it.getCurrentNode()) {
-      previous = current;
-      current = current->next;
+    if (previous != nullptr) {
+      previous->next = newNode;
     }
-
-    if (current == nullptr) {
-      delete newNode;
-      return;
-    }
-
-    previous->next = newNode;
+    newNode->prev = previous;
     newNode->next = current;
+    current->prev = newNode;
+
+    if (current == head) {
+      head = newNode;
+    }
+
     size++;
   }
-
   void insertBefore(const T& loc, const T& data) {
-    if (head && loc == head->data) {
-      pushFront(data);
+    Node<T>* newNode = new Node<T>(data);
+    Node<T>* current = head;
+
+    if (head == nullptr) {
+      head = newNode;
+      tail = newNode;
+      size++;
       return;
     }
 
-    Node<T>* newNode = new Node<T>(data);
-    Node<T>* current = head;
-    Node<T>* previous = nullptr;
+    if (head->data == loc) {
+      newNode->next = head;
+      head->prev = newNode;
+      head = newNode;
+      size++;
+      return;
+    }
 
     while (current != nullptr && current->data != loc) {
-      previous = current;
       current = current->next;
     }
 
@@ -201,8 +228,11 @@ class LinkedList {
       return;
     }
 
+    Node<T>* previous = current->prev;
     previous->next = newNode;
+    newNode->prev = previous;
     newNode->next = current;
+    current->prev = newNode;
     size++;
   }
 
@@ -213,26 +243,22 @@ class LinkedList {
 
     Node<T>* newNode = new Node<T>(data);
     Node<T>* current = it.getCurrentNode();
+    Node<T>* next = current->next;
+
+    if (next != nullptr) {
+      next->prev = newNode;
+    }
+    newNode->next = next;
+    newNode->prev = current;
+    current->next = newNode;
 
     if (current == tail) {
       tail = newNode;
     }
 
-    newNode->next = current->next;
-    current->next = newNode;
     size++;
   }
 
-  /**
-   * @brief Splits the linked list into two parts after the given iterator
-   * position.
-   *
-   * This function takes an iterator and splits the linked list into two
-   * separate lists. The original list retains the elements from the beginning
-   * up to the given iterator position. The new list (provided by the caller) is
-   * assigned the elements that come after the iterator position.
-   *
-   */
   void splitAfter(const Iterator& it, LinkedList<T>* newList) {
     if (newList == nullptr || it == end() || it.getCurrentNode() == tail) {
       return;
@@ -242,10 +268,12 @@ class LinkedList {
     Node<T>* newHead = current->next;
 
     current->next = nullptr;
+    if (newHead != nullptr) {
+      newHead->prev = nullptr;
+    }
     newList->head = newHead;
     newList->tail = tail;
 
-    // Calculate the size of the new list and update the original list size
     int newSize = 0;
     while (newHead != nullptr) {
       newSize++;
@@ -255,6 +283,24 @@ class LinkedList {
     newList->size = newSize;
     this->size -= newSize;
     this->tail = current;
+  }
+
+  T at(int n) const {
+    assert(n >= 0 && n < size);
+
+    Node<T>* current;
+    if (n < size / 2) {
+      current = head;
+      for (int i = 0; i < n; ++i) {
+        current = current->next;
+      }
+    } else {
+      current = tail;
+      for (int i = size - 1; i > n; --i) {
+        current = current->prev;
+      }
+    }
+    return current->data;
   }
 };
 

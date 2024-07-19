@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 
@@ -14,10 +15,23 @@
 #include "antlr4-runtime.h"
 #include "cgen.hh"
 
+void create_directories_if_not_exists(const std::filesystem::path &file_path);
 
-int main() {
+// With option -l, output is LLVM IR;
+// With option -r, output is RISCV Code.
+int main(int argc, char *argv[]) {
+  if (argc != 5) {
+    std::cerr << "Usage: compiler sourcefile -o outputfile -l/-r" << std::endl;
+    return 1;
+  }
 
-  std::ifstream source("./tests/test.c");
+  std::string sourcefile = argv[1];
+  std::string outputfile = argv[3];
+  enum { LLVM, RISCV } mode = strcmp(argv[4], "-l") == 0 ? LLVM : RISCV;
+
+  create_directories_if_not_exists(outputfile);
+
+  std::ifstream source(sourcefile);
   assert(source);
 
   antlr4::ANTLRInputStream input(source);
@@ -27,31 +41,33 @@ int main() {
 
   SysYParserParser parser(&tokens);
 
-  auto visitor = new MySysYParserVisitor(variableTable(nullptr));
+  auto visitor = new MySysYParserVisitor(new variableTable(nullptr));
 
-  auto prgc= parser.program();
-
-  std::cout << "helloccc!\n";
+  auto prgc = parser.program();
 
   visitor->visitProgram(prgc);
 
-  std::cout << "hello!\n";
-
   ANTPIE::Module *module = &visitor->module;
+
   std::ofstream out_ll;
-  out_ll.open("tests/test.ll");
-  module->printIR(out_ll);
 
-
+  if (mode == LLVM) {
+    out_ll.open(outputfile);
+    module->printIR(out_ll);
+    return 0;
+  }
   module->irOptimize();
-
-  std::ofstream opt_ll;
-  out_ll.open("tests/test.opt.ll");
-  module->printIR(opt_ll);
-
   MModule *mmodule = new MModule();
   generate_code(mmodule, module);
   std::ofstream out_s;
-  out_s.open("tests/test.s");
+  out_s.open(outputfile);
   out_s << *mmodule;
+}
+
+void create_directories_if_not_exists(const std::filesystem::path &file_path) {
+  std::filesystem::path parent_path = file_path.parent_path();
+
+  if (!std::filesystem::exists(parent_path)) {
+    std::filesystem::create_directories(parent_path);
+  }
 }

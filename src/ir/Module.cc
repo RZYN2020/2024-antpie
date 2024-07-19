@@ -9,8 +9,10 @@
 #include "LoopAnalysis.hh"
 #include "LoopInvariantCodeMotion.hh"
 #include "LoopSimplify.hh"
+#include "LoopUnroll.hh"
 #include "MemToReg.hh"
 #include "MergeBlock.hh"
+#include "TailRecursionElimination.hh"
 
 using ANTPIE::Module;
 
@@ -199,6 +201,7 @@ void Module::irOptimize() {
   optimizations.pushBack(new FunctionPropAnalysis());
   // Add function inlining pass
   optimizations.pushBack(new Inlining());
+
   // Add mergeBlock pass
   optimizations.pushBack(new MergeBlock());
   // Add earlyCSE pass
@@ -211,11 +214,17 @@ void Module::irOptimize() {
   optimizations.pushBack(new AliasAnalysis());
   // Add LICM pass
   optimizations.pushBack(new LoopInvariantCodeMotion());
+
   // GVM and GCM need DCE
   // // Add GVM pass
   // optimizations.pushBack(new GlobalValueNumbering());
   // // Add GCM pass
   // optimizations.pushBack(new GlobalCodeMotion());
+  // Add Loop Unroll pass
+  optimizations.pushBack(new LoopUnroll());
+  // Add tail recursion elimination
+  optimizations.pushBack(new TailRecursionElimination());
+  // optimizations.pushBack(new MergeBlock());
 
   // run all pass
   for (auto& pass : optimizations) {

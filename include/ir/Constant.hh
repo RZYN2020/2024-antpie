@@ -13,10 +13,10 @@
 using std::map;
 
 class Constant : public Value {
-private:
+ private:
   bool zeroInit;
 
-public:
+ public:
   Constant(bool zI) : zeroInit(zI), Value(nullptr, VT_CONSTANT) {}
   Constant(bool zI, Type *t, ValueTag vt) : zeroInit(zI), Value(t, vt) {}
   static Constant *getZeroConstant(Type *t);
@@ -28,11 +28,11 @@ public:
 };
 
 class IntegerConstant : public Constant {
-private:
+ private:
   int value = 0;
   static map<int, IntegerConstant *> constBuffer;
 
-public:
+ public:
   IntegerConstant() : Constant(true, Type::getInt32Type(), VT_INTCONST) {}
   IntegerConstant(int v)
       : Constant(false, Type::getInt32Type(), VT_INTCONST), value(v) {}
@@ -43,11 +43,11 @@ public:
 };
 
 class FloatConstant : public Constant {
-private:
+ private:
   float value = 0;
   static map<float, FloatConstant *> constBuffer;
 
-public:
+ public:
   FloatConstant() : Constant(true, Type::getFloatType(), VT_FLOATCONST) {}
   FloatConstant(float v)
       : Constant(false, Type::getFloatType(), VT_FLOATCONST), value(v) {}
@@ -58,26 +58,30 @@ public:
 };
 
 class ArrayConstant : public Constant {
-private:
-  unique_ptr<map<int, Constant *>> elems;
+ private:
+  unique_ptr<map<int, Value *>> elems;
 
-public:
+ public:
   ArrayConstant(Type *type) : Constant(true, type, VT_ARRCONST) {
-    elems = make_unique<map<int, Constant *>>();
+    elems = make_unique<map<int, Value *>>();
   }
 
   string toString() const override;
-  void put(int loc, Constant *v);
+  void put(int loc, Value *v);
 
   Constant *getElemInit(int loc) {
     auto it = elems->find(loc);
     if (it != elems->end()) {
-      return it->second;
+      return (Constant *)it->second;
     } else {
       return Constant::getZeroConstant(
           static_cast<ArrayType *>(getType())->getElemType());
     }
   }
+
+  bool isZeorInit() { return elems->empty(); }
+
+  map<int, Value *> *getElementMap() { return elems.get(); }
 
   static ArrayConstant *getConstArray(ArrayType *arrType) {
     return new ArrayConstant(arrType);

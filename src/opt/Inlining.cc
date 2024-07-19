@@ -26,7 +26,10 @@ bool Inlining::runOnFunction(Function* func) {
 
       CallInst* callInst = dynamic_cast<CallInst*>(instr);
       Function* callee = callInst->getFunction();
-      if (callee == func || !needInline(callee)) continue;
+      if (callee == func || !needInline(callee)) {
+        ++instrIter;
+        continue;
+      }
 
       changed = true;
 

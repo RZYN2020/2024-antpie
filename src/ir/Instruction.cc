@@ -53,9 +53,16 @@ bool BranchInst::replaceDestinationWith(BasicBlock* oldBlock,
   return false;
 }
 
+void Instruction::replaceRValueAt(int idx, Value* newValue) {
+  Use* use = useList->at(idx);
+  use->removeFromValue();
+  use->value = newValue;
+  newValue->addUser(use);
+}
+
 bool JumpInst::replaceDestinationWith(BasicBlock* oldBlock,
                                       BasicBlock* newBlock) {
-  assert(oldBlock == dynamic_cast<BasicBlock*>(getRValue(0)));
+  if (oldBlock != dynamic_cast<BasicBlock*>(getRValue(0))) return false;
   Use* use = useList->at(0);
   use->removeFromValue();
   use->value = newBlock;
@@ -109,10 +116,19 @@ Value* PhiInst::deleteIncomingFrom(BasicBlock* block) {
 }
 
 void Instruction::moveBefore(Instruction* instr) {
-  eraseFromParent();
+  if (getParent()) {
+    eraseFromParent();
+  }
   BasicBlock* destBlock = instr->getParent();
   setParent(destBlock);
   destBlock->getInstructions()->insertBefore(instr, this);
+}
+
+void Instruction::swapRValueAt(int idx1, int idx2) {
+  assert(idx1 < useList->size() && idx2 < useList->size());
+  auto tmp = useList->at(idx1);
+  useList->at(idx1) = useList->at(idx2);
+  useList->at(idx2) = tmp;
 }
 
 /*********************** Constructor ******************************/
@@ -122,18 +138,19 @@ Instruction::Instruction(ValueTag vTag) : Value(Type::getVoidType(), vTag) {
 }
 
 Instruction::Instruction(string name, ValueTag vTag)
-    : Value(Type::getVoidType(), name, vTag) {
+    : Value(Type::getVoidType(), LabelManager::getLabel(name), vTag) {
   useList = make_unique<vector<Use*>>();
 }
 
 Instruction::Instruction(Type* t, string name, ValueTag vTag)
-    : Value(t, name, vTag) {
+    : Value(t, LabelManager::getLabel(name), vTag) {
   useList = make_unique<vector<Use*>>();
 }
 
 AllocaInst::AllocaInst(Type* type, string name)
-    : Instruction(Type::getPointerType(type), name, VT_ALLOCA),
-      elemType(type) {}
+    : Instruction(Type::getPointerType(type), name, VT_ALLOCA), elemType(type) {
+  assert(type);
+}
 
 BinaryOpInst::BinaryOpInst(OpTag opType, Value* op1, Value* op2, string name)
     : Instruction(op1->getType(), name, VT_BOP), bOpType(opType) {

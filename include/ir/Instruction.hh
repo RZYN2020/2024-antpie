@@ -8,6 +8,7 @@
 
 #include <unordered_map>
 
+#include "LabelManager.hh"
 #include "Value.hh"
 using std::unordered_map;
 class BasicBlock;
@@ -55,6 +56,8 @@ class Instruction : public Value {
   void pushValue(Value* v);
   Value* getRValue(int idx) const;
   bool deleteRValueAt(int idx);
+  void swapRValueAt(int idx1, int idx2);
+  void replaceRValueAt(int idx, Value* newValue);
   int getRValueSize() const { return useList->size(); }
   BasicBlock* getParent() { return block; }
   void setParent(BasicBlock* bb) { block = bb; }
@@ -126,6 +129,7 @@ class IcmpInst : public Instruction {
   IcmpInst(OpTag opType, Value* op1, Value* op2, string name);
   void printIR(ostream& stream) const override;
   const OpTag getOpTag() const { return icmpType; }
+  void setOpTag(OpTag opTag) { icmpType = opTag; }
   Instruction* clone() override;
 };
 
@@ -138,6 +142,7 @@ class FcmpInst : public Instruction {
   FcmpInst(OpTag opType, Value* op1, Value* op2, string name);
   void printIR(ostream& stream) const override;
   const OpTag getOpTag() const { return fcmpType; }
+  void setOpTag(OpTag opTag) { fcmpType = opTag; }
   Instruction* clone() override;
 };
 

@@ -48,7 +48,7 @@ string ArrayConstant::toString() const {
     auto loc = elems->find(i);
     Constant* elem;
     if (loc != elems->end()) {
-      elem = loc->second;
+      elem = (Constant*)loc->second;
     } else {
       elem = Constant::getZeroConstant(type);
     }
@@ -63,6 +63,7 @@ string ArrayConstant::toString() const {
   return arrStr;
 }
 
-void ArrayConstant::put(int loc, Constant* v) { 
+void ArrayConstant::put(int loc, Value* v) {
   setZeroInit(false);
-  elems->emplace(loc, v); }
+  elems->emplace(loc, v);
+}

@@ -30,6 +30,7 @@ class FloatType;
 class ArrayType;
 class FuncType;
 class PointerType;
+class Constant;
 
 class Type {
  private:
@@ -53,6 +54,7 @@ class Type {
   static FuncType* getFuncType(Type* retType, vector<Argument*>& args);
   static FuncType* getFuncType(Type* retType);
   TypeTag getTypeTag() const { return tTag; }
+  virtual Constant* getZeroInit() { return nullptr; }
 };
 
 class VoidType : public Type {
@@ -71,12 +73,14 @@ class Int32Type : public Type {
  public:
   string toString() const override;
   Int32Type() : Type(TT_INT32) {}
+  Constant* getZeroInit() override;
 };
 
 class FloatType : public Type {
  public:
   string toString() const override;
   FloatType() : Type(TT_FLOAT) {}
+  Constant* getZeroInit() override;
 };
 
 class ArrayType : public Type {
@@ -89,6 +93,7 @@ class ArrayType : public Type {
   ArrayType(int l, Type* eT) : Type(TT_ARRAY), len(l), elemType(eT) {}
   int getLen() const { return len; }
   Type* getElemType() const { return elemType; }
+  Constant* getZeroInit() override;
 };
 
 class FuncType : public Type {

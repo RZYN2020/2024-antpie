@@ -5,3 +5,5 @@ example
 CMakeFiles
 tests/test.*
 tests/test
+tmp
+tests/compiler2023

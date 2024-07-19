@@ -44,10 +44,10 @@ void BasicBlock::eraseFromParent() {
 }
 
 BasicBlock* BasicBlock::clone(unordered_map<Value*, Value*>& replaceMap) {
-  BasicBlock* newBlock = new BasicBlock(getName() + "_clone");
+  BasicBlock* newBlock = new BasicBlock(LabelManager::getLabel(getName()));
   for (Instruction* instr : instructions) {
     Instruction* newInstr = instr->clone();
-    newInstr->setName(newInstr->getName() + "_clone");
+    newInstr->setName(LabelManager::getLabel(newInstr->getName()));
     newBlock->pushInstr(newInstr);
     replaceMap.emplace(instr, newInstr);
   }
@@ -99,7 +99,7 @@ BasicBlock* BasicBlock::splitBlockPredecessors(vector<BasicBlock*>& preds) {
     PhiInst* phiInstr;
     if (phiInstr = dynamic_cast<PhiInst*>(instr)) {
       PhiInst* newPhi = new PhiInst(phiInstr->getName() + "pre_clone");
-      for (BasicBlock* pred: preds) {
+      for (BasicBlock* pred : preds) {
         Value* fromValue = phiInstr->deleteIncomingFrom(pred);
         newPhi->pushIncoming(fromValue, pred);
       }
