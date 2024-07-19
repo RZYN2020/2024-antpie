@@ -71,6 +71,13 @@ vector<MInstruction *> solveParallelAssignment(vector<MInstruction *> instrs) {
       if (temp_registers.find(reg) != temp_registers.end()) {
         continue;
       }
+      // move to itself is not considered as use, because def would never
+      // confict wich this use.
+      if ((instr->getInsTag() == MInstruction::MV ||
+           instr->getInsTag() == MInstruction::FMV_S) &&
+          instr->getTarget() == reg) {
+        continue;
+      }
       uses.insert(reg);
     }
     if (instr->getTarget() != nullptr) {
