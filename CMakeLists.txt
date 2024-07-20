@@ -27,6 +27,7 @@ add_subdirectory(src/asm)
 add_subdirectory(src/cgen)
 add_subdirectory(src/opt)
 add_subdirectory(src/util)
+add_subdirectory(src/frontend)
 add_subdirectory(parser)
 
 add_executable(
@@ -43,6 +44,7 @@ target_link_libraries(
         opt
         util
         parser
+        frontend
         ${ANTLR4_LIBRARY}
 )
 

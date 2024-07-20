@@ -18,19 +18,20 @@ void BasicBlock::printIR(ostream& stream) const {
 }
 
 bool isTail(Instruction* instr) {
+  if (!instr) return false;
   return instr->getValueTag() == VT_BR || instr->getValueTag() == VT_RET ||
          instr->getValueTag() == VT_JUMP;
 }
 
 void BasicBlock::pushInstr(Instruction* instr) {
-  instr->setParent(this);
-  instructions.pushBack(instr);
+  if (isTail(instructions.back())) {
+    return;
+  }
   if (isTail(instr)) {
-    if (tail) {
-      // std::cout << "Multiple jump instruction in bb";
-    }
     tail = instr;
   }
+  instr->setParent(this);
+  instructions.pushBack(instr);
 }
 
 void BasicBlock::pushInstrAtHead(Instruction* instr) {
