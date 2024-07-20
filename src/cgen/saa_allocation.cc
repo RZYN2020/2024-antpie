@@ -300,7 +300,7 @@ void allocate_register(MModule *mod) {
     // printLivenessInfo(func.get(), liveness_ireg.get(), liveness_freg.get());
 
     // step2. Spill
-    int offset = 0; // from sp, upward->minus
+    int offset = 16; // from fp, upward->minus
     auto spill = make_unique<map<Register *, int>>();
     spill_registers(offset, spill.get(), liveness_ireg.get(),
                     liveness_freg.get());

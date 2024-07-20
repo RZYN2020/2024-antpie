@@ -464,18 +464,27 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           const Type *current_type = gep->getPtrType();
           auto ptrtp = static_cast<const PointerType *>(current_type);
           current_type = ptrtp->getElemType();
-          MInstruction *dest;
+          Register *dest = base;
           for (unsigned i = 1; i < gep->getRValueSize(); i++) {
-            Register *index = GET_VREG(gep->getRValue(i));
+            auto sz =  cal_size(current_type);
 
-            ADD_INSTR(elesz, MIli, cal_size(current_type));
-            ADD_INSTR(offset, MImul, index, elesz);
-            ADD_INSTR(addr, MIadd, base, offset);
-
-            if (i != gep->getRValueSize() - 1) {
+           if (i != gep->getRValueSize() - 1) {
               current_type =
                   static_cast<const ArrayType *>(current_type)->getElemType();
             }
+        
+            auto idx = gep->getRValue(i);
+            if (idx->getValueTag() == VT_INTCONST) {
+              auto v = static_cast<IntegerConstant *>(idx)->getValue();
+              if (v == 0) {
+                continue;
+              } // what if v == 1? ==> optimize it in peephole optimization...
+            } 
+
+            Register *index = GET_VREG(gep->getRValue(i));
+            ADD_INSTR(elesz, MIli, sz);
+            ADD_INSTR(offset, MImul, index, elesz);
+            ADD_INSTR(addr, MIadd, base, offset);
             dest = addr;
           }
           dest->setName(ins->getName());
