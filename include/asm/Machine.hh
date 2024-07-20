@@ -112,6 +112,7 @@ class MModule {
 private:
   unique_ptr<vector<unique_ptr<MGlobal>>> globalVariables;
   unique_ptr<vector<unique_ptr<MFunction>>> functions;
+  unique_ptr<vector<unique_ptr<MFunction>>> externFunctions;
   bool if_ssa = true;
 
 public:
@@ -120,6 +121,7 @@ public:
   bool is_ssa() {return if_ssa;}
   void ssa_out();
   MFunction *addFunction(FuncType *funcType, string name);
+  MFunction *addexternFunction(FuncType *funcType, string name);
   MGlobal *addGlobalVariable(GlobalVariable *global);
   MGlobal *addGlobalFloat(FloatConstant *f);
 

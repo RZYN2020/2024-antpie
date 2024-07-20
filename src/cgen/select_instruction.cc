@@ -198,6 +198,16 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     global_map->insert({g, mg});
   }
 
+
+  // Select Externel Fcuntions
+  auto externFunctions = ir->getexternFunctions();
+  for (auto it = externFunctions->begin(); it != externFunctions->end(); ++it) {
+    auto func = *it;
+    res->addFunction(
+        static_cast<FuncType *>(func->getType()), func->getName());
+  }
+
+
   // Select Functions
   auto functions = ir->getFunctions();
   for (auto it = functions->begin(); it != functions->end(); ++it) {

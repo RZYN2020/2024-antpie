@@ -512,6 +512,7 @@ std::ostream &operator<<(std::ostream &os, const MFunction &obj) {
 MModule::MModule() {
   globalVariables = make_unique<vector<unique_ptr<MGlobal>>>();
   functions = make_unique<vector<unique_ptr<MFunction>>>();
+  externFunctions = make_unique<vector<unique_ptr<MFunction>>>();
 }
 
 void MModule::ssa_out() { this->if_ssa = false; }
@@ -519,6 +520,14 @@ void MModule::ssa_out() { this->if_ssa = false; }
 MFunction *MModule::addFunction(FuncType *funcType, string name) {
   MFunction *func = new MFunction(funcType, name);
   functions->push_back(unique_ptr<MFunction>(func));
+  func->setMod(this);
+  return func;
+}
+
+
+MFunction *MModule::addexternFunction(FuncType *funcType, string name) {
+  MFunction *func = new MFunction(funcType, name);
+  externFunctions->push_back(unique_ptr<MFunction>(func));
   func->setMod(this);
   return func;
 }
@@ -542,6 +551,9 @@ vector<unique_ptr<MGlobal>> &MModule::getGlobals() { return *globalVariables; }
 vector<unique_ptr<MFunction>> &MModule::getFunctions() { return *functions; }
 
 std::ostream &operator<<(std::ostream &os, const MModule &obj) {
+  for (const auto &ef : *obj.externFunctions) {
+    os << ".extern " << ef->getName() << endl;
+  }
   os << ".globl main\n";
   for (const auto &gv : *obj.globalVariables) {
     os << *gv << endl;
