@@ -32,6 +32,10 @@ void Module::pushGlobalVariable(GlobalVariable* globalVariable) {
   globalVariables.pushBack(globalVariable);
 }
 
+void Module::pushExternFunction(Function* function) {
+  externFunctions.insert(function);
+}
+
 Function* Module::addFunction(FuncType* funcType, string name) {
   Function* func = new Function(funcType, name);
   functions.pushBack(func);
@@ -54,6 +58,11 @@ void Module::printIR(ostream& stream) const {
 
   for (const auto f : functions) {
     f->printIR(stream);
+    stream << endl;
+  }
+
+  for (const auto ef : externFunctions) {
+    ef->printIR(stream);
     stream << endl;
   }
 }

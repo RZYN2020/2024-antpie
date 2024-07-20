@@ -12,6 +12,7 @@ namespace ANTPIE {
 class Module {
  private:
   LinkedList<GlobalVariable*> globalVariables;
+  unordered_set<Function*> externFunctions;
   LinkedList<Function*> functions;
   BasicBlock* currBasicBlock;
 
@@ -21,6 +22,7 @@ class Module {
   ~Module();
   void pushFunction(Function* function);
   void pushGlobalVariable(GlobalVariable* globalVariable);
+  void pushExternFunction(Function* function);
   void printIR(ostream& stream) const;
   void setCurrBasicBlock(BasicBlock* bb) { currBasicBlock = bb; }
   void pushInstrution(Instruction* instr) { currBasicBlock->pushInstr(instr); }

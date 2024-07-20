@@ -1,6 +1,7 @@
 #include "LabelManager.hh"
 
 string LabelManager::getLabel(string str) {
+  str = str.substr(0, 10);
   if (str == "") {
     return "r_" + std::to_string(cnt++);
   }

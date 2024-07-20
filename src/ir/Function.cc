@@ -8,6 +8,13 @@ Function::Function(FuncType* fType, string name)
   pushBasicBlock(entry);
 }
 
+Function::Function(FuncType* fType, bool isExt, string name)
+    : GlobalValue(fType, name, VT_FUNC), external(isExt) {
+  if (isExt) return;
+  entry = new BasicBlock(name + "_entry");
+  pushBasicBlock(entry);
+}
+
 Function::~Function() {
   for (const auto& bb : basicBlocks) {
     delete bb;
@@ -30,6 +37,20 @@ void Function::pushBasicBlockAtHead(BasicBlock* bb) {
 
 void Function::printIR(ostream& stream) const {
   FuncType* funcType = dynamic_cast<FuncType*>(getType());
+  // declear external function
+  if (isExtern()) {
+    stream << "declare " << funcType->getRetType()->toString() << " @"
+           << getName() << "(";
+    int argSize = funcType->getArgSize();
+    for (int i = 0; i < argSize; i++) {
+      if (i != 0) {
+        stream << ", ";
+      }
+      stream << funcType->getArgument(i)->getType()->toString() << " ";
+    }
+    stream << ") " << endl;
+    return;
+  }
   stream << "define dso_local " << funcType->getRetType()->toString() << " @"
          << getName() << "(";
   int argSize = funcType->getArgSize();

@@ -1,5 +1,8 @@
 #include "Constant.hh"
 
+#include <bitset>
+#include <iomanip>
+#include <sstream>
 map<int, IntegerConstant*> IntegerConstant::constBuffer;
 map<float, FloatConstant*> FloatConstant::constBuffer;
 
@@ -66,4 +69,13 @@ string ArrayConstant::toString() const {
 void ArrayConstant::put(int loc, Value* v) {
   setZeroInit(false);
   elems->emplace(loc, v);
+}
+
+string FloatConstant::toString() const {
+  double tValue = value;
+  uint64_t bits = *reinterpret_cast<uint64_t*>(&tValue);
+  std::stringstream ss;
+  ss << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(16)
+     << bits;
+  return ss.str();
 }
