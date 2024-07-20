@@ -18,9 +18,9 @@ class BasicBlock : public Value {
 
  public:
   BasicBlock(string name_)
-      : Value(nullptr, name_, VT_BB), tail(nullptr), empty(false) {}
+      : Value(nullptr, LabelManager::getLabel(name_), VT_BB), tail(nullptr), empty(false) {}
   BasicBlock(string name_, bool empty_)
-      : Value(nullptr, name_, VT_BB), tail(nullptr), empty(empty_) {}
+      : Value(nullptr, LabelManager::getLabel(name_), VT_BB), tail(nullptr), empty(empty_) {}
   ~BasicBlock();
   void pushInstr(Instruction* i);
   void pushInstrAtHead(Instruction* i);

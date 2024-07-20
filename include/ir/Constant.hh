@@ -51,10 +51,10 @@ class FloatConstant : public Constant {
   FloatConstant() : Constant(true, Type::getFloatType(), VT_FLOATCONST) {}
   FloatConstant(float v)
       : Constant(false, Type::getFloatType(), VT_FLOATCONST), value(v) {}
-  string toString() const override { return std::to_string(value); }
+  string toString() const override;
   static FloatConstant *getConstFloat(float num);
 
-  int getValue() const { return value; }
+  float getValue() const { return value; }
 };
 
 class ArrayConstant : public Constant {

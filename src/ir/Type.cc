@@ -51,7 +51,14 @@ void FuncType::pushArgument(Argument* arg) {
   arguments->push_back(unique_ptr<Argument>(arg));
 }
 
-bool Value::isPointer() { return vType && vType->getTypeTag() == TT_POINTER; }
+bool Value::isFloat() const { return vType && vType->getTypeTag() == TT_FLOAT; }
+bool Value::isArray() const { return vType && vType->getTypeTag() == TT_ARRAY; }
+bool Value::isInteger() const {
+  return vType && vType->getTypeTag() == TT_INT32;
+}
+bool Value::isPointer() const {
+  return vType && vType->getTypeTag() == TT_POINTER;
+}
 
 Constant* Int32Type::getZeroInit() { return IntegerConstant::getConstInt(0); }
 

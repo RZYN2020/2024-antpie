@@ -13,6 +13,10 @@ all:
 
 BIN_DIR = build
 IRFile = tests/test.ll
+BCFile = $(patsubst %.ll,%.bc,$(IRFile))
+ASMFile = $(patsubst %.ll,%.s,$(IRFile))
+OBJFile = $(patsubst %.ll,%.o,$(IRFile))
+BINFile = $(patsubst %.ll,%,$(IRFile))
 run:
 	$(BIN_DIR)/compiler tests/test.sy -o tests/test.ll -l
 
@@ -24,7 +28,10 @@ debug:
 # Input: llvm ir
 # Output: return value
 llvm-test: run
-	lli $(IRFile); echo $$?
+	llvm-as $(IRFile) -o $(BCFile)
+	llc -relocation-model=pic $(BCFile) -o $(ASMFile)
+	clang -fPIE $(ASMFile) -L tests/ -lsysy -o $(BINFile) 
+	./$(BINFile); echo $$?
 
 EXE := tests/test
 INPUT := tests/test.in
@@ -60,12 +67,14 @@ gcc-riscv64:
 # todo: official docker test
 # https://pan.educg.net/#/s/V2oiq?path=%2F
 
+# Test in LLVM IR form: make test MODE=LLVM
+# Test in RISCV form: make test MODE=RISCV
 MODE := LLVM
 test:
 	$(shell [ -d tests/compiler2023 ] || git clone https://gitlab.eduxiji.net/csc1/nscscc/compiler2023.git tests/compiler2023)
 	python3 tests/scripts/test.py $(MODE)
 
-# single-test:
-# 	gdb build/compiler -x init.gdb
+single-test:
+	gdb build/compiler -x init.gdb
 
 	

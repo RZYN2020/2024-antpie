@@ -72,7 +72,10 @@ class Value {
   Type* getType() const { return vType; }
   virtual string toString() const { return "%" + vName; }
   bool isa(ValueTag vt_) { return vt_ == vTag; }
-  bool isPointer();
+  bool isPointer() const;
+  bool isFloat() const;
+  bool isInteger() const;
+  bool isArray() const;
 
   Use* getUseHead() const { return useHead; }
   void addUser(Use* use) {

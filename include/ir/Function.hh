@@ -20,6 +20,7 @@ class Module;
 
 class Function : public GlobalValue {
  private:
+  bool external = 0;
   // Basic structure
   LinkedList<BasicBlock*> basicBlocks;
   BasicBlock *entry, *exit;
@@ -51,6 +52,7 @@ class Function : public GlobalValue {
 
  public:
   Function(FuncType* fType, string name);
+  Function(FuncType* fType, bool isExt, string name);
   ~Function();
   void pushBasicBlock(BasicBlock* bb);
   void pushBasicBlockAtHead(BasicBlock* bb);
@@ -58,6 +60,7 @@ class Function : public GlobalValue {
   void printIR(ostream& stream) const override;
   void setParent(ANTPIE::Module* module_) { module = module_; }
   ANTPIE::Module* getParent() const { return module; }
+  bool isExtern() const { return external; }
 
   LinkedList<BasicBlock*>* getBasicBlocks() { return &basicBlocks; }
 
