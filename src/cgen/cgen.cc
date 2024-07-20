@@ -10,6 +10,6 @@ void generate_code(MModule *res, ANTPIE::Module *ir) {
   out_s.open("tests/test.phi.s");
   out_s << *res;
 
-  // spill_all_register(res);
-  allocate_register(res);
+  spill_all_register(res);
+  // allocate_register(res);
 }
