@@ -36,23 +36,23 @@ public:
   void pushPhi(MHIphi *phi);
   vector<unique_ptr<MHIphi>> &getPhis();
 
-
   void removeIncoming(MBasicBlock *bb);
-  void addIncoming(MBasicBlock* bb);
-  void replaceOutgoing(MBasicBlock* oldbb, MBasicBlock* newbb);
-  void replacePhiIncoming(MBasicBlock* oldbb, MBasicBlock* newbb);
+  void addIncoming(MBasicBlock *bb);
+  void replaceOutgoing(MBasicBlock *oldbb, MBasicBlock *newbb);
+  void replacePhiIncoming(MBasicBlock *oldbb, MBasicBlock *newbb);
   vector<MBasicBlock *> &getIncomings();
   vector<MBasicBlock *> &getOutgoings();
 
   unique_ptr<MInstruction> removeInstruction(MInstruction *ins);
-  void replaceInstructionWith(MInstruction *ins, vector<MInstruction *> instrs);
+  unique_ptr<MInstruction>
+  replaceInstructionWith(MInstruction *ins, vector<MInstruction *> instrs);
   void insertBeforeInstructionWith(MInstruction *ins,
                                    vector<MInstruction *> instrs);
 
   void insertAfterInstructionWith(MInstruction *ins,
                                   vector<MInstruction *> instrs);
 
-  vector<MInstruction*> getAllInstructions();
+  vector<MInstruction *> getAllInstructions();
   vector<unique_ptr<MInstruction>> &getInstructions();
   vector<unique_ptr<MInstruction>> &getJmps();
 
@@ -73,6 +73,9 @@ public:
 class MModule;
 
 class MFunction {
+public:
+  unique_ptr<vector<unique_ptr<MInstruction>>> reg_pool;
+
 private:
   FuncType *type;
   unique_ptr<vector<unique_ptr<ParaRegister>>> parameters;
@@ -80,10 +83,10 @@ private:
   unique_ptr<vector<unique_ptr<MBasicBlock>>> basicBlocks;
   MBasicBlock *entry;
   MBasicBlock *exit;
-  MModule* mod;
+  MModule *mod;
 
 public:
-  unique_ptr<vector<MBasicBlock*>> domtPreOrder;
+  unique_ptr<vector<MBasicBlock *>> domtPreOrder;
   int stack_offset;
   MFunction(FuncType *fType, string name);
   MBasicBlock *addBasicBlock(string name);
@@ -98,13 +101,13 @@ public:
   MModule *getMod();
 
   ParaRegister *getPara(int idx);
-  uint getParaSize() {return parameters->size();}
+  uint getParaSize() { return parameters->size(); }
   FuncType *getType();
 
   string getName() const;
   vector<unique_ptr<MBasicBlock>> &getBasicBlocks();
 
-  vector<Register*> &getVariables();
+  vector<Register *> &getVariables();
   friend std::ostream &operator<<(std::ostream &os, const MFunction &obj);
 };
 
@@ -118,7 +121,7 @@ private:
 public:
   MModule();
 
-  bool is_ssa() {return if_ssa;}
+  bool is_ssa() { return if_ssa; }
   void ssa_out();
   MFunction *addFunction(FuncType *funcType, string name);
   MFunction *addexternFunction(FuncType *funcType, string name);

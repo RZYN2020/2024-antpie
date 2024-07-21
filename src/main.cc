@@ -59,11 +59,7 @@ int main(int argc, char *argv[]) {
     return 0;
   }
 
-  // std::cout << "....!!!" << endl;
-
   // module->irOptimize();
-
-  // std::cout << "...!!!." << endl;
 
   MModule *mmodule = new MModule();
   generate_code(mmodule, module);

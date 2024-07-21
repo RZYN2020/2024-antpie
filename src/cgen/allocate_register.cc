@@ -249,9 +249,10 @@ void rewrite_program_spill(MFunction *func, map<Register *, int> *spill) {
       auto regs = std::vector<Register *>();
       for (int i = 0; i < ins->getRegNum(); i++) {
         auto reg = ins->getReg(i);
-        // std::cout << "  check reg " << reg->getName() << IS_VIRTUAL_REG(reg) <<endl;
+        // std::cout << "  check reg " << reg->getName() << IS_VIRTUAL_REG(reg)
+        // <<endl;
         if (IS_VIRTUAL_REG(reg) && spill->find(reg) != spill->end()) {
-        // std::cout << "    handle!" << endl;
+          // std::cout << "    handle!" << endl;
           regs.push_back(reg);
         }
       }
@@ -358,7 +359,7 @@ void lower_alloca(MFunction *func, int &stack_offset) {
         stack_offset += sz;
         auto addr =
             new MIaddi(Register::reg_s0, -stack_offset, alloca->getTarget());
-        func->reg_pool->push_back(ins->replaceWith({addr})); 
+        func->reg_pool->push_back(ins->replaceWith({addr}));
       }
     }
   }
@@ -384,8 +385,8 @@ void lower_call(MFunction *func, int &stack_offset,
         } else {
           ins->replaceRegisterWith(Register::reg_a0);
         }
-        func->reg_pool->push_back(ins->replaceWith(call->generateCallSequence(func, stack_offset, spill,
-                                                    allocation, &caller_saved)));
+        func->reg_pool->push_back(ins->replaceWith(call->generateCallSequence(
+            func, stack_offset, spill, allocation, &caller_saved)));
       }
     }
   }
@@ -480,11 +481,12 @@ vector<MInstruction *> MHIcall::generateCallSequence(
       }
       case Reg: {
         auto phyreg = para->getRegister();
+        auto argr = arg.arg.reg;
         if (phyreg->getTag() == Register::F_REGISTER) {
-          assignments.push_back(new MIfmv_s(phyreg, para->getRegister()));
+          assignments.push_back(new MIfmv_s(argr, phyreg));
         } else {
           assert(phyreg->getTag() == Register::V_IREGISTER);
-          assignments.push_back(new MImv(phyreg, para->getRegister()));
+          assignments.push_back(new MImv(argr, phyreg));
         }
       }
       }
@@ -563,12 +565,17 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
     auto para = func->getPara(i);
     if (spill->find(para) != spill->end()) {
       auto addr = spill->at(para);
-      if (para->getTag() == Register::V_FREGISTER) {
-        assignments.push_back(new MIfsw(para, -addr, Register::reg_s0));
-      } else if (para->isPointer()) {
-        assignments.push_back(new MIsd(para, -addr, Register::reg_s0));
-      } else {
-        assignments.push_back(new MIsw(para, -addr, Register::reg_s0));
+      if (para->getRegister() != nullptr) {
+        if (para->getTag() == Register::V_FREGISTER) {
+          assignments.push_back(
+              new MIfsw(para->getRegister(), -addr, Register::reg_s0));
+        } else if (para->isPointer()) {
+          assignments.push_back(
+              new MIsd(para->getRegister(), -addr, Register::reg_s0));
+        } else {
+          assignments.push_back(
+              new MIsw(para->getRegister(), -addr, Register::reg_s0));
+        }
       }
     } else {
       auto phyreg = allocation->at(para);

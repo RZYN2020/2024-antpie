@@ -139,7 +139,7 @@ public:
 
   void replaceIRRegister(map<Instruction *, Register *> instr_map);
   void replaceRegister(Register *oldReg, Register *newReg);
-  void replaceWith(vector<MInstruction *> instrs);
+  unique_ptr<MInstruction> replaceWith(vector<MInstruction *> instrs);
   void insertBefore(vector<MInstruction *> instrs);
   void insertAfter(vector<MInstruction *> instrs);
 

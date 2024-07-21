@@ -110,6 +110,7 @@ public:
   void replaceRegisterWith(Register *newReg);
   vector<MInstruction *> &getUses();
   void clearUses();
+  virtual ~Register() {};
 };
 
 class IRRegister : public Register {
