@@ -251,16 +251,20 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     }
     mfunc->setEntry(bb_map->at(func->getEntry()));
 
-    auto domt = func->getDT();
-    auto pr = domt->postOrder();
-    auto mdompr = new vector<MBasicBlock *>();
-    for (auto bb : *pr) {
-      if (bb->isEmpty())
-        continue;
-      mdompr->push_back(bb_map->at(bb));
-    }
-    std::reverse(mdompr->begin(), mdompr->end());
-    mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock *>>(mdompr);
+    // if (func->getDT() == nullptr) {
+    //   func->buildCFG();
+    //   func->buildDT();
+    // }
+    // auto domt = func->getDT();
+    // auto pr = domt->postOrder();
+    // auto mdompr = new vector<MBasicBlock *>();
+    // for (auto bb : *pr) {
+    //   if (bb->isEmpty())
+    //     continue;
+    //   mdompr->push_back(bb_map->at(bb));
+    // }
+    // std::reverse(mdompr->begin(), mdompr->end());
+    // mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock *>>(mdompr);
 
     // Select every Instruction
     for (auto it = basicBlocks->begin(); it != basicBlocks->end();
@@ -364,11 +368,11 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           case TT_INT1:
           case TT_INT32:
           case TT_POINTER: {
-            retTag = Register::RegTag::I_REGISTER;
+            retTag = Register::RegTag::V_IREGISTER;
             break;
           }
           case TT_FLOAT: {
-            retTag = Register::RegTag::I_REGISTER;
+            retTag = Register::RegTag::V_FREGISTER;
             break;
           }
           default:

@@ -64,8 +64,8 @@ void MInstruction::replaceRegister(Register *oldReg, Register *newReg) {
   newReg->addUse(this);
 }
 
-void MInstruction::replaceWith(vector<MInstruction *> instrs) {
-  bb->replaceInstructionWith(this, instrs);
+unique_ptr<MInstruction> MInstruction::replaceWith(vector<MInstruction *> instrs) {
+  return  bb->replaceInstructionWith(this, instrs);
 }
 
 void MInstruction::insertBefore(vector<MInstruction *> instrs) {

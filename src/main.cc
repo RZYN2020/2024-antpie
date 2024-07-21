@@ -50,18 +50,28 @@ int main(int argc, char *argv[]) {
   ANTPIE::Module *module = &visitor->module;
 
   std::ofstream out_ll;
+  out_ll.open("tests/test.ll");
+  module->printIR(out_ll);
 
   if (mode == LLVM) {
     out_ll.open(outputfile);
     module->printIR(out_ll);
     return 0;
   }
-  module->irOptimize();
+
+  // std::cout << "....!!!" << endl;
+
+  // module->irOptimize();
+
+  // std::cout << "...!!!." << endl;
+
   MModule *mmodule = new MModule();
   generate_code(mmodule, module);
   std::ofstream out_s;
   out_s.open(outputfile);
   out_s << *mmodule;
+
+  delete visitor;
 }
 
 void create_directories_if_not_exists(const std::filesystem::path &file_path) {
