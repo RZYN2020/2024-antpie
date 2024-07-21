@@ -64,8 +64,9 @@ void MInstruction::replaceRegister(Register *oldReg, Register *newReg) {
   newReg->addUse(this);
 }
 
-unique_ptr<MInstruction> MInstruction::replaceWith(vector<MInstruction *> instrs) {
-  return  bb->replaceInstructionWith(this, instrs);
+unique_ptr<MInstruction>
+MInstruction::replaceWith(vector<MInstruction *> instrs) {
+  return bb->replaceInstructionWith(this, instrs);
 }
 
 void MInstruction::insertBefore(vector<MInstruction *> instrs) {
@@ -499,6 +500,7 @@ IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, V_IREGISTER, sltiu, false)
                                                                                \
   ostream &MI##NAME::printASM(ostream &os) {                                   \
     if (this->global) {                                                        \
+      assert(0);                                                               \
       return os << #NAME << " " << this->getTarget()->getName() << +", "       \
                 << this->global->getName();                                    \
     } else {                                                                   \
@@ -530,6 +532,7 @@ IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, V_IREGISTER, sltiu, false)
                                                                                \
   ostream &MI##NAME::printASM(ostream &os) {                                   \
     if (this->global) {                                                        \
+      assert(0);                                                               \
       return os << #NAME << " " << this->getReg(0)->getName() << ", "          \
                 << this->global->getName();                                    \
     } else {                                                                   \

@@ -56,6 +56,7 @@ static void lower_call_spill_only(MFunction *func, map<Register *, int> *spill,
     }
     for (auto ins : instrs) {
       if (ins->getInsTag() == MInstruction::H_CALL) {
+        // std::cout << "spill " << *ins << endl;
         auto call = static_cast<MHIcall *>(ins);
         func->reg_pool->push_back(ins->replaceWith(call->generateCallSequence(
             func, stack_offset, spill, &allocation, &caller_saved)));

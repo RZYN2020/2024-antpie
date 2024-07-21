@@ -29,3 +29,4 @@ void peephole_optimize(MModule *mod) {
       }
     }
   }
+}

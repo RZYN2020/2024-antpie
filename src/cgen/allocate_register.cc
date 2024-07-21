@@ -57,6 +57,8 @@ vector<MInstruction *> solveParallelAssignment(vector<MInstruction *> instrs) {
   // ignore t0, t1, t2, ft0, ft1, ft2
   // store the registers used which could be write latter to stack
   // and then load from stack when using this register...
+
+  // std::cout << "solveParallelAssignment" << endl;
   static set<Register *> temp_registers = {
       Register::reg_t0,  Register::reg_t1,  Register::reg_t2,
       Register::reg_ft0, Register::reg_ft1, Register::reg_ft2,
@@ -398,7 +400,7 @@ void lower_call(MFunction *func, int &stack_offset,
 vector<MInstruction *> MHIcall::generateCallSequence(
     MFunction *func, int stack_offset, map<Register *, int> *spill,
     map<Register *, Register *> *allocation, set<Register *> *caller_saved) {
-  // std::cout << "gen call seq save" << endl;
+  // std::cout << "gen call seq save  " << *this << endl;
   vector<MInstruction *> push_callee_saved;
   vector<MInstruction *> pop_callee_saved;
   int stack_inc_sz = 0;
@@ -428,7 +430,7 @@ vector<MInstruction *> MHIcall::generateCallSequence(
           new MIlw(Register::reg_sp, -stack_inc_sz, reg));
     }
   }
-  // std::cout << "gen call seq pare" << endl;
+  // std::cout << "gen call seq para" << endl;
   vector<MInstruction *> res;
   for (int i = 0; i < function->getParaSize(); i++) {
     auto funp = function->getPara(i);
@@ -441,10 +443,12 @@ vector<MInstruction *> MHIcall::generateCallSequence(
   int shift = new_stack_pos - stack_offset;
   res.push_back(new MIaddi(Register::reg_sp, -shift, Register::reg_sp));
 
+  // std::cout << "gen call assignments" << endl;
   vector<MInstruction *> assignments;
   for (int i = 0; i < function->getParaSize(); i++) {
     auto para = function->getPara(i);
     auto arg = args->at(i);
+    // std::cout << "  para " << para->getName() << endl;
     if (para->getRegister() == nullptr) {
       switch (arg.tp) {
       case MIOprandTp::Float: {
@@ -452,11 +456,15 @@ vector<MInstruction *> MHIcall::generateCallSequence(
         res.push_back(new MIflw(g, Register::reg_ft0));
         res.push_back(
             new MIfsw(Register::reg_ft0, para->getOffset(), Register::reg_sp));
+        break;
+
       }
       case MIOprandTp::Int: {
         res.push_back(new MIli(arg.arg.i, Register::reg_t0));
         res.push_back(
             new MIsw(Register::reg_t0, para->getOffset(), Register::reg_sp));
+        break;
+
       }
       case MIOprandTp::Reg: {
         auto reg = static_cast<VRegister *>(arg.arg.reg);
@@ -472,6 +480,7 @@ vector<MInstruction *> MHIcall::generateCallSequence(
           assignments.push_back(
               new MIsw(reg, para->getOffset(), Register::reg_sp));
         }
+        break;
       }
       }
     } else {
@@ -479,9 +488,11 @@ vector<MInstruction *> MHIcall::generateCallSequence(
       case Float: {
         auto g = func->getMod()->addGlobalFloat(new FloatConstant(arg.arg.f));
         assignments.push_back(new MIflw(g, para->getRegister()));
+        break;
       }
       case Int: {
         assignments.push_back(new MIli(arg.arg.i, para->getRegister()));
+        break;
       }
       case Reg: {
         auto phyreg = para->getRegister();
@@ -489,13 +500,16 @@ vector<MInstruction *> MHIcall::generateCallSequence(
         if (phyreg->getTag() == Register::F_REGISTER) {
           assignments.push_back(new MIfmv_s(argr, phyreg));
         } else {
-          assert(phyreg->getTag() == Register::V_IREGISTER);
+          assert(phyreg->getTag() == Register::I_REGISTER);
+          auto argi =static_cast<MInstruction*>(argr);
           assignments.push_back(new MImv(argr, phyreg));
         }
+        break;
       }
       }
     }
   }
+  // std::cout << "rearranged_assignments" << endl;
   auto rearranged_assignments = solveParallelAssignment(assignments);
   for (auto assign : rearranged_assignments) {
     res.push_back(assign);

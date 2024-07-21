@@ -1005,6 +1005,12 @@ void MySysYParserVisitor::init_extern_function() {
 
   vector<Function*> externFunctions;
 
+  // int memset()
+  vector<Argument*> memsetArgs = {new Argument("p", intPtrType), new Argument("val", i32Type), new Argument("cnt", i32Type)};
+  funcType = Type::getFuncType(voidType, memsetArgs);
+  function = new Function(funcType, true, "memset");
+  externFunctions.push_back(function);
+
   // int getint()
   funcType = Type::getFuncType(i32Type);
   function = new Function(funcType, true, "getint");
