@@ -22,7 +22,8 @@ run:
 
 runs:
 	$(BIN_DIR)/compiler tests/test.sy -o tests/test.s -r
-	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.o tests/test.s
+	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
+	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
 	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
 
 debug:

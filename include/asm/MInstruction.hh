@@ -115,6 +115,7 @@ public:
     J,
     RET,
     LI,
+    LA,
     MV,
     FMV_S,
   };
@@ -400,6 +401,18 @@ public:
   MIli(int32_t imm);
   MIli(int32_t imm, string name);
   MIli(int32_t imm, Register *target);
+  ostream &printASM(ostream &stream) override;
+};
+
+
+class MIla : public MInstruction { // presudo
+private:
+  MGlobal* g;
+
+public:
+  MIla(MGlobal* g);
+  MIla(MGlobal* g, string name);
+  MIla(MGlobal* g, Register *target);
   ostream &printASM(ostream &stream) override;
 };
 
