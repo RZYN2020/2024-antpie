@@ -85,7 +85,11 @@ void lowerHIicmp(MFunction *mfunc) {
 
   // 2.2 lowering
   for (auto &mbb : mfunc->getBasicBlocks()) {
+    vector<MInstruction *> instrs;
     for (auto &ins : mbb->getInstructions()) {
+      instrs.push_back(&*ins);
+    }
+    for (auto ins : instrs) {
       if (ins->getInsTag() == MInstruction::H_ICMP) {
         auto icmp = static_cast<MHIicmp *>(&*ins);
         auto opd1 = icmp->getReg(0);
