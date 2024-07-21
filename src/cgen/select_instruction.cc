@@ -404,15 +404,15 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
         }
         case VT_LOAD: {
           LoadInst *load = static_cast<LoadInst *>(ins);
-          auto tp = load->getType();
+          auto tp = load->getType()->getTypeTag();
           auto addr = load->getRValue(0);
           if (addr->getValueTag() == VT_GLOBALVAR) {
             auto g = global_map->at(static_cast<GlobalVariable *>(addr));
-            if (tp == Type::getFloatType()) {
+            if (tp == TT_FLOAT) {
               ADD_INSTR(mload, MIflw, g, ins->getName());
               instr_map->insert({ins, mload});
-            } else if (tp == Type::getInt32Type() ||
-                       tp == Type::getInt1Type()) {
+            } else if (tp == TT_INT32 ||
+                       tp == TT_INT1) {
               ADD_INSTR(mload, MIlw, g, ins->getName());
               instr_map->insert({ins, mload});
             } else {
@@ -422,11 +422,11 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
             }
           } else {
             auto a = GET_VREG(addr);
-            if (tp == Type::getFloatType()) {
+            if (tp == TT_FLOAT) {
               ADD_INSTR(mload, MIflw, a, 0, ins->getName());
               instr_map->insert({ins, mload});
-            } else if (tp == Type::getInt32Type() ||
-                       tp == Type::getInt1Type()) {
+            } else if (tp == TT_INT32 ||
+                       tp == TT_INT1) {
               ADD_INSTR(mload, MIlw, a, 0, ins->getName());
               instr_map->insert({ins, mload});
             } else {
@@ -441,25 +441,28 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           StoreInst *store = static_cast<StoreInst *>(ins);
           auto value = store->getRValue(0);
           auto addr = store->getRValue(1);
+          auto tp = value->getType()->getTypeTag();
           auto v = GET_VREG(value);
           if (addr->getValueTag() == VT_GLOBALVAR) {
             auto g = global_map->at(static_cast<GlobalVariable *>(addr));
-            if (value->getType() == Type::getFloatType()) {
+            if (tp == TT_FLOAT) {
               ADD_INSTR(_, MIfsw, v, g);
-            } else if (value->getType() == Type::getInt32Type() ||
-                       value->getType() == Type::getInt1Type()) {
+            } else if (tp == TT_INT32 ||
+                       tp == TT_INT1) {
               ADD_INSTR(_, MIsw, v, g);
             } else {
+              assert(0);
               ADD_INSTR(_, MIsd, v, g);
             }
           } else {
             auto a = GET_VREG(addr);
-            if (value->getType() == Type::getFloatType()) {
+            if (tp == TT_FLOAT) {
               ADD_INSTR(_, MIfsw, v, 0, a);
-            } else if (value->getType() == Type::getInt32Type() ||
-                       value->getType() == Type::getInt1Type()) {
+            } else if (tp == TT_INT32 ||
+                       tp == TT_INT1) {
               ADD_INSTR(_, MIsw, v, 0, a);
             } else {
+              assert(0);
               ADD_INSTR(_, MIsd, v, 0, a);
             }
           }

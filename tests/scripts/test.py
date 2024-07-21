@@ -59,7 +59,6 @@ def compare_file_to_string(file_path, actual_output):
                     flag = False
                     print(f"Line {j + 1}: Actual output has more lines than file.")
                     print(f"Actual:   {actual_lines[j]}")
-            print()
                     
     except FileNotFoundError:
         print(f"File not found: {file_path}")
@@ -155,11 +154,13 @@ def run_all_test(sorted_files, test_fun):
     success = 0
     fail = 0
     for sy_file, out_file, in_file in sorted_files:
-        print("Running test: " + sy_file)
+        print("Running test: " + sy_file, end=" ")
         if test_fun(sy_file, out_file, in_file):
             success += 1
+            print("\033[32mPASSED\033[0m\n")
         else:
             fail += 1
+            print("\033[31mFAILED\033[0m\n")
     print_result(success, fail)
     
 
