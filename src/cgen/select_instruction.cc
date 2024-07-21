@@ -217,7 +217,9 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
   auto externFunctions = ir->getexternFunctions();
   for (auto it = externFunctions->begin(); it != externFunctions->end(); ++it) {
     auto func = *it;
-    res->addFunction(static_cast<FuncType *>(func->getType()), func->getName());
+    MFunction *mfunc = res->addexternFunction(
+        static_cast<FuncType *>(func->getType()), func->getName());
+    func_map->insert({func, mfunc});
   }
 
   // Select Functions

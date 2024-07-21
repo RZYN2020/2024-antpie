@@ -352,9 +352,13 @@ void rewrite_program_allocate(MFunction *func,
 
 void lower_alloca(MFunction *func, int &stack_offset) {
   for (auto &bb : func->getBasicBlocks()) {
+    vector<MInstruction *> instrs;
     for (auto &ins : bb->getInstructions()) {
+      instrs.push_back(&*ins);
+    }
+    for (auto ins : instrs) {
       if (ins->getInsTag() == MInstruction::H_ALLOCA) {
-        auto alloca = static_cast<MHIalloca *>(ins.get());
+        auto alloca = static_cast<MHIalloca *>(ins);
         auto sz = alloca->getSize();
         stack_offset += sz;
         auto addr =
