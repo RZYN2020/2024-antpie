@@ -370,18 +370,29 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           case TT_INT1:
           case TT_INT32:
           case TT_POINTER: {
-            retTag = Register::RegTag::V_IREGISTER;
+            retTag = Register::V_IREGISTER;
             break;
           }
           case TT_FLOAT: {
-            retTag = Register::RegTag::V_FREGISTER;
+            retTag = Register::V_FREGISTER;
             break;
           }
-          default:
-            assert(0);
+          default: {
+            assert(call->getType()->getTypeTag() == TT_VOID);
+            retTag = Register::NONE;
+            break;
+          }
           }
           auto callee = func_map->at(call->getFunction());
-          ADD_INSTR(mcall, MHIcall, callee, call->getName(), retTag);
+          MHIcall *mcall;
+          if (retTag == Register::NONE) {
+            ADD_INSTR(c, MHIcall, callee, retTag);
+            mcall = c;
+          } else {
+            ADD_INSTR(c, MHIcall, callee, call->getName(), retTag);
+            mcall = c;
+            instr_map->insert({ins, mcall});
+          }
           for (int i = 0; i < call->getRValueSize(); i++) {
             auto arg = call->getRValue(i);
             if (arg->getValueTag() == VT_FLOATCONST) {
@@ -391,10 +402,10 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
               auto i = static_cast<IntegerConstant *>(arg)->getValue();
               mcall->pushArg(i);
             } else {
-              mcall->pushArg(GET_VREG(arg));
+              auto argr = GET_VREG(arg);
+              mcall->pushArg(argr);
             }
           }
-          instr_map->insert({ins, mcall});
           break;
         }
         case VT_FPTOSI: {
