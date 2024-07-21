@@ -196,7 +196,7 @@ Register *get_vreg(MModule *m, MBasicBlock *mbb, Value *v,
 }
 
 void select_instruction(MModule *res, ANTPIE::Module *ir) {
-
+  // std::cout << "select_instruction" << endl;
   // assert ir: every block begin with phi, end with j
 
   auto instr_map = make_unique<map<Instruction *, Register *>>();
@@ -204,6 +204,7 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
   auto global_map = make_unique<map<GlobalVariable *, MGlobal *>>();
 
   // Select Global Variables
+  // std::cout << "Select Global Variables" << endl;
   auto globalVars = ir->getGlobalVariables();
   for (auto it = globalVars->begin(); it != globalVars->end(); ++it) {
     auto g = *it;
@@ -212,6 +213,7 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
   }
 
   // Select Externel Fcuntions
+  // std::cout << "Select Externel Fcuntions" << endl;
   auto externFunctions = ir->getexternFunctions();
   for (auto it = externFunctions->begin(); it != externFunctions->end(); ++it) {
     auto func = *it;
@@ -219,6 +221,7 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
   }
 
   // Select Functions
+  // std::cout << "Select Functions" << endl;
   auto functions = ir->getFunctions();
   for (auto it = functions->begin(); it != functions->end(); ++it) {
     auto func = *it;
@@ -230,11 +233,13 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
   for (auto it = functions->begin(); it != functions->end();
        ++it) { // Begin Func Loop
     auto func = *it;
+    // std::cout << "Function " << func->getName() << endl;
     MFunction *mfunc = func_map->at(func);
     auto bb_map = make_unique<map<BasicBlock *, MBasicBlock *>>();
     auto instr_map = make_unique<map<Instruction *, Register *>>();
 
     // Select BBs
+    // std::cout << "  Select BBs " << endl;
     auto basicBlocks = func->getBasicBlocks();
     for (auto it = basicBlocks->begin(); it != basicBlocks->end(); ++it) {
       auto bb = *it;
@@ -451,26 +456,14 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           auto addr = store->getRValue(1);
           auto tp = value->getType()->getTypeTag();
           auto v = GET_VREG(value);
-          if (addr->getValueTag() == VT_GLOBALVAR) {
-            auto g = global_map->at(static_cast<GlobalVariable *>(addr));
-            if (tp == TT_FLOAT) {
-              ADD_INSTR(_, MIfsw, v, g);
-            } else if (tp == TT_INT32 || tp == TT_INT1) {
-              ADD_INSTR(_, MIsw, v, g);
-            } else {
-              assert(0);
-              ADD_INSTR(_, MIsd, v, g);
-            }
+          auto a = GET_VREG(addr);
+          if (tp == TT_FLOAT) {
+            ADD_INSTR(_, MIfsw, v, 0, a);
+          } else if (tp == TT_INT32 || tp == TT_INT1) {
+            ADD_INSTR(_, MIsw, v, 0, a);
           } else {
-            auto a = GET_VREG(addr);
-            if (tp == TT_FLOAT) {
-              ADD_INSTR(_, MIfsw, v, 0, a);
-            } else if (tp == TT_INT32 || tp == TT_INT1) {
-              ADD_INSTR(_, MIsw, v, 0, a);
-            } else {
-              assert(0);
-              ADD_INSTR(_, MIsd, v, 0, a);
-            }
+            assert(0);
+            ADD_INSTR(_, MIsd, v, 0, a);
           }
           break;
         }

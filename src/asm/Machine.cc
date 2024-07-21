@@ -554,10 +554,12 @@ std::ostream &operator<<(std::ostream &os, const MModule &obj) {
   for (const auto &ef : *obj.externFunctions) {
     os << ".extern " << ef->getName() << endl;
   }
-  os << ".globl main\n";
+
+  os <<".section .data\n";
   for (const auto &gv : *obj.globalVariables) {
     os << *gv << endl;
   }
+  os <<".text\n"  << ".globl main\n";
   for (const auto &f : *obj.functions) {
     os << *f << endl;
   }

@@ -511,6 +511,7 @@ IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, V_IREGISTER, sltiu, false)
 #define IMPLEMENT_MI_STORE_CLASS(NAME, INS_TAG)                                \
   MI##NAME::MI##NAME(Register *val, MGlobal *global)                           \
       : MInstruction(MInstruction::INS_TAG, RegTag::NONE) {                    \
+    assert(0);                                                                 \
     this->pushReg(val);                                                        \
     this->global = global;                                                     \
   }                                                                            \
@@ -522,7 +523,10 @@ IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, V_IREGISTER, sltiu, false)
     imm = offset;                                                              \
   }                                                                            \
                                                                                \
-  MGlobal *MI##NAME::getGlobal() { return this->global; }                      \
+  MGlobal *MI##NAME::getGlobal() {                                             \
+    assert(0);                                                                 \
+    return this->global;                                                       \
+  }                                                                            \
                                                                                \
   ostream &MI##NAME::printASM(ostream &os) {                                   \
     if (this->global) {                                                        \
@@ -632,20 +636,20 @@ ostream &MIli::printASM(ostream &os) {
             << this->getTarget()->getName() + ", " + std::to_string(imm);
 }
 
-
 // MIla
-MIla::MIla(MGlobal* g) : MInstruction(MInstruction::LA, RegTag::V_IREGISTER, true) {
+MIla::MIla(MGlobal *g)
+    : MInstruction(MInstruction::LA, RegTag::V_IREGISTER, true) {
   this->g = g;
   this->setTarget(this);
 }
 
-MIla::MIla(MGlobal* g, string name)
+MIla::MIla(MGlobal *g, string name)
     : MInstruction(MInstruction::LA, RegTag::V_IREGISTER, name, true) {
   this->g = g;
   this->setTarget(this);
 }
 
-MIla::MIla(MGlobal* g, Register *target)
+MIla::MIla(MGlobal *g, Register *target)
     : MInstruction(MInstruction::LA, RegTag::V_IREGISTER, true) {
   this->g = g;
   this->setTarget(target);

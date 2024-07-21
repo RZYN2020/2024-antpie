@@ -26,6 +26,11 @@ runs:
 	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
 	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
 
+gcc-riscv:
+	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
+	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
+	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
+
 debug:
 	@cmake $(CMAKE_FLAGS) -DCMAKE_CXX_FLAGS="-DDEBUG_MODE" -B build
 	@cmake --build build
