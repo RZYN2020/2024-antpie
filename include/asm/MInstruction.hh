@@ -115,6 +115,7 @@ public:
     J,
     RET,
     LI,
+    LA,
     MV,
     FMV_S,
   };
@@ -138,7 +139,7 @@ public:
 
   void replaceIRRegister(map<Instruction *, Register *> instr_map);
   void replaceRegister(Register *oldReg, Register *newReg);
-  void replaceWith(vector<MInstruction *> instrs);
+  unique_ptr<MInstruction> replaceWith(vector<MInstruction *> instrs);
   void insertBefore(vector<MInstruction *> instrs);
   void insertAfter(vector<MInstruction *> instrs);
 
@@ -400,6 +401,18 @@ public:
   MIli(int32_t imm);
   MIli(int32_t imm, string name);
   MIli(int32_t imm, Register *target);
+  ostream &printASM(ostream &stream) override;
+};
+
+
+class MIla : public MInstruction { // presudo
+private:
+  MGlobal* g;
+
+public:
+  MIla(MGlobal* g);
+  MIla(MGlobal* g, string name);
+  MIla(MGlobal* g, Register *target);
   ostream &printASM(ostream &stream) override;
 };
 

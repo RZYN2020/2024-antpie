@@ -1,14 +1,16 @@
 .IGNORE: llvm-test
 .PHONY: clean all 
 
-DEBUG ?= 0
-CMAKE_FLAGS := -DCMAKE_BUILD_TYPE=$(if $(DEBUG),Debug,Release)
 ANTLR_PATH = $(shell find /usr/local/lib -name "antlr-*-complete.jar")
 ANTLR = java -jar $(ANTLR_PATH) -listener -visitor -long-messages
 PFILE = $(shell find . -name "SysYParser.g4")
 
 all:
-	@cmake $(CMAKE_FLAGS) -B build
+	cmake -DCMAKE_BUILD_TYPE=Release -B build
+	cmake --build build
+
+debug:
+	@cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_FLAGS="-DDEBUG_MODE" -B build
 	@cmake --build build
 
 BIN_DIR = build
@@ -22,12 +24,15 @@ run:
 
 runs:
 	$(BIN_DIR)/compiler tests/test.sy -o tests/test.s -r
-	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.o tests/test.s
+	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
+	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
 	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
 
-debug:
-	@cmake $(CMAKE_FLAGS) -DCMAKE_CXX_FLAGS="-DDEBUG_MODE" -B build
-	@cmake --build build
+gcc-riscv:
+	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
+	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
+	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
+
 
 # Test llvm
 # Input: llvm ir

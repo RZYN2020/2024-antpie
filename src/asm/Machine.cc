@@ -214,12 +214,14 @@ unique_ptr<MInstruction> MBasicBlock::removeInstruction(MInstruction *ins) {
   return nullptr;
 }
 
-void MBasicBlock::replaceInstructionWith(MInstruction *ins,
-                                         vector<MInstruction *> instrs) {
+unique_ptr<MInstruction>
+MBasicBlock::replaceInstructionWith(MInstruction *ins,
+                                    vector<MInstruction *> instrs) {
 
   for (auto it = jmps->begin(); it != jmps->end(); ++it) {
     if (it->get() == ins) {
       ins->setBasicBlock(nullptr);
+      unique_ptr<MInstruction> removed = std::move(*it);
       jmps->erase(it);
 
       for (auto new_ins : instrs) {
@@ -227,23 +229,26 @@ void MBasicBlock::replaceInstructionWith(MInstruction *ins,
         new_ins->setBasicBlock(this);
         ++it;
       }
-      return;
+      return removed;
     }
   }
 
+  instructions->reserve(instructions->size() + instrs.size());
   for (auto it = instructions->begin(); it != instructions->end(); ++it) {
     if (it->get() == ins) {
       ins->setBasicBlock(nullptr);
+      unique_ptr<MInstruction> removed = std::move(*it);
       instructions->erase(it);
-
       for (auto new_ins : instrs) {
         instructions->insert(it, unique_ptr<MInstruction>(new_ins));
         new_ins->setBasicBlock(this);
         ++it;
       }
-      return;
+      return removed;
     }
   }
+  assert(0);
+  return nullptr;
 }
 
 void MBasicBlock::insertBeforeInstructionWith(MInstruction *ins,
@@ -258,6 +263,7 @@ void MBasicBlock::insertBeforeInstructionWith(MInstruction *ins,
     }
   }
 
+  instructions->reserve(instructions->size() + instrs.size());
   for (auto it = instructions->begin(); it != instructions->end(); ++it) {
     if (it->get() == ins) {
       for (auto new_ins : instrs) {
@@ -272,6 +278,7 @@ void MBasicBlock::insertBeforeInstructionWith(MInstruction *ins,
 
 void MBasicBlock::insertAfterInstructionWith(MInstruction *ins,
                                              vector<MInstruction *> instrs) {
+  instructions->reserve(instructions->size() + instrs.size());
   for (auto it = instructions->begin(); it != instructions->end(); ++it) {
     if (it->get() == ins) {
       ++it;
@@ -417,6 +424,7 @@ MFunction::MFunction(FuncType *type, string name) {
   this->name = name;
   this->basicBlocks = make_unique<vector<unique_ptr<MBasicBlock>>>();
   this->parameters = make_unique<vector<unique_ptr<ParaRegister>>>();
+  this->reg_pool = make_unique<vector<unique_ptr<MInstruction>>>();
   int float_cnt = 10;
   int int_cnt = 10;
   int offset = 0;
@@ -524,7 +532,6 @@ MFunction *MModule::addFunction(FuncType *funcType, string name) {
   return func;
 }
 
-
 MFunction *MModule::addexternFunction(FuncType *funcType, string name) {
   MFunction *func = new MFunction(funcType, name);
   externFunctions->push_back(unique_ptr<MFunction>(func));
@@ -554,10 +561,13 @@ std::ostream &operator<<(std::ostream &os, const MModule &obj) {
   for (const auto &ef : *obj.externFunctions) {
     os << ".extern " << ef->getName() << endl;
   }
-  os << ".globl main\n";
+
+  os << ".section .data\n";
   for (const auto &gv : *obj.globalVariables) {
     os << *gv << endl;
   }
+  os << ".text\n"
+     << ".globl main\n";
   for (const auto &f : *obj.functions) {
     os << *f << endl;
   }

@@ -9,6 +9,11 @@
   auto INSTR = new CONS(__VA_ARGS__);                                          \
   mbb->pushInstr(INSTR)
 
+// #define ADD_INSTR(INSTR, CONS, ...)                                            \
+//   auto INSTR = new CONS(__VA_ARGS__);                                          \
+//   std::cout << "new Instr " << *INSTR << endl;                                 \
+//   mbb->pushInstr(INSTR)
+
 bool is_constant(Value *v) {
   return v->getValueTag() == VT_INTCONST || v->getValueTag() == VT_FLOATCONST;
 }
@@ -143,7 +148,9 @@ void lowerHIicmp(MFunction *mfunc) {
 }
 
 Register *get_vreg(MModule *m, MBasicBlock *mbb, Value *v,
-                   map<Instruction *, Register *> *instr_map, MFunction *func) {
+                   map<Instruction *, Register *> *instr_map,
+                   map<GlobalVariable *, MGlobal *> *global_map,
+                   MFunction *func) {
 
   if (v->getValueTag() == VT_ARG) {
     auto tp = v->getType();
@@ -173,6 +180,12 @@ Register *get_vreg(MModule *m, MBasicBlock *mbb, Value *v,
     return i;
   }
 
+  if (v->getValueTag() == VT_GLOBALVAR) {
+    auto g = global_map->at(static_cast<GlobalVariable *>(v));
+    ADD_INSTR(i, MIla, g);
+    return i;
+  }
+
   auto ins = static_cast<Instruction *>(v);
   auto it = instr_map->find(ins);
   if (it != instr_map->end()) {
@@ -183,7 +196,7 @@ Register *get_vreg(MModule *m, MBasicBlock *mbb, Value *v,
 }
 
 void select_instruction(MModule *res, ANTPIE::Module *ir) {
-
+  // std::cout << "select_instruction" << endl;
   // assert ir: every block begin with phi, end with j
 
   auto instr_map = make_unique<map<Instruction *, Register *>>();
@@ -191,6 +204,7 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
   auto global_map = make_unique<map<GlobalVariable *, MGlobal *>>();
 
   // Select Global Variables
+  // std::cout << "Select Global Variables" << endl;
   auto globalVars = ir->getGlobalVariables();
   for (auto it = globalVars->begin(); it != globalVars->end(); ++it) {
     auto g = *it;
@@ -198,17 +212,18 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     global_map->insert({g, mg});
   }
 
-
   // Select Externel Fcuntions
+  // std::cout << "Select Externel Fcuntions" << endl;
   auto externFunctions = ir->getexternFunctions();
   for (auto it = externFunctions->begin(); it != externFunctions->end(); ++it) {
     auto func = *it;
-    res->addFunction(
+    MFunction *mfunc = res->addexternFunction(
         static_cast<FuncType *>(func->getType()), func->getName());
+    func_map->insert({func, mfunc});
   }
 
-
   // Select Functions
+  // std::cout << "Select Functions" << endl;
   auto functions = ir->getFunctions();
   for (auto it = functions->begin(); it != functions->end(); ++it) {
     auto func = *it;
@@ -220,11 +235,13 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
   for (auto it = functions->begin(); it != functions->end();
        ++it) { // Begin Func Loop
     auto func = *it;
+    // std::cout << "Function " << func->getName() << endl;
     MFunction *mfunc = func_map->at(func);
     auto bb_map = make_unique<map<BasicBlock *, MBasicBlock *>>();
     auto instr_map = make_unique<map<Instruction *, Register *>>();
 
     // Select BBs
+    // std::cout << "  Select BBs " << endl;
     auto basicBlocks = func->getBasicBlocks();
     for (auto it = basicBlocks->begin(); it != basicBlocks->end(); ++it) {
       auto bb = *it;
@@ -236,16 +253,20 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     }
     mfunc->setEntry(bb_map->at(func->getEntry()));
 
-    auto domt = func->getDT();
-    auto pr = domt->postOrder();
-    auto mdompr = new vector<MBasicBlock *>();
-    for (auto bb : *pr) {
-      if (bb->isEmpty())
-        continue;
-      mdompr->push_back(bb_map->at(bb));
-    }
-    std::reverse(mdompr->begin(), mdompr->end());
-    mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock *>>(mdompr);
+    // if (func->getDT() == nullptr) {
+    //   func->buildCFG();
+    //   func->buildDT();
+    // }
+    // auto domt = func->getDT();
+    // auto pr = domt->postOrder();
+    // auto mdompr = new vector<MBasicBlock *>();
+    // for (auto bb : *pr) {
+    //   if (bb->isEmpty())
+    //     continue;
+    //   mdompr->push_back(bb_map->at(bb));
+    // }
+    // std::reverse(mdompr->begin(), mdompr->end());
+    // mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock *>>(mdompr);
 
     // Select every Instruction
     for (auto it = basicBlocks->begin(); it != basicBlocks->end();
@@ -264,7 +285,7 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
         // std::cout << endl;
         switch (ins->getValueTag()) {
           ///////////////////////////////////////////////////////////////////////////////
-#define GET_VREG(V) get_vreg(res, mbb, V, &*instr_map, mfunc)
+#define GET_VREG(V) get_vreg(res, mbb, V, &*instr_map, &*global_map, mfunc)
 
 #define BINARY_OP_WITH_IMM_CASE(OP, INSTR, INSTR_I, CONST_TP)                  \
   case OP: {                                                                   \
@@ -349,11 +370,11 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           case TT_INT1:
           case TT_INT32:
           case TT_POINTER: {
-            retTag = Register::RegTag::I_REGISTER;
+            retTag = Register::RegTag::V_IREGISTER;
             break;
           }
           case TT_FLOAT: {
-            retTag = Register::RegTag::I_REGISTER;
+            retTag = Register::RegTag::V_FREGISTER;
             break;
           }
           default:
@@ -404,15 +425,14 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
         }
         case VT_LOAD: {
           LoadInst *load = static_cast<LoadInst *>(ins);
-          auto tp = load->getType();
+          auto tp = load->getType()->getTypeTag();
           auto addr = load->getRValue(0);
           if (addr->getValueTag() == VT_GLOBALVAR) {
             auto g = global_map->at(static_cast<GlobalVariable *>(addr));
-            if (tp == Type::getFloatType()) {
+            if (tp == TT_FLOAT) {
               ADD_INSTR(mload, MIflw, g, ins->getName());
               instr_map->insert({ins, mload});
-            } else if (tp == Type::getInt32Type() ||
-                       tp == Type::getInt1Type()) {
+            } else if (tp == TT_INT32 || tp == TT_INT1) {
               ADD_INSTR(mload, MIlw, g, ins->getName());
               instr_map->insert({ins, mload});
             } else {
@@ -422,11 +442,10 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
             }
           } else {
             auto a = GET_VREG(addr);
-            if (tp == Type::getFloatType()) {
+            if (tp == TT_FLOAT) {
               ADD_INSTR(mload, MIflw, a, 0, ins->getName());
               instr_map->insert({ins, mload});
-            } else if (tp == Type::getInt32Type() ||
-                       tp == Type::getInt1Type()) {
+            } else if (tp == TT_INT32 || tp == TT_INT1) {
               ADD_INSTR(mload, MIlw, a, 0, ins->getName());
               instr_map->insert({ins, mload});
             } else {
@@ -441,27 +460,16 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           StoreInst *store = static_cast<StoreInst *>(ins);
           auto value = store->getRValue(0);
           auto addr = store->getRValue(1);
+          auto tp = value->getType()->getTypeTag();
           auto v = GET_VREG(value);
-          if (addr->getValueTag() == VT_GLOBALVAR) {
-            auto g = global_map->at(static_cast<GlobalVariable *>(addr));
-            if (value->getType() == Type::getFloatType()) {
-              ADD_INSTR(_, MIfsw, v, g);
-            } else if (value->getType() == Type::getInt32Type() ||
-                       value->getType() == Type::getInt1Type()) {
-              ADD_INSTR(_, MIsw, v, g);
-            } else {
-              ADD_INSTR(_, MIsd, v, g);
-            }
+          auto a = GET_VREG(addr);
+          if (tp == TT_FLOAT) {
+            ADD_INSTR(_, MIfsw, v, 0, a);
+          } else if (tp == TT_INT32 || tp == TT_INT1) {
+            ADD_INSTR(_, MIsw, v, 0, a);
           } else {
-            auto a = GET_VREG(addr);
-            if (value->getType() == Type::getFloatType()) {
-              ADD_INSTR(_, MIfsw, v, 0, a);
-            } else if (value->getType() == Type::getInt32Type() ||
-                       value->getType() == Type::getInt1Type()) {
-              ADD_INSTR(_, MIsw, v, 0, a);
-            } else {
-              ADD_INSTR(_, MIsd, v, 0, a);
-            }
+            assert(0);
+            ADD_INSTR(_, MIsd, v, 0, a);
           }
           break;
         }
@@ -474,6 +482,7 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           auto ptrtp = static_cast<const PointerType *>(current_type);
           current_type = ptrtp->getElemType();
           Register *dest = base;
+
           for (unsigned i = 1; i < gep->getRValueSize(); i++) {
             auto sz = cal_size(current_type);
 
@@ -616,6 +625,7 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     // 1. Reslove IRRegisters to VRegisters
     for (auto &mbb : mfunc->getBasicBlocks()) {
       for (auto &mins : mbb->getInstructions()) {
+        // std::cout << "Reslove " << *mins << endl;
         mins->replaceIRRegister(*instr_map);
       }
     }

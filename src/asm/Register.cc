@@ -133,7 +133,6 @@ void Register::replaceRegisterWith(Register *newReg) {
   for (auto use : this->uses) {
     use->replaceRegister(this, newReg);
   }
-  this->clearUses();
 }
 
 IRRegister::IRRegister(Instruction *ins)

@@ -6,8 +6,7 @@
 //////////////////////////////////////
 //////////////////////////////////////
 
-MInstruction::MInstruction(MITag mt, RegTag rt, string name,
-                           bool is_pointer)
+MInstruction::MInstruction(MITag mt, RegTag rt, string name, bool is_pointer)
     : VRegister(rt, name, is_pointer, true) {
   oprands = make_unique<vector<Register *>>();
   this->insTag = mt;
@@ -44,6 +43,7 @@ void MInstruction::replaceIRRegister(map<Instruction *, Register *> instr_map) {
         opd = it->second;
         delete irr;
       } else {
+        std::cout << "Try to replace " << inst->getName() << endl;
         assert(0);
       }
     }
@@ -64,8 +64,8 @@ void MInstruction::replaceRegister(Register *oldReg, Register *newReg) {
   newReg->addUse(this);
 }
 
-void MInstruction::replaceWith(vector<MInstruction *> instrs) {
-  bb->replaceInstructionWith(this, instrs);
+unique_ptr<MInstruction> MInstruction::replaceWith(vector<MInstruction *> instrs) {
+  return  bb->replaceInstructionWith(this, instrs);
 }
 
 void MInstruction::insertBefore(vector<MInstruction *> instrs) {
@@ -127,8 +127,7 @@ ostream &MHIphi::printASM(ostream &os) {
     } else {
       opd = std::to_string(this->getOprand(i).arg.i);
     }
-    os << "[" << opd << ","
-       << this->getIncomingBlock(i)->getName() + "]";
+    os << "[" << opd << "," << this->getIncomingBlock(i)->getName() + "]";
     if (i < this->getOprandNum() - 1) {
       os << ", ";
     }
@@ -194,19 +193,19 @@ ostream &MHIalloca::printASM(ostream &os) {
 
 MHIret::MHIret(int imm)
     : MInstruction(MInstruction::MITag::H_RET, RegTag::NONE) {
-      this->r.tp = MIOprandTp::Int;
-      this->r.arg.i = imm;
+  this->r.tp = MIOprandTp::Int;
+  this->r.arg.i = imm;
 }
 
 MHIret::MHIret(float imm)
     : MInstruction(MInstruction::MITag::H_RET, RegTag::NONE) {
-      this->r.tp = MIOprandTp::Float;
-      this->r.arg.f = imm;
+  this->r.tp = MIOprandTp::Float;
+  this->r.arg.f = imm;
 }
 MHIret::MHIret(Register *reg)
     : MInstruction(MInstruction::MITag::H_RET, RegTag::NONE) {
-      this->r.tp = MIOprandTp::Reg;
-      this->r.arg.reg = reg;
+  this->r.tp = MIOprandTp::Reg;
+  this->r.arg.reg = reg;
 }
 ostream &MHIret::printASM(ostream &os) {
   os << "ret ";
@@ -457,7 +456,9 @@ IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, V_IREGISTER, sltiu, false)
 #define IMPLEMENT_MI_LOAD_CLASS(NAME, INS_TAG, REG_TAG, IS_POINTER)            \
   MI##NAME::MI##NAME(MGlobal *global)                                          \
       : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER),      \
-        global(global) {}                                                      \
+        global(global) {                                                       \
+    this->setTarget(this);                                                     \
+  }                                                                            \
                                                                                \
   MI##NAME::MI##NAME(MGlobal *global, std::string name)                        \
       : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, name,             \
@@ -510,6 +511,7 @@ IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, V_IREGISTER, sltiu, false)
 #define IMPLEMENT_MI_STORE_CLASS(NAME, INS_TAG)                                \
   MI##NAME::MI##NAME(Register *val, MGlobal *global)                           \
       : MInstruction(MInstruction::INS_TAG, RegTag::NONE) {                    \
+    assert(0);                                                                 \
     this->pushReg(val);                                                        \
     this->global = global;                                                     \
   }                                                                            \
@@ -521,7 +523,10 @@ IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, V_IREGISTER, sltiu, false)
     imm = offset;                                                              \
   }                                                                            \
                                                                                \
-  MGlobal *MI##NAME::getGlobal() { return this->global; }                      \
+  MGlobal *MI##NAME::getGlobal() {                                             \
+    assert(0);                                                                 \
+    return this->global;                                                       \
+  }                                                                            \
                                                                                \
   ostream &MI##NAME::printASM(ostream &os) {                                   \
     if (this->global) {                                                        \
@@ -629,6 +634,30 @@ MIli::MIli(int32_t imm, Register *target)
 ostream &MIli::printASM(ostream &os) {
   return os << "li "
             << this->getTarget()->getName() + ", " + std::to_string(imm);
+}
+
+// MIla
+MIla::MIla(MGlobal *g)
+    : MInstruction(MInstruction::LA, RegTag::V_IREGISTER, true) {
+  this->g = g;
+  this->setTarget(this);
+}
+
+MIla::MIla(MGlobal *g, string name)
+    : MInstruction(MInstruction::LA, RegTag::V_IREGISTER, name, true) {
+  this->g = g;
+  this->setTarget(this);
+}
+
+MIla::MIla(MGlobal *g, Register *target)
+    : MInstruction(MInstruction::LA, RegTag::V_IREGISTER, true) {
+  this->g = g;
+  this->setTarget(target);
+}
+
+ostream &MIla::printASM(ostream &os) {
+  return os << "la "
+            << this->getTarget()->getName() + ", " + this->g->getName();
 }
 
 IMPLEMENT_MI_UNA_CLASS(mv, MV, V_IREGISTER, mv, false)

@@ -2,7 +2,7 @@
 #include <set>
 
 void spill_registers(MFunction *func, map<Register *, int> *spill,
-                        int &stack_offset) {
+                     int &stack_offset) {
   // allocate arguments
   auto ftp = func->getType();
   for (int i = 0; i < func->getType()->getArgSize(); i++) {
@@ -45,18 +45,24 @@ void spill_registers(MFunction *func, map<Register *, int> *spill,
 }
 
 static void lower_call_spill_only(MFunction *func, map<Register *, int> *spill,
-                       int &stack_offset) {
+                                  int &stack_offset) {
+  // std::cout << "lower_call_spill_only start" << endl;
   map<Register *, Register *> allocation;
   set<Register *> caller_saved;
   for (auto &bb : func->getBasicBlocks()) {
+    vector<MInstruction *> instrs;
     for (auto &ins : bb->getInstructions()) {
+      instrs.push_back(&*ins);
+    }
+    for (auto ins : instrs) {
       if (ins->getInsTag() == MInstruction::H_CALL) {
-        auto call = static_cast<MHIcall *>(ins.get());
-        ins->replaceWith(call->generateCallSequence(
-            func, stack_offset, spill, &allocation, &caller_saved));
+        auto call = static_cast<MHIcall *>(ins);
+        func->reg_pool->push_back(ins->replaceWith(call->generateCallSequence(
+            func, stack_offset, spill, &allocation, &caller_saved)));
       }
     }
   }
+  // std::cout << "lower_call_spill_only over" << endl;
 }
 
 void spill_register_for_func(MFunction *func) {
@@ -66,6 +72,12 @@ void spill_register_for_func(MFunction *func) {
   int stack_offset = 16; // with ra and sp
 
   spill_registers(func, spill.get(), stack_offset);
+
+  // for (const auto &pair : *spill) {
+  //   std::cout << "Register ID: " << pair.first->getName() << ", Offset: " << pair.second
+  //             << std::endl;
+  // }
+
   lower_alloca(func, stack_offset);
   lower_call_spill_only(func, spill.get(), stack_offset);
   add_prelude(func, &allocation, spill.get(), stack_offset, &callee_saved);
