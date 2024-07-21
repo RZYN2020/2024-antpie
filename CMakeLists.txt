@@ -40,11 +40,11 @@ target_link_libraries(
         asm
         cgen
         opt
+        frontend  
         ir 
         opt
         util
         parser
-        frontend
         ${ANTLR4_LIBRARY}
 )
 

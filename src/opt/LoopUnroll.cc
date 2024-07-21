@@ -34,7 +34,7 @@ bool LoopUnroll::runOnFunction(Function* func) {
   LoopInfoBase* liBase = func->getLoopInfoBase();
   liBase->analyseSimpleLoop();
   for (LoopInfo* loopInfo : liBase->loopInfos) {
-    if (!loopInfo->parentLoop) {
+    if (loopInfo->subLoops.empty()) {
       changed |= runOnLoop(loopInfo);
     }
   }
@@ -67,7 +67,10 @@ bool LoopUnroll::runOnLoop(LoopInfo* loopInfo) {
   Value* endValue = condInstr->getRValue(1);
   // check if init, stride is constant
   // Consider: if initValue is a single entry PHI?
-  if (!dynamic_cast<Constant*>(initValue) || !dynamic_cast<Constant*>(stride)) {
+  if (!constantOrInvariant(initValue, loopInfo)) {
+    return changed;
+  }
+  if (!dynamic_cast<Constant*>(stride)) {
     return changed;
   }
   // check end is constant or loop invariant
@@ -220,17 +223,20 @@ bool LoopUnroll::runOnLoop(LoopInfo* loopInfo) {
   ClonedLoop* remainLoop = cloneLoop(loopInfo);
 
   // outside block use value defined in loop
+  LinkedList<std::pair<Use*, Instruction*>> replaceList;
   for (Instruction* oldInst : *loopInfo->header->getInstructions()) {
     Instruction* newInst = (Instruction*)remainLoop->getNewValue(oldInst);
     for (Use* use = oldInst->getUseHead(); use; use = use->next) {
       Instruction* userInstr = use->instr;
       if (!loopInfo->containBlockInChildren(userInstr->getParent())) {
-        use->removeFromValue();
-        use->value = newInst;
-        newInst->addUser(use);
+        replaceList.pushBack({use, newInst});
       }
     }
   }
+  for (auto [use, instr]: replaceList) {
+    use->replaceValue(instr);
+  }
+  
   // set up remain loop insstruction
   for (auto [oldValue, newValue] : remainLoop->valueMap) {
     PhiInst* oldPhi = 0;
@@ -363,6 +369,7 @@ bool LoopUnroll::runOnLoop(LoopInfo* loopInfo) {
   for (auto [oldValue, newValue] : lastCloneLoop->valueMap) {
     if (PhiInst* oldPhi = dynamic_cast<PhiInst*>(oldValue)) {
       PhiInst* newPhi = static_cast<PhiInst*>(newValue);
+      if (oldPhi->getParent() != loopInfo->header) continue;
       int icSize = oldPhi->getRValueSize() / 2;
       for (int i = icSize - 1; i >= 0; i--) {
         BasicBlock* icBlock = (BasicBlock*)oldPhi->getRValue(i * 2 + 1);

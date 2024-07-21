@@ -46,7 +46,7 @@ enum OpTag {
 class Instruction : public Value {
  protected:
   unique_ptr<vector<Use*>> useList;
-  BasicBlock* block;
+  BasicBlock* block = 0;
 
  public:
   Instruction(ValueTag vtag);
@@ -188,9 +188,9 @@ class LoadInst : public Instruction {
 };
 
 class PhiInst : public Instruction {
-  PhiInst(Type* type, string name) : Instruction(type, name, VT_PHI) {}
 
- public:
+ public:  
+  PhiInst(Type* type, string name) : Instruction(type, name, VT_PHI) {}
   PhiInst(string name);
   void printIR(ostream& stream) const override;
   void pushIncoming(Value* v, BasicBlock* bb);

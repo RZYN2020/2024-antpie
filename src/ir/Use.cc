@@ -12,6 +12,7 @@ void Use::removeFromValue() {
   if (pre) {
     pre->next = next;
   }
+  pre = next = 0;
 }
 
 void Use::replaceValue(Value* value_) {

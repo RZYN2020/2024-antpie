@@ -2,6 +2,7 @@
 
 #include "AliasAnalysis.hh"
 #include "CommonSubexpElimination.hh"
+#include "DeadCodeElimination.hh"
 #include "FunctionPropAnalysis.hh"
 #include "GlobalCodeMotion.h"
 #include "GlobalValueNumbering.hh"
@@ -203,40 +204,45 @@ void Module::buildCFG() {
 
 void Module::irOptimize() {
   LinkedList<Optimization*> optimizations;
-
+  // Add dead code elimination
+  optimizations.pushBack(new DeadCodeElimination());
   // Add mem2reg Pass
   optimizations.pushBack(new MemToReg());
-  // Add function analysis pass
+  // // Add function analysis pass
   optimizations.pushBack(new FunctionPropAnalysis());
-  // Add function inlining pass
+  // // Add function inlining pass
   optimizations.pushBack(new Inlining());
 
-  // Add mergeBlock pass
+  // // Add mergeBlock pass
   optimizations.pushBack(new MergeBlock());
-  // Add earlyCSE pass
+  // // Add earlyCSE pass
   optimizations.pushBack(new CommonSubexpElimination());
   // Add loop Analysis
   optimizations.pushBack(new LoopAnalysis());
-  // Add loop simplify pass
+  // // Add loop simplify pass
   optimizations.pushBack(new LoopSimplify());
-  // Add alias analysis pass
+  // // Add alias analysis pass
   optimizations.pushBack(new AliasAnalysis());
-  // Add LICM pass
+  // // Add LICM pass
   optimizations.pushBack(new LoopInvariantCodeMotion());
-
-  // GVM and GCM need DCE
+  // Add Loop Unroll pass
+  optimizations.pushBack(new LoopUnroll());
+  // optimizations.pushBack(new DeadCodeElimination());
+  // // GVM and GCM need DCE
   // // Add GVM pass
   // optimizations.pushBack(new GlobalValueNumbering());
   // // Add GCM pass
   // optimizations.pushBack(new GlobalCodeMotion());
-  // Add Loop Unroll pass
-  optimizations.pushBack(new LoopUnroll());
+
   // Add tail recursion elimination
   optimizations.pushBack(new TailRecursionElimination());
-  // optimizations.pushBack(new MergeBlock());
+  optimizations.pushBack(new MergeBlock());
 
   // run all pass
   for (auto& pass : optimizations) {
     pass->runOnModule(this);
+    // if (dynamic_cast<TailRecursionElimination*>(pass)) {
+    //   printIR(std::cout);
+    // }
   }
 }

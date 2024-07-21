@@ -79,3 +79,18 @@ string FloatConstant::toString() const {
      << bits;
   return ss.str();
 }
+
+BoolConstant* BoolConstant::one = 0;
+BoolConstant* BoolConstant::zero = 0;
+
+BoolConstant* BoolConstant::getConstBool(bool val) {
+  if (!one) {
+    one = new BoolConstant(1);
+    zero = new BoolConstant(0);
+  }
+  if (val) {
+    return one;
+  } else {
+    return zero;
+  }
+}

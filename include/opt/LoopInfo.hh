@@ -10,23 +10,24 @@ using std::unordered_set;
 using std::vector;
 
 struct SimpleLoopInfo;
-struct LoopInfoBase;
+class LoopInfoBase;
 
-struct LoopInfo {
-  LoopInfoBase* liBase;
-  LoopInfo* parentLoop;
+class LoopInfo {
+ public:
+  LoopInfoBase* liBase = 0;
+  LoopInfo* parentLoop = 0;
   vector<LoopInfo*> subLoops;
   unordered_set<BasicBlock*> blocks;
 
-  BasicBlock* preHeader;
-  BasicBlock* header;
+  BasicBlock* preHeader = 0;
+  BasicBlock* header = 0;
   unordered_set<BasicBlock*> latches;
   unordered_set<BasicBlock*> exitings;
   unordered_set<BasicBlock*> exits;
 
   uint32_t depth;
 
-  SimpleLoopInfo* simpleLoop;
+  SimpleLoopInfo* simpleLoop = 0;
 
   LoopInfo(BasicBlock* header_)
       : header(header_), parentLoop(0), simpleLoop(0) {}
@@ -51,7 +52,8 @@ struct LoopInfo {
   void dump();
 };
 
-struct LoopInfoBase {
+class LoopInfoBase {
+ public:
   vector<LoopInfo*> loopInfos;
   unordered_map<BasicBlock*, LoopInfo*> bbToLoop;
 

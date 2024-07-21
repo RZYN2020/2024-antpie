@@ -71,6 +71,7 @@ gcc-riscv64:
 # Test in RISCV form: make test MODE=RISCV
 MODE := LLVM
 test:
+	rm -rf tmp
 	$(shell [ -d tests/compiler2023 ] || git clone https://gitlab.eduxiji.net/csc1/nscscc/compiler2023.git tests/compiler2023)
 	python3 tests/scripts/test.py $(MODE)
 

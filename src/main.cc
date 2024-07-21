@@ -50,13 +50,13 @@ int main(int argc, char *argv[]) {
   ANTPIE::Module *module = &visitor->module;
 
   std::ofstream out_ll;
-
+  module->irOptimize();
   if (mode == LLVM) {
     out_ll.open(outputfile);
     module->printIR(out_ll);
     return 0;
   }
-  module->irOptimize();
+
   MModule *mmodule = new MModule();
   generate_code(mmodule, module);
   std::ofstream out_s;

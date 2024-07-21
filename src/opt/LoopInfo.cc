@@ -64,13 +64,13 @@ LoopInfo* LoopInfoBase::getLoopOf(BasicBlock* block) {
 void LoopInfoBase::addLoopInfo(LoopInfo* loopInfo) {
   loopInfos.push_back(loopInfo);
   for (BasicBlock* block : loopInfo->blocks) {
-    bbToLoop[block] = loopInfo;
+    bbToLoop.emplace(block, loopInfo);
   }
 }
 
 void LoopInfoBase::addBlockToLoop(BasicBlock* block, LoopInfo* loopInfo) {
   loopInfo->blocks.insert(block);
-  bbToLoop[block] = loopInfo;
+  bbToLoop.emplace(block, loopInfo);
 }
 
 void LoopInfoBase::calculateDepth() {

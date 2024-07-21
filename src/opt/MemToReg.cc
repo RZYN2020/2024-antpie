@@ -38,9 +38,9 @@ void MemToReg::runPass() {
   for (ValueInfo* valueInfo : valueInfos) {
     BBListPtr phiBlocks = new LinkedList<BasicBlock*>();
     function->getDT()->calculateIDF(&valueInfo->defBlocks, phiBlocks);
-
+    Type* phiType = valueInfo->allocaInstr->getElemType();
     for (BasicBlock* bb : *phiBlocks) {
-      PhiInst* phiInstr = new PhiInst("phi" + std::to_string(id++));
+      PhiInst* phiInstr = new PhiInst(phiType, "phi");
       bb->pushInstrAtHead(phiInstr);
       instToValueInfo[phiInstr] = valueInfo;
     }
@@ -59,7 +59,7 @@ void MemToReg::runPass() {
 bool MemToReg::linkDefsAndUsesToVar(ValueInfo* valueInfo) {
   for (Use* use = valueInfo->allocaInstr->getUseHead(); use; use = use->next) {
     Instruction* useInstr;
-    if ((useInstr = dynamic_cast<LoadInst*>(use->instr))) {
+    if (useInstr = dynamic_cast<LoadInst*>(use->instr)) {
       instToValueInfo[useInstr] = valueInfo;
     } else if ((useInstr = dynamic_cast<StoreInst*>(use->instr))) {
       if (useInstr->getRValue(1) == valueInfo->allocaInstr) {
@@ -94,10 +94,12 @@ void MemToReg::renameRecursive(BasicBlock* bb) {
       PhiInst* phi;
       ValueInfo* valueInfo;
       if ((phi = dynamic_cast<PhiInst*>(instr)) &&
-          (valueInfo = instToValueInfo[instr]) &&
-          !valueInfo->defStask.isEmpty()) {
-        phi->pushIncoming(valueInfo->defStask.front(), bb);
-      }
+          (valueInfo = instToValueInfo[instr]))
+        if (!valueInfo->defStask.isEmpty()) {
+          phi->pushIncoming(valueInfo->defStask.front(), bb);
+        } else {
+          phi->pushIncoming(phi->getType()->getZeroInit(), bb);
+        }
     }
   }
 

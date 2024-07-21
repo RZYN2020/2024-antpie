@@ -88,4 +88,20 @@ class ArrayConstant : public Constant {
   }
 };
 
+class BoolConstant : public Constant {
+ private:
+  bool value = 0;
+  static BoolConstant* zero;
+  static BoolConstant* one;
+
+ public:
+  BoolConstant() : Constant(true, Type::getInt1Type(), VT_BOOLCONST) {}
+  BoolConstant(bool v)
+      : Constant(false, Type::getInt1Type(), VT_BOOLCONST), value(v) {}
+  string toString() const override { return std::to_string((int)value); }
+  static BoolConstant *getConstBool(bool val);
+
+  bool getValue() const { return value; }
+};
+
 #endif

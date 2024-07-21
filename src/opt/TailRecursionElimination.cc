@@ -65,7 +65,11 @@ bool TailRecursionElimination::runOnFunction(Function* func) {
   if (func->getCFG()) {
     CFG* cfg = func->getCFG();
     cfg->addNode(phiBlock);
+    vector<BasicBlock*> succs;
     for (BasicBlock* entrySucc : *cfg->getSuccOf(entry)) {
+      succs.push_back(entrySucc);
+    }
+    for (BasicBlock* entrySucc : succs) {
       cfg->eraseEdge(entry, entrySucc);
       cfg->addEdge(phiBlock, entrySucc);
     }
