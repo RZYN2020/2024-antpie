@@ -180,7 +180,8 @@ Register *get_vreg(MModule *m, MBasicBlock *mbb, Value *v,
   if (v->getValueTag() == VT_FLOATCONST) {
     auto fc = static_cast<FloatConstant *>(v);
     auto fg = m->addGlobalFloat(fc);
-    ADD_INSTR(i, MIflw, fg);
+    ADD_INSTR(faddr, MIla, fg);
+    ADD_INSTR(i, MIflw, faddr, 0);
     return i;
   }
 
@@ -257,20 +258,20 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     }
     mfunc->setEntry(bb_map->at(func->getEntry()));
 
-    // if (func->getDT() == nullptr) {
-    //   func->buildCFG();
-    //   func->buildDT();
-    // }
-    // auto domt = func->getDT();
-    // auto pr = domt->postOrder();
-    // auto mdompr = new vector<MBasicBlock *>();
-    // for (auto bb : *pr) {
-    //   if (bb->isEmpty())
-    //     continue;
-    //   mdompr->push_back(bb_map->at(bb));
-    // }
-    // std::reverse(mdompr->begin(), mdompr->end());
-    // mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock *>>(mdompr);
+    if (func->getDT() == nullptr) {
+      func->buildCFG();
+      func->buildDT();
+    }
+    auto domt = func->getDT();
+    auto pr = domt->postOrder();
+    auto mdompr = new vector<MBasicBlock *>();
+    for (auto bb : *pr) {
+      if (bb->isEmpty())
+        continue;
+      mdompr->push_back(bb_map->at(bb));
+    }
+    std::reverse(mdompr->begin(), mdompr->end());
+    mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock *>>(mdompr);
 
     // Select every Instruction
     for (auto it = basicBlocks->begin(); it != basicBlocks->end();

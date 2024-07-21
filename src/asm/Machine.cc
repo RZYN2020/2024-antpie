@@ -548,7 +548,7 @@ MGlobal *MModule::addGlobalVariable(GlobalVariable *global) {
 MGlobal *MModule::addGlobalFloat(FloatConstant *f) {
   static int float_cnt = 0;
   auto g = new MGlobal(
-      new GlobalVariable(FloatType::getFloatType(), f, "fi" + float_cnt));
+      new GlobalVariable(FloatType::getFloatType(), f,  "fi" +  std::to_string(float_cnt++)));
   globalVariables->push_back(unique_ptr<MGlobal>(g));
   return g;
 }
@@ -558,11 +558,16 @@ vector<unique_ptr<MGlobal>> &MModule::getGlobals() { return *globalVariables; }
 vector<unique_ptr<MFunction>> &MModule::getFunctions() { return *functions; }
 
 std::ostream &operator<<(std::ostream &os, const MModule &obj) {
+  bool gen_memset = false;
   for (const auto &ef : *obj.externFunctions) {
+    if (ef->getName() == "memset") {
+      gen_memset = true;
+      continue;
+    }
     os << ".extern " << ef->getName() << endl;
   }
 
-  os << ".section .data\n";
+  os << ".data\n";
   for (const auto &gv : *obj.globalVariables) {
     os << *gv << endl;
   }
@@ -571,5 +576,11 @@ std::ostream &operator<<(std::ostream &os, const MModule &obj) {
   for (const auto &f : *obj.functions) {
     os << *f << endl;
   }
+
+  #include "memset.hh"
+  if (gen_memset) {
+    os << memset_code << endl;
+  }
+
   return os;
 }
