@@ -12,7 +12,7 @@ bool DeadCodeElimination::runOnFunction(Function* func) {
   bool changed = false;
   changed |= simplifyInstruction(func);
   changed |= eliminateDeadBlocks(func);
-  // changed |= eliminateDeadInstructions(func);
+  changed |= eliminateDeadInstructions(func);
   return changed;
 }
 
@@ -48,7 +48,7 @@ bool DeadCodeElimination::eliminateDeadBlocks(Function* func) {
   }
   return !deadBlocks.empty();
 }
-
+Value* tmp = 0;
 bool DeadCodeElimination::eliminateDeadInstructions(Function* func) {
   LinkedList<Instruction*> worklist;
   for (BasicBlock* block : *func->getBasicBlocks()) {
@@ -61,19 +61,27 @@ bool DeadCodeElimination::eliminateDeadInstructions(Function* func) {
   }
   bool changed = !worklist.isEmpty();
 
+  LinkedList<Instruction*> trashList;
+
   while (!worklist.isEmpty()) {
     Instruction* deadInst = worklist.popFront();
+    if (deadInst->getUseHead() || !deadInst->getParent()) continue;
     int argSize = deadInst->getRValueSize();
     for (int i = 0; i < argSize; i++) {
       Value* rValue = deadInst->getRValue(i);
+      tmp = rValue;
       if (Instruction* effectInst = dynamic_cast<Instruction*>(rValue)) {
-        if (!effectInst->getUseHead() && isComputeInstruction(effectInst)) {
+        if (isComputeInstruction(effectInst)) {
           worklist.pushBack(effectInst);
         }
       }
     }
     deadInst->eraseFromParent();
     deadInst->deleteUseList();
+    trashList.pushBack(deadInst);
+  }
+  for (Instruction* trash: trashList) {
+    delete trash;
   }
 
   return changed;
@@ -101,15 +109,25 @@ bool DeadCodeElimination::simplifyInstruction(Function* func) {
         branch->deleteUseList();
         block->pushInstr(new JumpInst(succBlock));
         delete branch;
+
+        // delete phi incoming from block to unreachBlock
+        for (Instruction* instr : *unreachBLock->getInstructions()) {
+          if (PhiInst* phiInstr = dynamic_cast<PhiInst*>(instr)) {
+            phiInstr->deleteIncomingFrom(block);
+          }
+        }
       }
     }
 
     // delete single entry phi
     PhiInst* phiInst = 0;
-    for (Instruction* instr : *block->getInstructions()) {
+    for (auto it = block->getInstructions()->begin();
+         it != block->getInstructions()->end();) {
+      Instruction* instr = *it;
+      ++it;
       if ((phiInst = dynamic_cast<PhiInst*>(instr)) &&
           (instr->getRValueSize() == 2)) {
-        phiInst->replaceAllUsesWith(phiInst->getRValue(1));
+        phiInst->replaceAllUsesWith(phiInst->getRValue(0));
         phiInst->eraseFromParent();
         phiInst->deleteUseList();
       } else {
@@ -120,7 +138,8 @@ bool DeadCodeElimination::simplifyInstruction(Function* func) {
 }
 
 bool DeadCodeElimination::isComputeInstruction(Instruction* instr) {
-  if (instr->isa(VT_JUMP) || instr->isa(VT_BR) || instr->isa(VT_RET)) {
+  if (instr->isa(VT_JUMP) || instr->isa(VT_BR) || instr->isa(VT_RET) ||
+      instr->isa(VT_STORE) || instr->isa(VT_CALL)) {
     return false;
   }
   return true;

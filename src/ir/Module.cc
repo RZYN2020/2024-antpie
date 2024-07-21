@@ -227,12 +227,12 @@ void Module::irOptimize() {
   optimizations.pushBack(new LoopInvariantCodeMotion());
   // Add Loop Unroll pass
   optimizations.pushBack(new LoopUnroll());
-  // optimizations.pushBack(new DeadCodeElimination());
+  optimizations.pushBack(new DeadCodeElimination());
   // // GVM and GCM need DCE
-  // // Add GVM pass
-  // optimizations.pushBack(new GlobalValueNumbering());
-  // // Add GCM pass
-  // optimizations.pushBack(new GlobalCodeMotion());
+  // Add GVM pass
+  optimizations.pushBack(new GlobalValueNumbering());
+  // Add GCM pass
+  optimizations.pushBack(new GlobalCodeMotion());
 
   // Add tail recursion elimination
   optimizations.pushBack(new TailRecursionElimination());
@@ -240,8 +240,11 @@ void Module::irOptimize() {
 
   // run all pass
   for (auto& pass : optimizations) {
+    // if (dynamic_cast<DeadCodeElimination*>(pass)) {
+    //   printIR(std::cout);
+    // }
     pass->runOnModule(this);
-    // if (dynamic_cast<TailRecursionElimination*>(pass)) {
+    // if (dynamic_cast<LoopUnroll*>(pass)) {
     //   printIR(std::cout);
     // }
   }

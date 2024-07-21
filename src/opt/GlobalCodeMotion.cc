@@ -71,7 +71,6 @@ bool GlobalCodeMotion::runOnFunction(Function* func) {
       Instruction* instr = *it;
       ++it;
       if (!visited.count(instr)) {
-
         scheduleLate(instr, dt, liBase);
       }
     }
@@ -82,7 +81,7 @@ bool GlobalCodeMotion::runOnFunction(Function* func) {
 bool GlobalCodeMotion::isPinned(Instruction* instr) {
   return instr->isa(VT_JUMP) || instr->isa(VT_BR) || instr->isa(VT_RET) ||
          instr->isa(VT_CALL) || instr->isa(VT_PHI) || instr->isa(VT_LOAD) ||
-         instr->isa(VT_STORE);
+         instr->isa(VT_STORE) || instr->isa(VT_ALLOCA);
 }
 
 Instruction* GlobalCodeMotion::scheduleEarly(Instruction* instr, DomTree* dt) {
@@ -127,6 +126,11 @@ Instruction* GlobalCodeMotion::scheduleLate(Instruction* instr, DomTree* dt,
       for (int i = 0; i < icSize; i++) {
         if (phiInst->getRValue(i * 2) == (Value*)instr) {
           useBlock = (BasicBlock*)phiInst->getRValue(i * 2 + 1);
+          if (lca) {
+            lca = dt->findLCA(lca, useBlock);
+          } else {
+            lca = useBlock;
+          }
         }
       }
     }
