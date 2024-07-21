@@ -59,6 +59,7 @@ def compare_file_to_string(file_path, actual_output):
                     flag = False
                     print(f"Line {j + 1}: Actual output has more lines than file.")
                     print(f"Actual:   {actual_lines[j]}")
+            print()
                     
     except FileNotFoundError:
         print(f"File not found: {file_path}")
@@ -112,30 +113,61 @@ def run_single_ir_test(sy_file, out_file, in_file=None):
     output = result.stdout + str(result.returncode)
     return compare_file_to_string(test_dir + out_file, output)
 
+def run_single_test(sy_file, out_file, in_file=None): 
+    # generate ir command: compiler ...00_main.sy -o tmp/00_main.s -r
+    prefix = sy_file.split('.')[0] 
+    # get riscv asm file
+    asm_file = tmp_file_base + prefix + ".s"
+    gen_command = compiler_path + " " + test_dir + sy_file + " -o " + asm_file + " -r"
+    subprocess.run(gen_command, shell=True)
+
+    # asm to binary file
+    obj_file = tmp_file_base + prefix + ".o"
+    objgen_command = ["riscv64-linux-gnu-gcc-10", "-fPIE", "-c", asm_file, "-o", obj_file]
+    result = subprocess.run(objgen_command, text=True, capture_output=True)
+
+    # link
+    bin_file = tmp_file_base + prefix 
+    link_command = ["riscv64-linux-gnu-gcc-10", obj_file, "-L", lib_dir, "-lrvsysy", "-o", bin_file]
+    result = subprocess.run(link_command, text=True, capture_output=True)
+
+    # qemu load...
+    run_command = ["qemu-riscv64", "-L", "/usr/riscv64-linux-gnu", "-s", "1024M", bin_file]
+    if in_file:
+        with open(test_dir + in_file, 'r') as input_file:
+            result = subprocess.run(run_command, text=True, input=input_file.read(), capture_output=True)
+    else:
+        result = subprocess.run(run_command, text=True, capture_output=True)
+    stdout = result.stdout
+    if stdout != "" and stdout[len(stdout) - 1] != '\n':
+        result.stdout += "\n"
+    output = result.stdout + str(result.returncode)
+    return compare_file_to_string(test_dir + out_file, output)
+
 def print_result(success, fail):
     if fail == 0:
         print('[Success]' + ' 🎉')
     else:
         print('[Failure]' + ' 💩')
-    print(str(success) + '/' + str(success + fail))
+    print(str(success) + '/' + str(success + fail) + " passed")
 
-def run_all_ir_test(sorted_files):
+def run_all_test(sorted_files, test_fun):
     success = 0
     fail = 0
     for sy_file, out_file, in_file in sorted_files:
         print("Running test: " + sy_file)
-        if run_single_ir_test(sy_file, out_file, in_file):
+        if test_fun(sy_file, out_file, in_file):
             success += 1
         else:
             fail += 1
     print_result(success, fail)
+    
 
 if __name__ == "__main__":
     mode = sys.argv[1]
     sorted_files = find_and_sort_matching_files(test_dir)
     if mode == 'RISCV':
-        # TODO
-        print("unfinish")
-        exit(0)
+        test_fun = run_single_test
     if mode == 'LLVM':
-        run_all_ir_test(sorted_files)
+        test_fun = run_single_ir_test
+    run_all_test(sorted_files, test_fun)

@@ -3,7 +3,6 @@
 #include "Module.hh"
 #include <algorithm>
 
-
 ///////// Macro Defs /////////
 // capture (res)
 #define ADD_INSTR(INSTR, CONS, ...)                                            \
@@ -199,6 +198,16 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     global_map->insert({g, mg});
   }
 
+
+  // Select Externel Fcuntions
+  auto externFunctions = ir->getexternFunctions();
+  for (auto it = externFunctions->begin(); it != externFunctions->end(); ++it) {
+    auto func = *it;
+    res->addFunction(
+        static_cast<FuncType *>(func->getType()), func->getName());
+  }
+
+
   // Select Functions
   auto functions = ir->getFunctions();
   for (auto it = functions->begin(); it != functions->end(); ++it) {
@@ -236,7 +245,7 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
       mdompr->push_back(bb_map->at(bb));
     }
     std::reverse(mdompr->begin(), mdompr->end());
-    mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock*>>(mdompr);
+    mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock *>>(mdompr);
 
     // Select every Instruction
     for (auto it = basicBlocks->begin(); it != basicBlocks->end();
@@ -321,10 +330,10 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           auto ret_val = ret->getRValue(0);
           MHIret *mret;
           if (ret_val->getValueTag() == VT_FLOATCONST) {
-            auto i = static_cast<IntegerConstant *>(ret_val)->getValue();
+            auto i = static_cast<FloatConstant *>(ret_val)->getValue();
             mret = new MHIret(i);
           } else if (ret_val->getValueTag() == VT_INTCONST) {
-            auto f = static_cast<FloatConstant *>(ret_val)->getValue();
+            auto f = static_cast<IntegerConstant *>(ret_val)->getValue();
             mret = new MHIret(f);
           } else {
             mret = new MHIret(GET_VREG(ret_val));
@@ -464,18 +473,27 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           const Type *current_type = gep->getPtrType();
           auto ptrtp = static_cast<const PointerType *>(current_type);
           current_type = ptrtp->getElemType();
-          MInstruction *dest;
+          Register *dest = base;
           for (unsigned i = 1; i < gep->getRValueSize(); i++) {
-            Register *index = GET_VREG(gep->getRValue(i));
-
-            ADD_INSTR(elesz, MIli, cal_size(current_type));
-            ADD_INSTR(offset, MImul, index, elesz);
-            ADD_INSTR(addr, MIadd, base, offset);
+            auto sz = cal_size(current_type);
 
             if (i != gep->getRValueSize() - 1) {
               current_type =
                   static_cast<const ArrayType *>(current_type)->getElemType();
             }
+
+            auto idx = gep->getRValue(i);
+            if (idx->getValueTag() == VT_INTCONST) {
+              auto v = static_cast<IntegerConstant *>(idx)->getValue();
+              if (v == 0) {
+                continue;
+              } // what if v == 1? ==> optimize it in peephole optimization...
+            }
+
+            Register *index = GET_VREG(gep->getRValue(i));
+            ADD_INSTR(elesz, MIli, sz);
+            ADD_INSTR(offset, MImul, index, elesz);
+            ADD_INSTR(addr, MIadd, base, offset);
             dest = addr;
           }
           dest->setName(ins->getName());

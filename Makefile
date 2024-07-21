@@ -20,6 +20,11 @@ BINFile = $(patsubst %.ll,%,$(IRFile))
 run:
 	$(BIN_DIR)/compiler tests/test.sy -o tests/test.ll -l
 
+runs:
+	$(BIN_DIR)/compiler tests/test.sy -o tests/test.s -r
+	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.o tests/test.s
+	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
+
 debug:
 	@cmake $(CMAKE_FLAGS) -DCMAKE_CXX_FLAGS="-DDEBUG_MODE" -B build
 	@cmake --build build
@@ -58,11 +63,6 @@ clean:
 antlr: $(PFILE)
 	$(ANTLR) -Dlanguage=Cpp $(PFILE)
 
-
-SRC := tests/test.s
-RES := tests/test
-gcc-riscv64:
-	riscv64-linux-gnu-gcc-10 -o $(RES) $(SRC)
 
 # todo: official docker test
 # https://pan.educg.net/#/s/V2oiq?path=%2F

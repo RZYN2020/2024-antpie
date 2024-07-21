@@ -54,6 +54,8 @@ class Module {
 
   LinkedList<GlobalVariable*>* getGlobalVariables() { return &globalVariables; }
   LinkedList<Function*>* getFunctions() { return &functions; }
+  unordered_set<Function*>* getexternFunctions() { return &externFunctions; }
+
 
   void buildCFG();
 
