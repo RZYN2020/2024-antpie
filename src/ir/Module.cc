@@ -77,109 +77,177 @@ AllocaInst* Module::addAllocaInst(Type* type, string name) {
 BinaryOpInst* Module::addBinaryOpInst(OpTag opType, Value* op1, Value* op2,
                                       string name) {
   BinaryOpInst* instr = new BinaryOpInst(opType, op1, op2, name);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 BranchInst* Module::addBranchInst(Value* cond, BasicBlock* trueBlock,
                                   BasicBlock* falseBlock) {
   BranchInst* instr = new BranchInst(cond, trueBlock, falseBlock);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 CallInst* Module::addCallInst(Function* func, string name) {
   CallInst* instr = new CallInst(func, name);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 CallInst* Module::addCallInst(Function* func, vector<Value*>& params,
                               string name) {
   CallInst* instr = new CallInst(func, params, name);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 IcmpInst* Module::addIcmpInst(OpTag opType, Value* op1, Value* op2,
                               string name) {
   IcmpInst* instr = new IcmpInst(opType, op1, op2, name);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 FcmpInst* Module::addFcmpInst(OpTag opType, Value* op1, Value* op2,
                               string name) {
   FcmpInst* instr = new FcmpInst(opType, op1, op2, name);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 FptosiInst* Module::addFptosiInst(Value* src, string name) {
   FptosiInst* instr = new FptosiInst(src, name);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 GetElemPtrInst* Module::addGetElemPtrInst(Value* ptr, Value* idx1, Value* idx2,
                                           string name) {
   GetElemPtrInst* instr = new GetElemPtrInst(ptr, idx1, idx2, name);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 GetElemPtrInst* Module::addGetElemPtrInst(Value* ptr, Value* idx1,
                                           string name) {
   GetElemPtrInst* instr = new GetElemPtrInst(ptr, idx1, name);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 JumpInst* Module::addJumpInst(BasicBlock* block) {
   JumpInst* instr = new JumpInst(block);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 LoadInst* Module::addLoadInst(Value* addr, string name) {
   LoadInst* instr = new LoadInst(addr, name);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 PhiInst* Module::addPhiInst(string name) {
   PhiInst* instr = new PhiInst(name);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 ReturnInst* Module::addReturnInst(Value* retValue) {
   ReturnInst* instr = new ReturnInst(retValue);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 ReturnInst* Module::addReturnInst() {
   ReturnInst* instr = new ReturnInst();
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 SitofpInst* Module::addSitofpInst(Value* src, string name) {
   SitofpInst* instr = new SitofpInst(src, name);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 StoreInst* Module::addStoreInst(Value* value, Value* addr) {
   StoreInst* instr = new StoreInst(value, addr);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
 ZextInst* Module::addZextInst(Value* src, Type* dstType, string name) {
   ZextInst* instr = new ZextInst(src, dstType, name);
-  currBasicBlock->pushInstr(instr);
+  if (!currBasicBlock->pushInstr(instr)) {
+    BasicBlock* newBlock =
+        addBasicBlock(currBasicBlock->getParent(), currBasicBlock->getName());
+    newBlock->pushInstr(instr);
+  }
   return instr;
 }
 
@@ -240,12 +308,10 @@ void Module::irOptimize() {
 
   // run all pass
   for (auto& pass : optimizations) {
-    // if (dynamic_cast<DeadCodeElimination*>(pass)) {
+    // if (dynamic_cast<GlobalCodeMotion*>(pass) ||
+    //     dynamic_cast<GlobalValueNumbering*>(pass)) {
     //   printIR(std::cout);
     // }
     pass->runOnModule(this);
-    // if (dynamic_cast<LoopUnroll*>(pass)) {
-    //   printIR(std::cout);
-    // }
   }
 }

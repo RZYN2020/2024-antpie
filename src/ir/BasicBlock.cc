@@ -28,15 +28,16 @@ bool isTail(Instruction* instr) {
          instr->getValueTag() == VT_JUMP;
 }
 
-void BasicBlock::pushInstr(Instruction* instr) {
+bool BasicBlock::pushInstr(Instruction* instr) {
   if (isTail(instructions.back())) {
-    return;
+    return false;
   }
   if (isTail(instr)) {
     tail = instr;
   }
   instr->setParent(this);
   instructions.pushBack(instr);
+  return true;
 }
 
 void BasicBlock::pushInstrAtHead(Instruction* instr) {

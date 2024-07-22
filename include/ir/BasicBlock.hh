@@ -26,7 +26,7 @@ class BasicBlock : public Value {
         tail(nullptr),
         empty(empty_) {}
   ~BasicBlock();
-  void pushInstr(Instruction* i);
+  bool pushInstr(Instruction* i);
   void pushInstrAtHead(Instruction* i);
   void printIR(ostream& stream) const override;
   Instruction* getTailInstr() { return tail; }

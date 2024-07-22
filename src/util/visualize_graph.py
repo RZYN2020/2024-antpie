@@ -24,8 +24,8 @@ def main():
         if line.strip() == "":  # end input
             break
         edges.append(tuple(line.strip().split()))
+        print(line)
 
-    print(edges)
     G = nx.DiGraph()
     G.add_edges_from(edges)
 

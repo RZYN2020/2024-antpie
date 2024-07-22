@@ -51,9 +51,12 @@ bool GlobalCodeMotion::runOnFunction(Function* func) {
   visited.clear();
   for (BasicBlock* bb : *func->getBasicBlocks()) {
     auto instrList = bb->getInstructions();
-    for (auto it = instrList->begin(); it != instrList->end();) {
-      Instruction* instr = *it;
-      ++it;
+    vector<Instruction*> cloneList;
+    for (Instruction* instr : *instrList) {
+      cloneList.push_back(instr);
+    }
+    for (auto instr : cloneList) {
+      if (instr->getParent() != bb) continue;
       if (isPinned(instr)) {
         visited.insert(instr);
         Use* use = instr->getUseHead();
@@ -79,13 +82,17 @@ bool GlobalCodeMotion::runOnFunction(Function* func) {
 }
 
 bool GlobalCodeMotion::isPinned(Instruction* instr) {
-  return instr->isa(VT_JUMP) || instr->isa(VT_BR) || instr->isa(VT_RET) ||
-         instr->isa(VT_CALL) || instr->isa(VT_PHI) || instr->isa(VT_LOAD) ||
-         instr->isa(VT_STORE) || instr->isa(VT_ALLOCA);
+  if (CallInst* callInstr = dynamic_cast<CallInst*>(instr)) {
+    Function* callee = callInstr->getFunction();
+    return !callee->isPureFunction();
+  }
+  return !(instr->isa(VT_ICMP) || instr->isa(VT_FCMP) || instr->isa(VT_BOP) ||
+         instr->isa(VT_FPTOSI) || instr->isa(VT_SITOFP) ||
+         instr->isa(VT_ZEXT) || instr->isa(VT_GEP));
 }
 
 Instruction* GlobalCodeMotion::scheduleEarly(Instruction* instr, DomTree* dt) {
-  if (visited.count(instr)) {
+  if (visited.count(instr) || isPinned(instr)) {
     return instr;
   }
   visited.insert(instr);
@@ -111,7 +118,7 @@ Instruction* GlobalCodeMotion::scheduleEarly(Instruction* instr, DomTree* dt) {
 
 Instruction* GlobalCodeMotion::scheduleLate(Instruction* instr, DomTree* dt,
                                             LoopInfoBase* liBase) {
-  if (visited.count(instr)) {
+  if (visited.count(instr) || isPinned(instr)) {
     return instr;
   }
   visited.insert(instr);
@@ -163,13 +170,22 @@ Instruction* GlobalCodeMotion::scheduleLate(Instruction* instr, DomTree* dt,
   }
 
   // Move instruction
+  unordered_set<Instruction*> sameBlockInstrs;
   infoMap[instr]->latestBlock = bestBlock;
   if (bestBlock == instr->getParent()) return instr;
   for (Use* use = instr->getUseHead(); use; use = use->next) {
     Instruction* userInstr = use->instr;
-    if (userInstr->getParent() == bestBlock && !instr->isa(VT_PHI)) {
-      instr->moveBefore(userInstr);
-      return instr;
+    if (userInstr->getParent() == bestBlock && !userInstr->isa(VT_PHI)) {
+      sameBlockInstrs.insert(userInstr);
+    }
+  }
+  if (!sameBlockInstrs.empty()) {
+    for (auto it = bestBlock->getInstructions()->begin();
+         it != bestBlock->getInstructions()->end(); ++it) {
+      if (sameBlockInstrs.count(*it)) {
+        instr->moveBefore(*it);
+        return instr;
+      }
     }
   }
 
