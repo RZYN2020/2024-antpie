@@ -77,13 +77,13 @@ def run_single_ir_test(sy_file, out_file, in_file=None):
     # llvm ir to bitcode
     # llvm-as example.ll -o example.bc
     bc_file = tmp_file_base + prefix + ".bc"
-    bcgen_command = ["llvm-as", ir_file, "-o", bc_file]
+    bcgen_command = ["llvm-as", "-opaque-pointers", ir_file, "-o", bc_file]
     result = subprocess.run(bcgen_command, text=True, capture_output=True)
 
     # bitcode to x64-64 code
     # llc example.bc -o example.s
     code_file = tmp_file_base + prefix + ".s"
-    codegen_command = ["llc", "-relocation-model=pic", bc_file, "-o", code_file]
+    codegen_command = ["llc", "-opaque-pointers", "-relocation-model=pic", bc_file, "-o", code_file]
     result = subprocess.run(codegen_command, text=True, capture_output=True)
 
     # asm to object file

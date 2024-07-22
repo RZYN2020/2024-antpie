@@ -35,6 +35,7 @@ class Constant;
 class Type {
  private:
   TypeTag tTag;
+  int width;
 
   // Singleton
   static VoidType* voidType;
@@ -43,7 +44,7 @@ class Type {
   static FloatType* floatType;
 
  public:
-  Type(TypeTag tt) : tTag(tt) {}
+  Type(TypeTag tt, int w) : tTag(tt), width(w) {}
   virtual string toString() const { return ""; }
   static inline Int1Type* getInt1Type() { return int1Type; }
   static inline Int32Type* getInt32Type() { return int32Type; }
@@ -55,31 +56,32 @@ class Type {
   static FuncType* getFuncType(Type* retType);
   TypeTag getTypeTag() const { return tTag; }
   virtual Constant* getZeroInit() { return nullptr; }
+  size_t getWidth() const { return width; };
 };
 
 class VoidType : public Type {
  public:
   string toString() const override;
-  VoidType() : Type(TT_VOID) {}
+  VoidType() : Type(TT_VOID, 4) {}
 };
 
 class Int1Type : public Type {
  public:
   string toString() const override;
-  Int1Type() : Type(TT_INT1) {}
+  Int1Type() : Type(TT_INT1, 4) {}
 };
 
 class Int32Type : public Type {
  public:
   string toString() const override;
-  Int32Type() : Type(TT_INT32) {}
+  Int32Type() : Type(TT_INT32, 4) {}
   Constant* getZeroInit() override;
 };
 
 class FloatType : public Type {
  public:
   string toString() const override;
-  FloatType() : Type(TT_FLOAT) {}
+  FloatType() : Type(TT_FLOAT, 4) {}
   Constant* getZeroInit() override;
 };
 
@@ -90,7 +92,8 @@ class ArrayType : public Type {
 
  public:
   string toString() const override;
-  ArrayType(int l, Type* eT) : Type(TT_ARRAY), len(l), elemType(eT) {}
+  ArrayType(int l, Type* eT)
+      : Type(TT_ARRAY, eT->getWidth() * l), len(l), elemType(eT) {}
   int getLen() const { return len; }
   Type* getElemType() const { return elemType; }
   Constant* getZeroInit() override;
@@ -115,7 +118,7 @@ class PointerType : public Type {
 
  public:
   string toString() const override;
-  PointerType(Type* et) : Type(TT_POINTER), elemType(et) {}
+  PointerType(Type* et) : Type(TT_POINTER, 4), elemType(et) {}
   Type* getElemType() const { return elemType; }
 };
 

@@ -957,36 +957,66 @@ void MySysYParserVisitor::setArrayInitVal(Value* arr,
       [&](ArrayConstant* arrayConst) {
         ArrayType* arrayType = (ArrayType*)arrayConst->getType();
         int len = arrayType->getLen();
+        int elemWidth = arrayType->getWidth() / len;
         auto* elemMap = arrayConst->getElementMap();
-
+        int preLoc = -1;
         if (arrayType->getElemType()->getTypeTag() != TT_ARRAY) {
-          for (int loc = 0; loc < len; loc++) {
-            auto it = elemMap->find(loc);
-            Value* elem;
-            if (it == elemMap->end()) {
-              elem = arrayType->getElemType()->getZeroInit();
-            } else {
-              elem = it->second;
+          for (auto [loc, elem] : *elemMap) {
+            if (loc - preLoc > 1) {
+              // memset (preLoc + 1, 0, loc - preLoc - 1)
+              Value* beginAddr = module.addGetElemPtrInst(
+                  addr, zero, IntegerConstant::getConstInt(preLoc + 1),
+                  "begin.addr");
+              vector<Value*> params{
+                  beginAddr, zero,
+                  IntegerConstant::getConstInt((loc - preLoc - 1) << 2)};
+              module.addCallInst(memsetFunc, params, "");
             }
             auto finalAddr = module.addGetElemPtrInst(
                 addr, zero, new IntegerConstant(loc), "arr.faddr");
             elem = tranformType(
                 elem, ((PointerType*)finalAddr->getType())->getElemType());
             module.addStoreInst(elem, finalAddr);
+            preLoc = loc;
           }
+          if (len - preLoc > 1) {
+            // memset (preLoc + 1, 0, loc - preLoc - 1)
+            Value* beginAddr = module.addGetElemPtrInst(
+                addr, zero, IntegerConstant::getConstInt(preLoc + 1),
+                "begin.addr");
+            vector<Value*> params{
+                beginAddr, zero,
+                IntegerConstant::getConstInt((len - preLoc - 1) << 2)};
+            module.addCallInst(memsetFunc, params, "");
+          }
+
         } else {
           Value* oldAddr = addr;
-          for (int loc = 0; loc < len; loc++) {
-            auto it = elemMap->find(loc);
-            Value* elem;
-            if (it == elemMap->end()) {
-              elem = arrayType->getElemType()->getZeroInit();
-            } else {
-              elem = it->second;
+          for (auto [loc, elem] : *elemMap) {
+            if (loc - preLoc > 1) {
+              // memset (preLoc + 1, 0, (loc - preLoc - 1) * width)
+              Value* beginAddr = module.addGetElemPtrInst(
+                  oldAddr, zero, IntegerConstant::getConstInt(preLoc + 1),
+                  "begin.addr");
+              vector<Value*> params{
+                  beginAddr, zero,
+                  IntegerConstant::getConstInt((loc - preLoc - 1) * elemWidth)};
+              module.addCallInst(memsetFunc, params, "");
             }
             addr = module.addGetElemPtrInst(
-                oldAddr, zero, IntegerConstant::getConstInt(loc), "arr.addr");
+                oldAddr, zero, new IntegerConstant(loc), "arr.addr");
             arrayInitDfs((ArrayConstant*)elem);
+            preLoc = loc;
+          }
+          if (len - preLoc > 1) {
+            // memset (preLoc + 1, 0, loc - preLoc - 1)
+            Value* beginAddr = module.addGetElemPtrInst(
+                oldAddr, zero, IntegerConstant::getConstInt(preLoc + 1),
+                "begin.addr");
+            vector<Value*> params{
+                beginAddr, zero,
+                IntegerConstant::getConstInt((len - preLoc - 1) * elemWidth)};
+            module.addCallInst(memsetFunc, params, "");
           }
           addr = oldAddr;
         }
@@ -1006,10 +1036,14 @@ void MySysYParserVisitor::init_extern_function() {
   vector<Function*> externFunctions;
 
   // int memset()
-  vector<Argument*> memsetArgs = {new Argument("p", intPtrType), new Argument("val", i32Type), new Argument("cnt", i32Type)};
+  vector<Argument*> memsetArgs = {new Argument("p", intPtrType),
+                                  new Argument("val", i32Type),
+                                  new Argument("cnt", i32Type)};
   funcType = Type::getFuncType(voidType, memsetArgs);
   function = new Function(funcType, true, "memset");
   externFunctions.push_back(function);
+  memsetFunc = function;
+  module.pushExternFunction(memsetFunc);
 
   // int getint()
   funcType = Type::getFuncType(i32Type);

@@ -45,7 +45,15 @@ class AggregateValue {
     depth = loc = 0;
     total_size = n;
   }
-  void pushValue(Value* v) { arr_elems->emplace(loc++, v); }
+  void pushValue(Value* v) {
+    if (v->isa(VT_INTCONST) && ((IntegerConstant*)v)->getValue() == 0) {
+      loc++;
+    } else if (v->isa(VT_FLOATCONST) && ((FloatConstant*)v)->getValue() == 0) {
+      loc++;
+    } else {
+      arr_elems->emplace(loc++, v);
+    }
+  }
   void inBrace() {
     int size = arr_shape->size();
     int nd = depth + 1;

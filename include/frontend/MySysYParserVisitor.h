@@ -120,6 +120,7 @@ class MySysYParserVisitor : SysYParserBaseVisitor {
   void buildVariable(string name, Value* val);
   void buildVariable(string name, Type* type);
   Value* tranformType(Value* src, Type* dest);
+  Function* memsetFunc;
 };
 
 #endif  // ANTPIE_MYSYSYPARSERVISITOR_H

@@ -43,7 +43,7 @@ string ArrayType::toString() const {
 
 string PointerType::toString() const { return elemType->toString() + "*"; }
 
-FuncType::FuncType(Type* rType) : Type(TT_FUNCTION), retType(rType) {
+FuncType::FuncType(Type* rType) : Type(TT_FUNCTION, 4), retType(rType) {
   arguments = make_unique<vector<unique_ptr<Argument>>>();
 };
 
