@@ -80,7 +80,7 @@ bool DeadCodeElimination::eliminateDeadInstructions(Function* func) {
     deadInst->deleteUseList();
     trashList.pushBack(deadInst);
   }
-  for (Instruction* trash: trashList) {
+  for (Instruction* trash : trashList) {
     delete trash;
   }
 
@@ -88,11 +88,13 @@ bool DeadCodeElimination::eliminateDeadInstructions(Function* func) {
 }
 
 bool DeadCodeElimination::simplifyInstruction(Function* func) {
+  bool changed = false;
   for (BasicBlock* block : *func->getBasicBlocks()) {
     // Cond branch to uncond branch
     if (BranchInst* branch = dynamic_cast<BranchInst*>(block->getTailInstr())) {
       Value* cond = branch->getRValue(0);
       if (BoolConstant* boolConstant = dynamic_cast<BoolConstant*>(cond)) {
+        changed = true;
         BasicBlock* succBlock = nullptr;
         BasicBlock* unreachBLock = nullptr;
         if (boolConstant->getValue()) {
@@ -127,6 +129,7 @@ bool DeadCodeElimination::simplifyInstruction(Function* func) {
       ++it;
       if ((phiInst = dynamic_cast<PhiInst*>(instr)) &&
           (instr->getRValueSize() == 2)) {
+        changed = true;
         phiInst->replaceAllUsesWith(phiInst->getRValue(0));
         phiInst->eraseFromParent();
         phiInst->deleteUseList();
@@ -135,6 +138,7 @@ bool DeadCodeElimination::simplifyInstruction(Function* func) {
       }
     }
   }
+  return changed;
 }
 
 bool DeadCodeElimination::isComputeInstruction(Instruction* instr) {
