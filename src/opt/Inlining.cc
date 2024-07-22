@@ -39,6 +39,18 @@ bool Inlining::runOnFunction(Function* func) {
 
       BasicBlock* splitBlock = block->split(instrIter);
       ++instrIter;
+
+      // modify phi from block
+      vector<Use*> changedUsers;
+      for (Use* use = block->getUseHead(); use; use = use->next) {
+        Instruction* userInst = use->instr;
+        if (!userInst->isa(VT_PHI)) continue;
+        changedUsers.push_back(use);
+      }
+      for (Use* use: changedUsers) {
+        use->replaceValue(splitBlock);
+      }
+
       FuncType* funcType = dynamic_cast<FuncType*>(callee->getType());
       int argSize = funcType->getArgSize();
       assert(argSize == callInst->getRValueSize());
@@ -122,5 +134,6 @@ bool Inlining::runOnFunction(Function* func) {
 }
 
 bool Inlining::needInline(Function* func) {
-  return !func->isRecursive() && func->getLineSize() < INLINE_THRESHOLD;
+  return !func->isExtern() && !func->isRecursive() &&
+         func->getLineSize() < INLINE_THRESHOLD;
 }

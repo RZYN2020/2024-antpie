@@ -15,4 +15,5 @@ add_library(
     GlobalValueNumbering.cc
     LoopUnroll.cc
     TailRecursionElimination.cc
+    DeadCodeElimination.cc
 )

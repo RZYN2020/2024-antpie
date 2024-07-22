@@ -134,7 +134,7 @@ string GlobalValueNumbering::hashToString(Instruction* instr) {
     return hashStr;
   }
 
-  if (instr->getRValueSize() == 1) {
+  if (!rhs) {
     return opName + "|" + lhs->toString();
   } else {
     return opName + "|" + lhs->toString() + "|" + rhs->toString();

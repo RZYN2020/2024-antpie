@@ -30,6 +30,7 @@ void CFG::eraseNode(BasicBlock* bb) {
     blkSuccMap[pred]->remove(bb);
   }
   blkPredMap.erase(bb);
+  blocks.remove(bb);
 }
 
 void CFG::eraseEdge(BasicBlock* src, BasicBlock* dest) {

@@ -77,7 +77,7 @@ string CommonSubexpElimination::hashToString(Instruction* instr) {
     opName = "gep" + instr->getRValue(0)->toString();
   }
 
-  if (instr->getRValueSize() == 1) {
+  if (!rhs) {
     return opName + "|" + lhs->toString();
   } else {
     return opName + "|" + lhs->toString() + "|" + rhs->toString();

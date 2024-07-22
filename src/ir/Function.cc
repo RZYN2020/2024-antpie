@@ -5,13 +5,23 @@
 Function::Function(FuncType* fType, string name)
     : GlobalValue(fType, name, VT_FUNC) {
   entry = new BasicBlock(name + "_entry");
+  exit = 0;
   pushBasicBlock(entry);
 }
 
 Function::Function(FuncType* fType, bool isExt, string name)
     : GlobalValue(fType, name, VT_FUNC), external(isExt) {
-  if (isExt) return;
+  if (isExt) {
+    setSideEffects(true);
+    setPureFunction(false);
+    setRecursive(false);
+    setMemRead(true);
+    setMemWrite(true);
+    return;
+  }
   entry = new BasicBlock(name + "_entry");
+  exit = 0;
+
   pushBasicBlock(entry);
 }
 

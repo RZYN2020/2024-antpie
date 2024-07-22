@@ -39,7 +39,8 @@ bool LoopAnalysis::runOnFunction(Function* func) {
             loopInfo->addExiting(block);
             loopInfo->addExit(succBlock);
           }
-        } else if (BranchInst* branchInst = dynamic_cast<BranchInst*>(tailInstr)) {
+        } else if (BranchInst* branchInst =
+                       dynamic_cast<BranchInst*>(tailInstr)) {
           for (int i = 1; i <= 2; i++) {
             BasicBlock* succBlock = (BasicBlock*)branchInst->getRValue(i);
             if (!loopInfo->containBlockInChildren(succBlock)) {
@@ -68,7 +69,6 @@ void LoopAnalysis::discoverAndMapSubloop(LoopInfo* loopInfo,
   for (BasicBlock* latch : latches) {
     workList.pushBack(latch);
   }
-
   while (!workList.isEmpty()) {
     BasicBlock* pred = workList.popFront();
 
@@ -79,7 +79,9 @@ void LoopAnalysis::discoverAndMapSubloop(LoopInfo* loopInfo,
         continue;
       }
       for (BasicBlock* ppred : *cfg->getPredOf(pred)) {
-        workList.pushBack(ppred);
+        if (!loopInfo->containBlock(ppred)) {
+          workList.pushBack(ppred);
+        }
       }
     } else {
       subloop = subloop->getRootLoop();

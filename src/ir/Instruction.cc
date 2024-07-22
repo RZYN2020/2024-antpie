@@ -19,7 +19,10 @@ Value* Instruction::getRValue(int idx) const {
 }
 
 void Instruction::eraseFromParent() {
-  getParent()->getInstructions()->remove(this);
+  if (block->getTailInstr() == this) {
+    block->setTailInstr(nullptr);
+  }
+  block->getInstructions()->remove(this);
   block = nullptr;
 }
 

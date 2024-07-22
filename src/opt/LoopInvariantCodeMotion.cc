@@ -28,7 +28,7 @@ bool LoopInvariantCodeMotion::isMovable(Instruction* instr, LoopInfo* loopInfo,
             return true;
 
           if (subInstr->isa(VT_CALL)) {
-            CallInst* callInstr = dynamic_cast<CallInst*>(instr);
+            CallInst* callInstr = dynamic_cast<CallInst*>(subInstr);
             Function* callee =
                 dynamic_cast<Function*>(callInstr->getFunction());
             if (callee->hasMemWrite()) return true;
@@ -55,7 +55,7 @@ bool LoopInvariantCodeMotion::isMovable(Instruction* instr, LoopInfo* loopInfo,
             return true;
 
           if (subInstr->isa(VT_CALL)) {
-            CallInst* callInstr = dynamic_cast<CallInst*>(instr);
+            CallInst* callInstr = dynamic_cast<CallInst*>(subInstr);
             Function* callee =
                 dynamic_cast<Function*>(callInstr->getFunction());
             if (callee->hasMemRead()) return true;

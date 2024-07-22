@@ -11,6 +11,7 @@ bool FunctionPropAnalysis::runOnModule(ANTPIE::Module* module) {
   // A function level worklist
   while (!workList.isEmpty()) {
     Function* function = workList.popFront();
+    if (function->isExtern()) continue;
     if (runOnFunction(function)) {
       changed = true;
       for (Function* caller : function->getCallers()) {

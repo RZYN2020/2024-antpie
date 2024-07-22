@@ -11,6 +11,11 @@ BasicBlock::~BasicBlock() {
 void BasicBlock::printIR(ostream& stream) const {
   stream << getName() << ":" << endl;
   for (const auto& instr : instructions) {
+    
+    if (instr->getParent() != this) {
+      std::cout << getName() << std::endl;
+      assert(0);
+    }
     stream << "  ";
     instr->printIR(stream);
     stream << endl;
@@ -23,15 +28,16 @@ bool isTail(Instruction* instr) {
          instr->getValueTag() == VT_JUMP;
 }
 
-void BasicBlock::pushInstr(Instruction* instr) {
+bool BasicBlock::pushInstr(Instruction* instr) {
   if (isTail(instructions.back())) {
-    return;
+    return false;
   }
   if (isTail(instr)) {
     tail = instr;
   }
   instr->setParent(this);
   instructions.pushBack(instr);
+  return true;
 }
 
 void BasicBlock::pushInstrAtHead(Instruction* instr) {
@@ -61,6 +67,9 @@ BasicBlock* BasicBlock::split(LinkedList<Instruction*>::Iterator iter) {
   splitBlock->tail = tail;
   tail = nullptr;
   splitBlock->function = function;
+  for (Instruction* splitInstr: *splitBlock->getInstructions()) {
+    splitInstr->setParent(splitBlock);
+  }
   return splitBlock;
 }
 

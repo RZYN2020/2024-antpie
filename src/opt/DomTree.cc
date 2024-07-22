@@ -2,9 +2,9 @@
 
 #include "Function.hh"
 
-vector<BasicBlock *> dfsPred; // fth
-vector<int> dsTree;           // fa
-vector<int> sDom;             // sdom
+vector<BasicBlock *> dfsPred;  // fth
+vector<int> dsTree;            // fa
+vector<int> sDom;              // sdom
 vector<int> mn;
 vector<vector<int>> sDomSucc;
 
@@ -108,15 +108,20 @@ DomTree::DomTree(Function *func) : dtActive(false) {
   blocks = func->getBasicBlocks();
   cfg = func->getCFG();
   assert(cfg);
-  for (BasicBlock* bb : *blocks) {
+  for (BasicBlock *bb : *blocks) {
     dtNodeMap[bb] = new DomTreeNode();
   }
 }
 
 void DomTree::draw() {
   vector<std::pair<string, string>> edges;
-  for (auto& item : dtNodeMap) {
-    edges.push_back({item.second->dominator->getName(), item.first->getName()});
+  for (auto &item : dtNodeMap) {
+    if (item.second->dominator) {
+      edges.push_back(
+          {item.second->dominator->getName(), item.first->getName()});
+    } else {
+      edges.push_back({"eee", item.first->getName()});
+    }
   }
   visualizeGraph(edges);
 }
@@ -127,8 +132,8 @@ void DomTree::calculateDF() {
   if (!dtReady()) {
     buildDomTree();
   }
-  for (BasicBlock* bb : *blocks) {
-    dtNodeMap[bb]->dominanceFrontier = new LinkedList<BasicBlock*>();
+  for (BasicBlock *bb : *blocks) {
+    dtNodeMap[bb]->dominanceFrontier = new LinkedList<BasicBlock *>();
   }
   for (BasicBlock *bb : *blocks) {
     if (cfg->getPredOf(bb)->getSize() > 1) {
@@ -178,10 +183,10 @@ void DomTree::calculateIDF(BBListPtr src, BBListPtr result) {
   }
 }
 
-void DomTree::mergeChildrenTo(BasicBlock* src, BasicBlock* dest) {
+void DomTree::mergeChildrenTo(BasicBlock *src, BasicBlock *dest) {
   BBListPtr srcList = dtNodeMap[src]->domChildren;
   BBListPtr destList = dtNodeMap[dest]->domChildren;
-  for (BasicBlock* domChild : *srcList) {
+  for (BasicBlock *domChild : *srcList) {
     destList->pushBack(domChild);
     setDominator(domChild, dest);
   }
@@ -189,10 +194,10 @@ void DomTree::mergeChildrenTo(BasicBlock* src, BasicBlock* dest) {
 }
 
 BBListPtr DomTree::postOrder() {
-  BBListPtr postOrderList = new LinkedList<BasicBlock*>();
+  BBListPtr postOrderList = new LinkedList<BasicBlock *>();
 
-  std::function<void(BasicBlock*)> postDfs = [&](BasicBlock* node) -> void {
-    for (BasicBlock* child : *getDomChildren(node)) {
+  std::function<void(BasicBlock *)> postDfs = [&](BasicBlock *node) -> void {
+    for (BasicBlock *child : *getDomChildren(node)) {
       postDfs(child);
     }
     postOrderList->pushBack(node);
@@ -202,8 +207,8 @@ BBListPtr DomTree::postOrder() {
   return postOrderList;
 }
 
-bool DomTree::dominates(BasicBlock* parent, BasicBlock* block) {
-  BasicBlock* ptr = block;
+bool DomTree::dominates(BasicBlock *parent, BasicBlock *block) {
+  BasicBlock *ptr = block;
   while (ptr != parent) {
     auto it = dtNodeMap.find(ptr);
     if (it->second->dominator == nullptr) {
@@ -216,10 +221,10 @@ bool DomTree::dominates(BasicBlock* parent, BasicBlock* block) {
 
 void DomTree::calculateDepth() {
   depthActive = 1;
-  std::function<void(DomTreeNode*, uint32_t)> dfs = [&](DomTreeNode* node,
-                                                        uint32_t depth) {
+  std::function<void(DomTreeNode *, uint32_t)> dfs = [&](DomTreeNode *node,
+                                                         uint32_t depth) {
     node->depth = depth;
-    for (BasicBlock* child : *node->domChildren) {
+    for (BasicBlock *child : *node->domChildren) {
       dfs(dtNodeMap[child], depth + 1);
     }
   };
@@ -227,7 +232,7 @@ void DomTree::calculateDepth() {
   dfs(dtNodeMap[cfg->getEntry()], 0);
 }
 
-BasicBlock* DomTree::findLCA(BasicBlock* bbx, BasicBlock* bby) {
+BasicBlock *DomTree::findLCA(BasicBlock *bbx, BasicBlock *bby) {
   int delta = getDepth(bbx) - getDepth(bby);
   if (delta < 0) {
     std::swap(bbx, bby);

@@ -47,7 +47,8 @@ void MySysYParserVisitor::buildCondition() {
       currentRet = module.addIcmpInst(OpTag::NE, currentRet, zero, "icmp.ne");
     } else {
       Value* fzero = FloatConstant::getConstFloat(0);
-      currentRet = module.addFcmpInst(OpTag::ONE, currentRet, fzero, "fcmp.one");
+      currentRet =
+          module.addFcmpInst(OpTag::ONE, currentRet, fzero, "fcmp.one");
     }
   }
   module.addBranchInst(currentRet, trueBasicBlock, falseBasicBlock);
@@ -559,8 +560,12 @@ antlrcpp::Any MySysYParserVisitor::visitRelExp(
   //   LoadInst* li = module.addLoadInst(l_Val, "lval");
   //   l_Val = li;
   // }
-  if (l_Val->getType()->getTypeTag() == TT_INT1) {
-    l_Val = module.addZextInst(l_Val, Type::getInt32Type(), "zext");
+  if (l_Val->getType()->getTypeTag() == TT_INT1 && ctx->op.size() > 0) {
+    if (l_Val->isa(VT_BOOLCONST)) {
+      l_Val = IntegerConstant::getConstInt(((BoolConstant*)l_Val)->getValue());
+    } else {
+      l_Val = module.addZextInst(l_Val, Type::getInt32Type(), "zext");
+    }
   }
   for (int i = 0; i < ctx->op.size(); ++i) {
     visit(ctx->right[i]);
@@ -569,7 +574,12 @@ antlrcpp::Any MySysYParserVisitor::visitRelExp(
       r_Val = module.addLoadInst(r_Val, "rval");
     }
     if (r_Val->getType()->getTypeTag() == TT_INT1) {
-      r_Val = module.addZextInst(r_Val, Type::getInt32Type(), "zext");
+      if (r_Val->isa(VT_BOOLCONST)) {
+        r_Val =
+            IntegerConstant::getConstInt(((BoolConstant*)r_Val)->getValue());
+      } else {
+        r_Val = module.addZextInst(r_Val, Type::getInt32Type(), "zext");
+      }
     }
     // lhs and rhs both are constant
     if (dynamic_cast<Constant*>(l_Val) && dynamic_cast<Constant*>(r_Val)) {
@@ -587,7 +597,7 @@ antlrcpp::Any MySysYParserVisitor::visitRelExp(
         } else {
           rhs = ((FloatConstant*)r_Val)->getValue();
         }
-        float ret_float = 0;
+        int ret_float = 0;
         if (ctx->op[i]->getText() == "<") {
           ret_float = (lhs < rhs) ? 1 : 0;
         } else if (ctx->op[i]->getText() == ">") {
@@ -597,7 +607,7 @@ antlrcpp::Any MySysYParserVisitor::visitRelExp(
         } else if (ctx->op[i]->getText() == ">=") {
           ret_float = (lhs >= rhs) ? 1 : 0;
         }
-        l_Val = FloatConstant::getConstFloat(ret_float);
+        l_Val = BoolConstant::getConstBool(ret_float);
         continue;
       } else {
         // result is integer
@@ -613,7 +623,7 @@ antlrcpp::Any MySysYParserVisitor::visitRelExp(
         } else if (ctx->op[i]->getText() == ">=") {
           ret_int = lhs >= rhs;
         }
-        l_Val = IntegerConstant::getConstInt(ret_int);
+        l_Val = BoolConstant::getConstBool(ret_int);
         continue;
       }
     }
@@ -655,8 +665,12 @@ antlrcpp::Any MySysYParserVisitor::visitEqExp(
   //   LoadInst* li = module.addLoadInst(l_Val, "lval");
   //   l_Val = li;
   // }
-  if (l_Val->getType()->getTypeTag() == TT_INT1) {
-    l_Val = module.addZextInst(l_Val, Type::getInt32Type(), "zext");
+  if (l_Val->getType()->getTypeTag() == TT_INT1 && ctx->op.size() > 0) {
+    if (l_Val->isa(VT_BOOLCONST)) {
+      l_Val = IntegerConstant::getConstInt(((BoolConstant*)l_Val)->getValue());
+    } else {
+      l_Val = module.addZextInst(l_Val, Type::getInt32Type(), "zext");
+    }
   }
   for (int i = 0; i < ctx->op.size(); ++i) {
     visit(ctx->right[i]);
@@ -665,7 +679,12 @@ antlrcpp::Any MySysYParserVisitor::visitEqExp(
       r_Val = module.addLoadInst(r_Val, "rval");
     }
     if (r_Val->getType()->getTypeTag() == TT_INT1) {
-      r_Val = module.addZextInst(r_Val, Type::getInt32Type(), "zext");
+      if (r_Val->isa(VT_BOOLCONST)) {
+        r_Val =
+            IntegerConstant::getConstInt(((BoolConstant*)r_Val)->getValue());
+      } else {
+        r_Val = module.addZextInst(r_Val, Type::getInt32Type(), "zext");
+      }
     }
     // lhs and rhs both are constant
     if (dynamic_cast<Constant*>(l_Val) && dynamic_cast<Constant*>(r_Val)) {
@@ -683,13 +702,13 @@ antlrcpp::Any MySysYParserVisitor::visitEqExp(
         } else {
           rhs = ((FloatConstant*)r_Val)->getValue();
         }
-        float ret_float = 0;
+        int ret = 0;
         if (ctx->op[i]->getText() == "==") {
-          ret_float = (lhs == rhs) ? 1 : 0;
+          ret = (lhs == rhs) ? 1 : 0;
         } else if (ctx->op[i]->getText() == "!=") {
-          ret_float = (lhs != rhs) ? 1 : 0;
+          ret = (lhs != rhs) ? 1 : 0;
         }
-        l_Val = FloatConstant::getConstFloat(ret_float);
+        l_Val = BoolConstant::getConstBool(ret);
         continue;
       } else {
         // result is integer
@@ -701,7 +720,7 @@ antlrcpp::Any MySysYParserVisitor::visitEqExp(
         } else if (ctx->op[i]->getText() == "!=") {
           ret_int = lhs != rhs;
         }
-        l_Val = IntegerConstant::getConstInt(ret_int);
+        l_Val = BoolConstant::getConstBool(ret_int);
         continue;
       }
     }
@@ -938,36 +957,66 @@ void MySysYParserVisitor::setArrayInitVal(Value* arr,
       [&](ArrayConstant* arrayConst) {
         ArrayType* arrayType = (ArrayType*)arrayConst->getType();
         int len = arrayType->getLen();
+        int elemWidth = arrayType->getWidth() / len;
         auto* elemMap = arrayConst->getElementMap();
-
+        int preLoc = -1;
         if (arrayType->getElemType()->getTypeTag() != TT_ARRAY) {
-          for (int loc = 0; loc < len; loc++) {
-            auto it = elemMap->find(loc);
-            Value* elem;
-            if (it == elemMap->end()) {
-              elem = arrayType->getElemType()->getZeroInit();
-            } else {
-              elem = it->second;
+          for (auto [loc, elem] : *elemMap) {
+            if (loc - preLoc > 1) {
+              // memset (preLoc + 1, 0, loc - preLoc - 1)
+              Value* beginAddr = module.addGetElemPtrInst(
+                  addr, zero, IntegerConstant::getConstInt(preLoc + 1),
+                  "begin.addr");
+              vector<Value*> params{
+                  beginAddr, zero,
+                  IntegerConstant::getConstInt((loc - preLoc - 1) << 2)};
+              module.addCallInst(memsetFunc, params, "");
             }
             auto finalAddr = module.addGetElemPtrInst(
                 addr, zero, new IntegerConstant(loc), "arr.faddr");
             elem = tranformType(
                 elem, ((PointerType*)finalAddr->getType())->getElemType());
             module.addStoreInst(elem, finalAddr);
+            preLoc = loc;
           }
+          if (len - preLoc > 1) {
+            // memset (preLoc + 1, 0, loc - preLoc - 1)
+            Value* beginAddr = module.addGetElemPtrInst(
+                addr, zero, IntegerConstant::getConstInt(preLoc + 1),
+                "begin.addr");
+            vector<Value*> params{
+                beginAddr, zero,
+                IntegerConstant::getConstInt((len - preLoc - 1) << 2)};
+            module.addCallInst(memsetFunc, params, "");
+          }
+
         } else {
           Value* oldAddr = addr;
-          for (int loc = 0; loc < len; loc++) {
-            auto it = elemMap->find(loc);
-            Value* elem;
-            if (it == elemMap->end()) {
-              elem = arrayType->getElemType()->getZeroInit();
-            } else {
-              elem = it->second;
+          for (auto [loc, elem] : *elemMap) {
+            if (loc - preLoc > 1) {
+              // memset (preLoc + 1, 0, (loc - preLoc - 1) * width)
+              Value* beginAddr = module.addGetElemPtrInst(
+                  oldAddr, zero, IntegerConstant::getConstInt(preLoc + 1),
+                  "begin.addr");
+              vector<Value*> params{
+                  beginAddr, zero,
+                  IntegerConstant::getConstInt((loc - preLoc - 1) * elemWidth)};
+              module.addCallInst(memsetFunc, params, "");
             }
             addr = module.addGetElemPtrInst(
-                oldAddr, zero, IntegerConstant::getConstInt(loc), "arr.addr");
+                oldAddr, zero, new IntegerConstant(loc), "arr.addr");
             arrayInitDfs((ArrayConstant*)elem);
+            preLoc = loc;
+          }
+          if (len - preLoc > 1) {
+            // memset (preLoc + 1, 0, loc - preLoc - 1)
+            Value* beginAddr = module.addGetElemPtrInst(
+                oldAddr, zero, IntegerConstant::getConstInt(preLoc + 1),
+                "begin.addr");
+            vector<Value*> params{
+                beginAddr, zero,
+                IntegerConstant::getConstInt((len - preLoc - 1) * elemWidth)};
+            module.addCallInst(memsetFunc, params, "");
           }
           addr = oldAddr;
         }
@@ -987,10 +1036,14 @@ void MySysYParserVisitor::init_extern_function() {
   vector<Function*> externFunctions;
 
   // int memset()
-  vector<Argument*> memsetArgs = {new Argument("p", intPtrType), new Argument("val", i32Type), new Argument("cnt", i32Type)};
+  vector<Argument*> memsetArgs = {new Argument("p", intPtrType),
+                                  new Argument("val", i32Type),
+                                  new Argument("cnt", i32Type)};
   funcType = Type::getFuncType(voidType, memsetArgs);
   function = new Function(funcType, true, "memset");
   externFunctions.push_back(function);
+  memsetFunc = function;
+  module.pushExternFunction(memsetFunc);
 
   // int getint()
   funcType = Type::getFuncType(i32Type);
