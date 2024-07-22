@@ -79,11 +79,15 @@ void spill_register_for_func(MFunction *func) {
   //             << std::endl;
   // }
 
+  // std::cout << "lower_alloca" << endl;
   lower_alloca(func, stack_offset);
+  // std::cout << "lower_call_spill_only" << endl;
+
   lower_call_spill_only(func, spill.get(), stack_offset);
   add_prelude(func, &allocation, spill.get(), stack_offset, &callee_saved);
   add_conclude(func, &allocation, spill.get(), stack_offset, &callee_saved);
   rewrite_program_spill(func, spill.get());
+  fixRange(func);
 }
 
 void spill_all_register(MModule *mod) {

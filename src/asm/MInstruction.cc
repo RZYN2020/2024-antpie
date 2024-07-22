@@ -91,6 +91,13 @@ int MInstruction::getRegNum() const {
   return oprands->size();
 }
 
+void MInstruction::setReg(int idx, Register *reg) const {
+  if (oprands == nullptr || idx < 0 || idx >= oprands->size()) {
+    assert(0);
+  }
+  (*oprands)[idx] = reg;
+}
+
 Register *MInstruction::getReg(int idx) const {
   if (oprands == nullptr || idx < 0 || idx >= oprands->size()) {
     return nullptr;

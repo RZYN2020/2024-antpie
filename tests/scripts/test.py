@@ -118,8 +118,11 @@ def run_single_test(sy_file, out_file, in_file=None):
     # get riscv asm file
     asm_file = tmp_file_base + prefix + ".s"
     gen_command = compiler_path + " " + test_dir + sy_file + " -o " + asm_file + " -r"
-    subprocess.run(gen_command, shell=True)
-
+    try:
+        subprocess.run(gen_command, shell=True, timeout=5)
+    except subprocess.TimeoutExpired:
+        return "Process timed out"
+    
     # asm to binary file
     obj_file = tmp_file_base + prefix + ".o"
     objgen_command = ["riscv64-linux-gnu-gcc-10", "-fPIE", "-c", asm_file, "-o", obj_file]
@@ -132,16 +135,21 @@ def run_single_test(sy_file, out_file, in_file=None):
 
     # qemu load...
     run_command = ["qemu-riscv64", "-L", "/usr/riscv64-linux-gnu", "-s", "1024M", bin_file]
-    if in_file:
-        with open(test_dir + in_file, 'r') as input_file:
-            result = subprocess.run(run_command, text=True, input=input_file.read(), capture_output=True)
-    else:
-        result = subprocess.run(run_command, text=True, capture_output=True)
-    stdout = result.stdout
-    if stdout != "" and stdout[len(stdout) - 1] != '\n':
-        result.stdout += "\n"
-    output = result.stdout + str(result.returncode)
-    return compare_file_to_string(test_dir + out_file, output)
+    try:
+        if in_file:
+            with open(test_dir + in_file, 'r') as input_file:
+                result = subprocess.run(run_command, text=True, input=input_file.read(), capture_output=True, timeout=5)
+        else:
+            result = subprocess.run(run_command, text=True, capture_output=True, timeout=5)
+        
+        stdout = result.stdout
+        if stdout != "" and stdout[-1] != '\n':
+            result.stdout += "\n"
+        output = result.stdout + str(result.returncode)
+        return compare_file_to_string(test_dir + out_file, output)
+    
+    except subprocess.TimeoutExpired:
+        return "Process timed out"
 
 def print_result(success, fail):
     if fail == 0:

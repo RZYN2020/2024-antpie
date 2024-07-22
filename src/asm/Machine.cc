@@ -240,10 +240,12 @@ MBasicBlock::replaceInstructionWith(MInstruction *ins,
       unique_ptr<MInstruction> removed = std::move(*it);
       instructions->erase(it);
       for (auto new_ins : instrs) {
+        // std::cout << "  insert " << *new_ins << endl;
         instructions->insert(it, unique_ptr<MInstruction>(new_ins));
         new_ins->setBasicBlock(this);
         ++it;
       }
+      // std::cout << "return moved" << endl;
       return removed;
     }
   }
@@ -459,10 +461,10 @@ MFunction::MFunction(FuncType *type, string name) {
     case TT_POINTER: {
       if (int_cnt <= 17) {
         argr = new ParaRegister(Register::getIRegister(int_cnt++),
-                                arg->getName(), Register::V_IREGISTER, false);
+                                arg->getName(), Register::V_IREGISTER, true);
       } else {
         argr = new ParaRegister(offset, 8, arg->getName(),
-                                Register::V_IREGISTER, false);
+                                Register::V_IREGISTER, true);
         offset += 8;
       }
       break;
@@ -547,8 +549,8 @@ MGlobal *MModule::addGlobalVariable(GlobalVariable *global) {
 
 MGlobal *MModule::addGlobalFloat(FloatConstant *f) {
   static int float_cnt = 0;
-  auto g = new MGlobal(
-      new GlobalVariable(FloatType::getFloatType(), f,  "fi" +  std::to_string(float_cnt++)));
+  auto g = new MGlobal(new GlobalVariable(FloatType::getFloatType(), f,
+                                          "fi" + std::to_string(float_cnt++)));
   globalVariables->push_back(unique_ptr<MGlobal>(g));
   return g;
 }
@@ -577,7 +579,7 @@ std::ostream &operator<<(std::ostream &os, const MModule &obj) {
     os << *f << endl;
   }
 
-  #include "memset.hh"
+#include "memset.hh"
   if (gen_memset) {
     os << memset_code << endl;
   }

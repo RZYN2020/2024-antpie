@@ -5,11 +5,11 @@
 #include "Register.hh"
 #include <cassert>
 #include <memory>
-#include <vector>
 #include <set>
+#include <vector>
 
-using std::set;
 using std::ostream;
+using std::set;
 using std::unique_ptr;
 
 class MBasicBlock;
@@ -149,6 +149,7 @@ public:
   void pushReg(Register *r);
   int getRegNum() const;
   Register *getReg(int idx) const;
+  void setReg(int idx, Register *reg) const;
 
   MITag getInsTag() const;
 
@@ -220,7 +221,7 @@ public:
   ostream &printASM(ostream &stream) override;
   vector<MInstruction *> generateCallSequence(
       MFunction *func, int stack_offset, map<Register *, int> *spill,
-      map<Register *, Register *> *allocation, set<Register *>* lineIn);
+      map<Register *, Register *> *allocation, set<Register *> *lineIn);
 };
 
 class MHIbr : public MInstruction {
@@ -258,7 +259,7 @@ public:
 
 #define DEFINE_MI_IMM_CLASS(NAME)                                              \
   class MI##NAME : public MInstruction {                                       \
-  private:                                                                     \
+  public:                                                                      \
     int imm;                                                                   \
                                                                                \
   public:                                                                      \
@@ -295,7 +296,7 @@ DEFINE_MI_IMM_CLASS(sltiu)
 
 #define DEFINE_MI_LOAD_CLASS(NAME)                                             \
   class MI##NAME : public MInstruction {                                       \
-  private:                                                                     \
+  public:                                                                      \
     MGlobal *global = nullptr;                                                 \
     int imm;                                                                   \
                                                                                \
@@ -312,7 +313,7 @@ DEFINE_MI_IMM_CLASS(sltiu)
 
 #define DEFINE_MI_STORE_CLASS(NAME)                                            \
   class MI##NAME : public MInstruction {                                       \
-  private:                                                                     \
+  public:                                                                      \
     MGlobal *global = nullptr;                                                 \
     int imm;                                                                   \
                                                                                \
@@ -404,15 +405,14 @@ public:
   ostream &printASM(ostream &stream) override;
 };
 
-
 class MIla : public MInstruction { // presudo
 private:
-  MGlobal* g;
+  MGlobal *g;
 
 public:
-  MIla(MGlobal* g);
-  MIla(MGlobal* g, string name);
-  MIla(MGlobal* g, Register *target);
+  MIla(MGlobal *g);
+  MIla(MGlobal *g, string name);
+  MIla(MGlobal *g, Register *target);
   ostream &printASM(ostream &stream) override;
 };
 

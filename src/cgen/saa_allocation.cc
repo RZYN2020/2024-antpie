@@ -295,7 +295,7 @@ void allocate_register(MModule *mod) {
     auto liveness_ireg = make_unique<LivenessInfo>();
     auto liveness_freg = make_unique<LivenessInfo>();
     ssa_liveness_analysis(func.get(), liveness_ireg.get(), liveness_freg.get());
-    // std::cout << "Function: " << func->getName() << endl;
+    std::cout << "Function: " << func->getName() << endl;
 
     // printLivenessInfo(func.get(), liveness_ireg.get(), liveness_freg.get());
 
@@ -305,29 +305,30 @@ void allocate_register(MModule *mod) {
     spill_registers(offset, spill.get(), liveness_ireg.get(),
                     liveness_freg.get());
 
-    // std::cout << "Spill to Memory:" << endl;
-    // for (auto &[reg, offset] : *spill) {
-    //   std::cout << "  " << reg->getName() << " -> " << offset << endl;
-    // }
-    // std::cout << endl;
+    std::cout << "Spill to Memory:" << endl;
+    for (auto &[reg, offset] : *spill) {
+      std::cout << "  " << reg->getName() << " -> " << offset << endl;
+    }
+    std::cout << endl;
 
     // // step3. Allocate
     auto allocation = make_unique<map<Register *, Register *>>();
     allocate(func.get(), allocation.get(), spill.get(), liveness_ireg.get(),
              liveness_freg.get());
 
-    // std::cout << "Register Allocation:" << endl;
-    // for (auto &[logical_reg, physical_reg] : *allocation) {
-    //   std::cout << "  " << logical_reg->getName() << " -> "
-    //             << physical_reg->getName() << endl;
-    // }
-    // std::cout << endl << endl;
+    std::cout << "Register Allocation:" << endl;
+    for (auto &[logical_reg, physical_reg] : *allocation) {
+      std::cout << "  " << logical_reg->getName() << " -> "
+                << physical_reg->getName() << endl;
+    }
+    std::cout << endl << endl;
 
     auto callee_saved = getActuallCalleeSavedRegisters(allocation.get());
     offset += callee_saved.size() * 8;
 
     // step4. Rewrite program
     out_of_ssa(func.get());
+        std::cout << "endl" << endl;
     lower_call(func.get(), offset, allocation.get(), spill.get(), liveness_ireg.get(), liveness_ireg.get());
     lower_alloca(func.get(), offset);
     add_prelude(func.get(), allocation.get(), spill.get(), offset,
@@ -336,6 +337,7 @@ void allocate_register(MModule *mod) {
                  &callee_saved);
     rewrite_program_allocate(func.get(), allocation.get());
     rewrite_program_spill(func.get(), spill.get());
+    fixRange(func.get());
   }
   mod->ssa_out();
 }

@@ -258,21 +258,23 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     }
     mfunc->setEntry(bb_map->at(func->getEntry()));
 
-    if (func->getDT() == nullptr) {
-      func->buildCFG();
-      func->buildDT();
-    }
-    auto domt = func->getDT();
-    auto pr = domt->postOrder();
-    auto mdompr = new vector<MBasicBlock *>();
-    for (auto bb : *pr) {
-      if (bb->isEmpty())
-        continue;
-      mdompr->push_back(bb_map->at(bb));
-    }
-    std::reverse(mdompr->begin(), mdompr->end());
-    mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock *>>(mdompr);
+    // std::cout << "  Select DomTree " << endl;
+    // if (func->getDT() == nullptr) {
+    //   func->buildCFG();
+    //   func->buildDT();
+    // }
+    // auto domt = func->getDT();
+    // auto pr = domt->postOrder();
+    // auto mdompr = new vector<MBasicBlock *>();
+    // for (auto bb : *pr) {
+    //   if (bb->isEmpty())
+    //     continue;
+    //   mdompr->push_back(bb_map->at(bb));
+    // }
+    // std::reverse(mdompr->begin(), mdompr->end());
+    // mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock *>>(mdompr);
 
+    // std::cout << "    Select every Instruction " << endl;
     // Select every Instruction
     for (auto it = basicBlocks->begin(); it != basicBlocks->end();
          ++it) { // Begin BB Loop
@@ -443,32 +445,17 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           LoadInst *load = static_cast<LoadInst *>(ins);
           auto tp = load->getType()->getTypeTag();
           auto addr = load->getRValue(0);
-          if (addr->getValueTag() == VT_GLOBALVAR) {
-            auto g = global_map->at(static_cast<GlobalVariable *>(addr));
-            if (tp == TT_FLOAT) {
-              ADD_INSTR(mload, MIflw, g, ins->getName());
-              instr_map->insert({ins, mload});
-            } else if (tp == TT_INT32 || tp == TT_INT1) {
-              ADD_INSTR(mload, MIlw, g, ins->getName());
-              instr_map->insert({ins, mload});
-            } else {
-              assert(0);
-              ADD_INSTR(mload, MIld, g, ins->getName());
-              instr_map->insert({ins, mload});
-            }
+          auto a = GET_VREG(addr);
+          if (tp == TT_FLOAT) {
+            ADD_INSTR(mload, MIflw, a, 0, ins->getName());
+            instr_map->insert({ins, mload});
+          } else if (tp == TT_INT32 || tp == TT_INT1) {
+            ADD_INSTR(mload, MIlw, a, 0, ins->getName());
+            instr_map->insert({ins, mload});
           } else {
-            auto a = GET_VREG(addr);
-            if (tp == TT_FLOAT) {
-              ADD_INSTR(mload, MIflw, a, 0, ins->getName());
-              instr_map->insert({ins, mload});
-            } else if (tp == TT_INT32 || tp == TT_INT1) {
-              ADD_INSTR(mload, MIlw, a, 0, ins->getName());
-              instr_map->insert({ins, mload});
-            } else {
-              assert(0);
-              ADD_INSTR(mload, MIld, a, 0, ins->getName());
-              instr_map->insert({ins, mload});
-            }
+            assert(0);
+            ADD_INSTR(mload, MIld, a, 0, ins->getName());
+            instr_map->insert({ins, mload});
           }
           break;
         }

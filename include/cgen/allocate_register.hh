@@ -84,6 +84,7 @@ void printLivenessInfo(MFunction *func, LivenessInfo *liveness_ireg,
 /////                   Functions
 /////////////////////////////////////////////////////////////////
 
+void fixRange(MFunction *mfunc);
 void out_of_ssa(MFunction *func);
 void rewrite_program_spill(MFunction *func, map<Register *, int> *spill);
 void rewrite_program_allocate(MFunction *func,
