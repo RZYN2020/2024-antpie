@@ -353,7 +353,8 @@ void out_of_ssa(MFunction *func) {
           }
         } else if (opd.tp == MIOprandTp::Float) {
           auto g = func->getMod()->addGlobalFloat(new FloatConstant(opd.arg.f));
-          ins = new MIflw(g, phi->getTarget());
+          auto addr = new MIla(g, Register::reg_t0);
+          ins = new MIflw(Register::reg_t0, 0, phi->getTarget());
         } else {
           ins = new MIli(opd.arg.i, phi->getTarget());
         }
@@ -600,7 +601,8 @@ vector<MInstruction *> MHIcall::generateCallSequence(
       switch (arg.tp) {
       case MIOprandTp::Float: {
         auto g = func->getMod()->addGlobalFloat(new FloatConstant(arg.arg.f));
-        res.push_back(new MIflw(g, Register::reg_ft0));
+        res.push_back(new MIla(g, Register::reg_t0));
+        res.push_back(new MIflw(Register::reg_t0, 0, Register::reg_ft0));
         res.push_back(
             new MIfsw(Register::reg_ft0, para->getOffset(), Register::reg_sp));
         break;
@@ -632,7 +634,9 @@ vector<MInstruction *> MHIcall::generateCallSequence(
       switch (arg.tp) {
       case Float: {
         auto g = func->getMod()->addGlobalFloat(new FloatConstant(arg.arg.f));
-        assignments.push_back(new MIflw(g, para->getRegister()));
+        assignments.push_back(new MIla(g, Register::reg_t0));
+        assignments.push_back(
+            new MIflw(Register::reg_t0, 0, para->getRegister()));
         break;
       }
       case Int: {
@@ -770,7 +774,8 @@ void add_conclude(MFunction *func, map<Register *, Register *> *allocation,
         case MIOprandTp::Float: {
           auto g =
               func->getMod()->addGlobalFloat(new FloatConstant(hret->r.arg.f));
-          bb->pushInstr(new MIflw(g, Register::reg_fa0));
+          bb->pushInstr(new MIla(g, Register::reg_t0));
+          bb->pushInstr(new MIflw(Register::reg_t0, 0, Register::reg_fa0));
           break;
         }
         case MIOprandTp::Int: {

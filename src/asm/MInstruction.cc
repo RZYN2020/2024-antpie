@@ -1,5 +1,5 @@
-#include "Machine.hh"
 #include "MInstruction.hh"
+#include "Machine.hh"
 
 //////////////////////////////////////
 //////////////////////////////////////
@@ -234,8 +234,7 @@ ostream &MHIalloca::printASM(ostream &os) {
 }
 ////////////////////////////////////////////
 
-MHIret::MHIret()
-    : MInstruction(MInstruction::MITag::H_RET, RegTag::NONE) {
+MHIret::MHIret() : MInstruction(MInstruction::MITag::H_RET, RegTag::NONE) {
   this->r.tp = MIOprandTp::None;
 }
 
@@ -605,9 +604,9 @@ IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, V_IREGISTER, sltiu, false)
                                                                                \
   ostream &MI##NAME::printASM(ostream &os) {                                   \
     if (this->global) {                                                        \
-      assert(0);                                                               \
-      return os << #NAME << " " << this->getTarget()->getName() << +", "       \
+      std::cout << #NAME << " " << this->getTarget()->getName() << +", "       \
                 << this->global->getName();                                    \
+      assert(0);                                                               \
     } else {                                                                   \
       return os << #NAME << " " << this->getTarget()->getName() << ", "        \
                 << std::to_string(imm) << "(" << this->getReg(0)->getName()    \
@@ -669,7 +668,30 @@ IMPLEMENT_MI_BIN_CLASS(fmul_s, FMUL_S, V_FREGISTER, fmul.s, false)
 IMPLEMENT_MI_BIN_CLASS(fdiv_s, FDIV_S, V_FREGISTER, fdiv.s, false)
 
 IMPLEMENT_MI_UNA_CLASS(fcvts_w, FCVTS_W, V_FREGISTER, fcvt.s.w, false)
-IMPLEMENT_MI_UNA_CLASS(fcvtw_s, FCVTW_S, V_IREGISTER, fcvt.w.s, false)
+// IMPLEMENT_MI_UNA_CLASS(fcvtw_s, FCVTW_S, V_IREGISTER, fcvt.w.s, false)
+
+// add rtz mode
+MIfcvtw_s::MIfcvtw_s(Register *reg)
+    : MInstruction(MInstruction::FCVTW_S, RegTag::V_IREGISTER, false) {
+  this->pushReg(reg);
+  this->setTarget(this);
+}
+MIfcvtw_s::MIfcvtw_s(Register *reg, Register *target)
+    : MInstruction(MInstruction::FCVTW_S, RegTag::V_IREGISTER, false) {
+  this->pushReg(reg);
+  this->setTarget(target);
+}
+MIfcvtw_s::MIfcvtw_s(Register *reg, string name)
+    : MInstruction(MInstruction::FCVTW_S, RegTag::V_IREGISTER, name, false) {
+  this->pushReg(reg);
+  this->setTarget(this);
+}
+ostream &MIfcvtw_s::printASM(ostream &os) {
+  auto target = this->getTarget()->getName();
+  auto reg = this->getReg(0)->getName();
+  return os << "fcvt.w.s"
+            << " " << target << ", " << reg << ", rtz";
+}
 
 IMPLEMENT_MI_BIN_CLASS(feq_s, FEQ_S, V_IREGISTER, feq.s, false)
 IMPLEMENT_MI_BIN_CLASS(flt_s, FLT_S, V_IREGISTER, flt.s, false)
@@ -695,11 +717,8 @@ IMPLEMENT_MIT_BRANCH_CLASS(bne, BNE)
 IMPLEMENT_MIT_BRANCH_CLASS(bge, BGE)
 IMPLEMENT_MIT_BRANCH_CLASS(blt, BLT)
 
-
-
-MIj::MIj(MBasicBlock *targetBB) : MInstruction(MInstruction::J, RegTag::NONE), targetBB(targetBB) {
-
-}
+MIj::MIj(MBasicBlock *targetBB)
+    : MInstruction(MInstruction::J, RegTag::NONE), targetBB(targetBB) {}
 
 void MIj::setTargetBB(MBasicBlock *bb) { this->targetBB = bb; }
 
