@@ -292,7 +292,7 @@ void allocate_register(MModule *mod) {
     auto liveness_ireg = make_unique<LivenessInfo>();
     auto liveness_freg = make_unique<LivenessInfo>();
     ssa_liveness_analysis(func, liveness_ireg.get(), liveness_freg.get());
-    std::cout << "Function: " << func->getName() << endl;
+    // std::cout << "Function: " << func->getName() << endl;
 
     // printLivenessInfo(func.get(), liveness_ireg.get(), liveness_freg.get());
 

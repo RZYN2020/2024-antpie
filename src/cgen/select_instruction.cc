@@ -11,7 +11,7 @@
 
 // #define ADD_INSTR(INSTR, CONS, ...)                                            \
 //   auto INSTR = new CONS(__VA_ARGS__);                                          \
-//   std::cout << "new Instr " << *INSTR << endl;                                 \
+//   std::cout << "    Instr " << *INSTR << endl;                                 \
 //   mbb->pushInstr(INSTR)
 
 bool is_constant(Value *v) {
@@ -127,7 +127,7 @@ void lowerHIicmp(MFunction *mfunc) {
           break;
         }
         case OpTag::SGE: {
-          auto sgt = new MIslt(opd2, opd1);
+          auto sgt = new MIslt(opd1, opd2);
           auto sle = new MIxori(sgt, 1, icmp);
           instrs.push_back(sgt);
           instrs.push_back(sle);
@@ -432,7 +432,10 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           break;
         }
         case VT_ALLOCA: {
+          // std::cout << endl;
           AllocaInst *alloca = static_cast<AllocaInst *>(ins);
+          // alloca->printIR(std::cout );
+          // std::cout << endl;
           auto tp = alloca->getType();
           if (tp->getTypeTag() == TT_POINTER) {
             auto pt = static_cast<PointerType *>(tp);
@@ -440,6 +443,7 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
           }
           auto size = cal_size(tp);
           ADD_INSTR(malloca, MHIalloca, size, ins->getName());
+          // std::cout << *malloca << endl;
           instr_map->insert({ins, malloca});
           break;
         }
@@ -508,6 +512,10 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
             ADD_INSTR(elesz, MIli, sz);
             ADD_INSTR(offset, MImul, index, elesz);
             ADD_INSTR(addr, MIadd, base, offset);
+            dest = addr;
+          }
+          if (dest == base) {
+            ADD_INSTR(addr, MIaddi, base, 0); // we do not use mv because mv used only for non-pointer...
             dest = addr;
           }
           dest->setName(ins->getName());
@@ -643,6 +651,8 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
         mins->replaceIRRegister(*instr_map);
       }
     }
+
+    // std::cout << *mfunc << endl;
 
     // std::cout << "lower H_ICMP and BR" << endl;
     // 2. lower H_ICMP and BR

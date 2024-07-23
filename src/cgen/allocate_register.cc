@@ -931,7 +931,7 @@ getActuallCallerSavedRegisters(map<Register *, Register *> *allocation,
   for (auto reg : liveInOfcallsite) {
     if (allocation->find(reg) != allocation->end()) {
       auto phyreg = allocation->at(reg);
-      if (saved_registers.find(reg) != saved_registers.end()) {
+      if (saved_registers.find(phyreg) != saved_registers.end()) {
         intersection.insert(reg);
       }
     }
