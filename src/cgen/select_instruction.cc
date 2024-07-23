@@ -27,6 +27,7 @@ void lowerHIicmp(MFunction *mfunc) {
       auto tb = br->getTBlock();
       auto fb = br->getFBlock();
       auto cond = br->getReg(0);
+      // std::cout << cond->getName() << endl;
       if (cond->getTag() == Register::V_IREGISTER) {
         auto vreg = static_cast<VRegister *>(cond);
         if (vreg->isInstruction()) {
@@ -94,12 +95,12 @@ void lowerHIicmp(MFunction *mfunc) {
         auto icmp = static_cast<MHIicmp *>(&*ins);
         auto opd1 = icmp->getReg(0);
         auto opd2 = icmp->getReg(1);
-        Register *res;
+        MInstruction *res;
         vector<MInstruction *> instrs;
         switch (icmp->getOpTag()) {
         case OpTag::EQ: {
           auto sub = new MIsubw(opd1, opd2);
-          auto eq = new MIsltiu(sub, 1, icmp->getName());
+          auto eq = new MIsltiu(sub, 1, icmp);
           instrs.push_back(sub);
           instrs.push_back(eq);
           res = eq;
@@ -107,7 +108,7 @@ void lowerHIicmp(MFunction *mfunc) {
         }
         case OpTag::NE: {
           auto sub = new MIsubw(opd1, opd2);
-          auto ne = new MIsltu(Register::reg_zero, sub, icmp->getName());
+          auto ne = new MIsltu(Register::reg_zero, sub, icmp);
           instrs.push_back(sub);
           instrs.push_back(ne);
           res = ne;
@@ -115,7 +116,7 @@ void lowerHIicmp(MFunction *mfunc) {
         }
         case OpTag::SLE: {
           auto slt = new MIslt(opd2, opd1);
-          auto sle = new MIxori(slt, 1, icmp->getName());
+          auto sle = new MIxori(slt, 1, icmp);
           instrs.push_back(slt);
           instrs.push_back(sle);
           res = sle;
@@ -129,14 +130,14 @@ void lowerHIicmp(MFunction *mfunc) {
         }
         case OpTag::SGE: {
           auto sgt = new MIslt(opd2, opd1);
-          auto sle = new MIxori(sgt, 1, icmp->getName());
+          auto sle = new MIxori(sgt, 1, icmp);
           instrs.push_back(sgt);
           instrs.push_back(sle);
           res = sle;
           break;
         }
         case OpTag::SGT: {
-          auto sgt = new MIslt(opd2, opd1);
+          auto sgt = new MIslt(opd2, opd1, icmp);
           instrs.push_back(sgt);
           res = sgt;
           break;
@@ -144,8 +145,7 @@ void lowerHIicmp(MFunction *mfunc) {
         default:
           assert(0);
         }
-        icmp->replaceRegisterWith(res);
-        icmp->replaceWith(instrs);
+        mfunc->reg_pool->push_back(icmp->replaceWith(instrs));
       }
     }
   }
@@ -535,6 +535,7 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
             assert(0);
           }
           auto mphi = new MHIphi(phi->getName(), retTag, is_pointer);
+
           for (int i = 0; i < phi->getRValueSize(); i += 2) {
             Value *opd = phi->getRValue(i);
             BasicBlock *pred_bb =
@@ -627,7 +628,15 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     // std::cout << "Reslove IRRegisters to VRegisters" << endl;
     // 1. Reslove IRRegisters to VRegisters
     for (auto &mbb : mfunc->getBasicBlocks()) {
+      for (auto &mins : mbb->getPhis()) {
+        // std::cout << "Reslove " << *mins << endl;
+        mins->replaceIRRegister(*instr_map);
+      }
       for (auto &mins : mbb->getInstructions()) {
+        // std::cout << "Reslove " << *mins << endl;
+        mins->replaceIRRegister(*instr_map);
+      }
+      for (auto &mins : mbb->getJmps()) {
         // std::cout << "Reslove " << *mins << endl;
         mins->replaceIRRegister(*instr_map);
       }

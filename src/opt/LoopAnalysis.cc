@@ -54,9 +54,9 @@ bool LoopAnalysis::runOnFunction(Function* func) {
   }
   func->setLoopInfoBase(loopInfoBase);
 
-#ifdef DEBUG_MODE
-  loopInfoBase->dump();
-#endif
+// #ifdef DEBUG_MODE
+//   loopInfoBase->dump();
+// #endif
 
   return true;
 }

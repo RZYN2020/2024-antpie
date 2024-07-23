@@ -115,7 +115,7 @@ string Register::getName() { return name; }
 void Register::setName(string name) { this->name = name; }
 Register::RegTag Register::getTag() { return tag; }
 
-void Register::addUse(MInstruction *use) { this->uses.push_back(use); }
+void Register::addUse(MInstruction *use) { this->uses.insert(use); }
 void Register::removeUse(MInstruction *use) {
   for (auto it = this->uses.begin(); it != this->uses.end(); ++it) {
     if (*it == use) {
@@ -123,9 +123,10 @@ void Register::removeUse(MInstruction *use) {
       return;
     }
   }
+  assert(0);
 }
 
-vector<MInstruction *> &Register::getUses() { return this->uses; }
+set<MInstruction *> &Register::getUses() { return this->uses; }
 
 void Register::clearUses() { this->uses.clear(); }
 

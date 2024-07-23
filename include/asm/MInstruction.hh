@@ -137,8 +137,10 @@ public:
   void setComment(string comment);
   string getComment();
 
-  void replaceIRRegister(map<Instruction *, Register *> instr_map);
-  void replaceRegister(Register *oldReg, Register *newReg);
+  // special case on ret, call and phi...
+  virtual void replaceIRRegister(map<Instruction *, Register *> instr_map);
+  virtual void replaceRegister(Register *oldReg, Register *newReg);
+
   unique_ptr<MInstruction> replaceWith(vector<MInstruction *> instrs);
   void insertBefore(vector<MInstruction *> instrs);
   void insertAfter(vector<MInstruction *> instrs);
@@ -168,6 +170,7 @@ struct MIOprand {
   } arg;
 };
 
+// todo: repalce arguments
 class MHIphi : public MInstruction {
 private:
   unique_ptr<vector<MBasicBlock *>> incoming;
@@ -183,6 +186,8 @@ public:
   MBasicBlock *getIncomingBlock(int idx) const;
   MIOprand getOprand(int idx) const { return opds->at(idx); };
   int getOprandNum() const { return opds->size(); };
+  void replaceIRRegister(map<Instruction *, Register *> instr_map) override;
+  void replaceRegister(Register *oldReg, Register *newReg) override;
 };
 
 class MHIalloca : public MInstruction {
@@ -195,6 +200,7 @@ public:
   uint32_t getSize() { return size; }
 };
 
+// todo: repalce arguments
 class MHIret : public MInstruction {
 public:
   MIOprand r;
@@ -202,8 +208,11 @@ public:
   MHIret(float imm);
   MHIret(Register *reg);
   ostream &printASM(ostream &stream) override;
+  void replaceIRRegister(map<Instruction *, Register *> instr_map) override;
+  void replaceRegister(Register *oldReg, Register *newReg) override;
 };
 
+// todo: repalce arguments????
 class MHIcall : public MInstruction {
 public:
   MFunction *function;
@@ -222,6 +231,8 @@ public:
   vector<MInstruction *> generateCallSequence(
       MFunction *func, int stack_offset, map<Register *, int> *spill,
       map<Register *, Register *> *allocation, set<Register *> *lineIn);
+  void replaceIRRegister(map<Instruction *, Register *> instr_map) override;
+  void replaceRegister(Register *oldReg, Register *newReg) override;
 };
 
 class MHIbr : public MInstruction {

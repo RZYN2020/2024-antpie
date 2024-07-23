@@ -3,9 +3,11 @@
 #include "Instruction.hh"
 #include <string>
 #include <vector>
+#include <set>
 
 using std::string;
 using std::vector;
+using std::set;
 
 class MInstruction;
 class IRegister;
@@ -13,7 +15,7 @@ class FRegister;
 
 class Register {
 private:
-  vector<MInstruction *> uses;
+  set<MInstruction *> uses;
 
 public:
   static IRegister *reg_zero;
@@ -108,7 +110,7 @@ public:
   void addUse(MInstruction *use);
   void removeUse(MInstruction *use);
   void replaceRegisterWith(Register *newReg);
-  vector<MInstruction *> &getUses();
+  set<MInstruction *> &getUses();
   void clearUses();
   virtual ~Register() {};
 };

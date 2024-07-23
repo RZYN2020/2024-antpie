@@ -331,22 +331,27 @@ void out_of_ssa(MFunction *func) {
   map<MBasicBlock *, vector<MInstruction *>> moves;
   for (auto &bb : func->getBasicBlocks()) {
     for (auto &phi : bb->getPhis()) {
+      assert(phi->getTarget()->getTag() == Register::V_FREGISTER ||
+             phi->getTarget()->getTag() == Register::V_IREGISTER);
       for (int i = 0; i < phi->getOprandNum(); i++) {
         auto opd = phi->getOprand(i);
         auto pre = phi->getIncomingBlock(i);
         MInstruction *ins;
-        if (opd.tp == MIOprandTp::Float) {
+        if (opd.tp == MIOprandTp::Reg) {
           auto reg = opd.arg.reg;
+          // std::cout << reg->getTag() << " " << reg->getName() << endl;
+          assert(reg->getTag() == Register::V_FREGISTER ||
+                 reg->getTag() == Register::V_IREGISTER);
           if (reg->getTag() == Register::V_FREGISTER) {
-            ins = new MIfmv_s(reg, phi.get());
+            ins = new MIfmv_s(reg, phi->getTarget());
           } else {
-            ins = new MImv(reg, phi.get());
+            ins = new MImv(reg, phi->getTarget());
           }
         } else if (opd.tp == MIOprandTp::Float) {
           auto g = func->getMod()->addGlobalFloat(new FloatConstant(opd.arg.f));
-          ins = new MIflw(g, phi.get());
+          ins = new MIflw(g, phi->getTarget());
         } else {
-          ins = new MIli(opd.arg.i, phi.get());
+          ins = new MIli(opd.arg.i, phi->getTarget());
         }
         // If critical path
         if (pre->getOutgoings().size() > 1 && bb->getIncomings().size() > 1) {
@@ -386,7 +391,7 @@ void rewrite_program_spill(MFunction *func, map<Register *, int> *spill) {
       for (int i = 0; i < ins->getRegNum(); i++) {
         auto reg = ins->getReg(i);
         // std::cout << "  check reg " << reg->getName() << IS_VIRTUAL_REG(reg)
-        // <<endl;
+                  // << reg->getTag() << endl;
         if (IS_VIRTUAL_REG(reg) && spill->find(reg) != spill->end()) {
           // std::cout << "    handle!" << endl;
           regs.push_back(reg);
@@ -520,11 +525,12 @@ void lower_call(MFunction *func, int &stack_offset,
         all_live.insert(live_fregs.begin(), live_fregs.end());
         auto caller_saved =
             getActuallCallerSavedRegisters(allocation, all_live);
-        if (ins->getTag() == Register::V_FREGISTER) {
-          ins->replaceRegisterWith(Register::reg_fa0);
-        } else {
-          ins->replaceRegisterWith(Register::reg_a0);
-        }
+        // todo: delete?
+        // if (ins->getTag() == Register::V_FREGISTER) {
+        //   ins->replaceRegisterWith(Register::reg_fa0);
+        // } else {
+        //   ins->replaceRegisterWith(Register::reg_a0);
+        // }
         // std::cout << "lower " << *ins << endl;
         auto rmd = ins->replaceWith(call->generateCallSequence(
             func, stack_offset, spill, allocation, &caller_saved));

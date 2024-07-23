@@ -34,6 +34,7 @@ void MInstruction::setComment(string comment) { this->comment = comment; }
 string MInstruction::getComment() { return comment; }
 
 void MInstruction::replaceIRRegister(map<Instruction *, Register *> instr_map) {
+  // todo: for phi
   for (auto &opd : *oprands) {
     if (opd->getTag() == IR_REGISTER) {
       auto irr = static_cast<IRRegister *>(opd);
@@ -123,6 +124,42 @@ MHIphi::MHIphi(string name, RegTag rt, bool is_pointer)
   opds = make_unique<vector<MIOprand>>();
   setTarget(this);
 }
+
+
+void MHIphi::replaceIRRegister(map<Instruction *, Register *> instr_map) {
+  for (int i = 0; i < opds->size(); i++) {
+    auto arg = opds->at(i);
+    if (arg.tp == MIOprandTp::Reg &&
+        arg.arg.reg->getTag() == Register::IR_REGISTER) {
+      auto irr = static_cast<IRRegister *>(arg.arg.reg);
+      Instruction *inst = irr->ir_reg;
+      auto it = instr_map.find(inst);
+      if (it != instr_map.end()) {
+        opds->at(i) = MIOprand{MIOprandTp::Reg, arg : {reg : it->second}};
+        it->second->addUse(this);
+        delete irr;
+      } else {
+        std::cout << "Try to replace " << inst->getName() << endl;
+        assert(0);
+      }
+    }
+  }
+}
+
+void MHIphi::replaceRegister(Register *oldReg, Register *newReg) {
+  if (getTarget() == oldReg) {
+    setTarget(newReg);
+  }
+  for (auto it = opds->begin(); it != opds->end(); ++it) {
+    if (it->tp == MIOprandTp::Reg && it->arg.reg == oldReg) {
+      *it = MIOprand{MIOprandTp::Reg, arg : {reg : newReg}};
+    }
+  }
+  oldReg->removeUse(this);
+  newReg->addUse(this);
+}
+
+
 
 ostream &MHIphi::printASM(ostream &os) {
   os << getTarget()->getName() << " = phi ";
@@ -215,6 +252,35 @@ MHIret::MHIret(Register *reg)
   this->r.tp = MIOprandTp::Reg;
   this->r.arg.reg = reg;
 }
+
+
+void MHIret::replaceIRRegister(map<Instruction *, Register *> instr_map) {
+    if (r.tp == MIOprandTp::Reg &&
+        r.arg.reg->getTag() == Register::IR_REGISTER) {
+      auto irr = static_cast<IRRegister *>(r.arg.reg);
+      Instruction *inst = irr->ir_reg;
+      auto it = instr_map.find(inst);
+      if (it != instr_map.end()) {
+        r = MIOprand{MIOprandTp::Reg, arg : {reg : it->second}};
+        it->second->addUse(this);
+        delete irr;
+      } else {
+        std::cout << "Try to replace " << inst->getName() << endl;
+        assert(0);
+      }
+    }
+}
+
+void MHIret::replaceRegister(Register *oldReg, Register *newReg) {
+    if (r.tp == MIOprandTp::Reg && r.arg.reg == oldReg) {
+      r = MIOprand{MIOprandTp::Reg, arg : {reg : newReg}};
+    }
+  oldReg->removeUse(this);
+  newReg->addUse(this);
+}
+
+
+
 ostream &MHIret::printASM(ostream &os) {
   os << "ret ";
   switch (r.tp) {
@@ -244,6 +310,39 @@ MHIcall::MHIcall(MFunction *func, RegTag rt)
     : MInstruction(MInstruction::MITag::H_CALL, rt) {
   this->function = func;
   this->args = make_unique<vector<MIOprand>>();
+}
+
+void MHIcall::replaceIRRegister(map<Instruction *, Register *> instr_map) {
+  for (int i = 0; i < args->size(); i++) {
+    auto arg = args->at(i);
+    if (arg.tp == MIOprandTp::Reg &&
+        arg.arg.reg->getTag() == Register::IR_REGISTER) {
+      auto irr = static_cast<IRRegister *>(arg.arg.reg);
+      Instruction *inst = irr->ir_reg;
+      auto it = instr_map.find(inst);
+      if (it != instr_map.end()) {
+        args->at(i) = MIOprand{MIOprandTp::Reg, arg : {reg : it->second}};
+        it->second->addUse(this);
+        delete irr;
+      } else {
+        std::cout << "Try to replace " << inst->getName() << endl;
+        assert(0);
+      }
+    }
+  }
+}
+
+void MHIcall::replaceRegister(Register *oldReg, Register *newReg) {
+  if (getTarget() == oldReg) {
+    setTarget(newReg);
+  }
+  for (auto it = args->begin(); it != args->end(); ++it) {
+    if (it->tp == MIOprandTp::Reg && it->arg.reg == oldReg) {
+      *it = MIOprand{MIOprandTp::Reg, arg : {reg : newReg}};
+    }
+  }
+  oldReg->removeUse(this);
+  newReg->addUse(this);
 }
 
 void MHIcall::pushArg(float f) {
@@ -304,7 +403,7 @@ ostream &MHIcall::printASM(ostream &os) {
 }
 
 MHIicmp::MHIicmp(OpTag optag, Register *reg1, Register *reg2, std::string name)
-    : MInstruction(MInstruction::MITag::H_ICMP, RegTag::I_REGISTER, name) {
+    : MInstruction(MInstruction::MITag::H_ICMP, RegTag::V_IREGISTER, name) {
   this->optag = optag;
   pushReg(reg1);
   pushReg(reg2);

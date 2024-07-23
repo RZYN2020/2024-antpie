@@ -148,15 +148,15 @@ void DomTree::calculateDF() {
     }
   }
   dfActive = true;
-#ifdef DEBUG_MODE
-  for (BasicBlock *bb : *blocks) {
-    std::cout << bb->getName() << ": ";
-    for (BasicBlock *df : *getDF(bb)) {
-      std::cout << df->getName() << " ";
-    }
-    std::cout << std::endl;
-  }
-#endif
+// #ifdef DEBUG_MODE
+//   for (BasicBlock *bb : *blocks) {
+//     std::cout << bb->getName() << ": ";
+//     for (BasicBlock *df : *getDF(bb)) {
+//       std::cout << df->getName() << " ";
+//     }
+//     std::cout << std::endl;
+//   }
+// #endif
 }
 
 void DomTree::calculateIDF(BBListPtr src, BBListPtr result) {

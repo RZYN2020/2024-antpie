@@ -30,11 +30,15 @@ void spill_registers(MFunction *func, map<Register *, int> *spill,
       spill->insert({reg, stack_offset});
     }
     for (auto &ins : bb->getInstructions()) {
-      if (ins->getTarget() != ins.get()) { // not used as register
+      if (ins->getTarget() == nullptr) { // not used as register
         continue;
       }
-      auto reg = ins.get();
-      if (reg->isPointer()) {
+      auto reg = ins->getTarget();
+      if (spill->find(reg) != spill->end()) { // already spilled
+        continue;
+      }
+      assert(reg->getTag() == Register::V_IREGISTER || reg->getTag() == Register::V_FREGISTER);
+      if (static_cast<VRegister*>(reg)->isPointer()) {
         stack_offset += 8;
       } else {
         stack_offset += 4;
