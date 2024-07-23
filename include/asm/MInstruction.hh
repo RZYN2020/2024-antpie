@@ -160,7 +160,7 @@ public:
 };
 
 ///////////////////////////////////////////////////////
-enum MIOprandTp { Float, Int, Reg };
+enum MIOprandTp { Float, Int, Reg, None };
 struct MIOprand {
   MIOprandTp tp;
   union Arg {
@@ -204,6 +204,7 @@ public:
 class MHIret : public MInstruction {
 public:
   MIOprand r;
+  MHIret();
   MHIret(int imm);
   MHIret(float imm);
   MHIret(Register *reg);

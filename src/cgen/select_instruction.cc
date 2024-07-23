@@ -68,7 +68,9 @@ void lowerHIicmp(MFunction *mfunc) {
                 assert(0);
               }
               auto j = new MIj(fb);
-              condi->replaceWith({});
+              auto icmp = condi->replaceWith({});
+              opd1->removeUse(icmp.get());
+              opd2->removeUse(icmp.get());
               mbb->clearJmps();
               mbb->pushJmp(mi);
               mbb->pushJmp(j);
@@ -119,7 +121,7 @@ void lowerHIicmp(MFunction *mfunc) {
           break;
         }
         case OpTag::SLT: {
-          auto slt = new MIslt(opd1, opd2);
+          auto slt = new MIslt(opd1, opd2, icmp);
           instrs.push_back(slt);
           res = slt;
           break;
@@ -351,16 +353,20 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
         }
         case VT_RET: {
           ReturnInst *ret = static_cast<ReturnInst *>(ins);
-          auto ret_val = ret->getRValue(0);
           MHIret *mret;
-          if (ret_val->getValueTag() == VT_FLOATCONST) {
-            auto i = static_cast<FloatConstant *>(ret_val)->getValue();
-            mret = new MHIret(i);
-          } else if (ret_val->getValueTag() == VT_INTCONST) {
-            auto f = static_cast<IntegerConstant *>(ret_val)->getValue();
-            mret = new MHIret(f);
+          if (ret->getRValueSize() == 0) {
+            mret = new MHIret();
           } else {
-            mret = new MHIret(GET_VREG(ret_val));
+            auto ret_val = ret->getRValue(0);
+            if (ret_val->getValueTag() == VT_FLOATCONST) {
+              auto i = static_cast<FloatConstant *>(ret_val)->getValue();
+              mret = new MHIret(i);
+            } else if (ret_val->getValueTag() == VT_INTCONST) {
+              auto f = static_cast<IntegerConstant *>(ret_val)->getValue();
+              mret = new MHIret(f);
+            } else {
+              mret = new MHIret(GET_VREG(ret_val));
+            }
           }
           mbb->pushJmp(mret);
           break;

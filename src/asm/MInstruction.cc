@@ -234,6 +234,11 @@ ostream &MHIalloca::printASM(ostream &os) {
 }
 ////////////////////////////////////////////
 
+MHIret::MHIret()
+    : MInstruction(MInstruction::MITag::H_RET, RegTag::NONE) {
+  this->r.tp = MIOprandTp::None;
+}
+
 MHIret::MHIret(int imm)
     : MInstruction(MInstruction::MITag::H_RET, RegTag::NONE) {
   this->r.tp = MIOprandTp::Int;
