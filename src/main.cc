@@ -78,8 +78,7 @@ int main(int argc, char *argv[]) {
 
 void create_directories_if_not_exists(const std::filesystem::path &file_path) {
   std::filesystem::path parent_path = file_path.parent_path();
-
-  if (!std::filesystem::exists(parent_path)) {
+  if (!(std::filesystem::exists(parent_path) || parent_path.empty())) {
     std::filesystem::create_directories(parent_path);
   }
 }
