@@ -1,4 +1,5 @@
 #include "Machine.hh"
+#include "MInstruction.hh"
 
 //////////////////////////////////////
 //////////////////////////////////////
@@ -125,7 +126,6 @@ MHIphi::MHIphi(string name, RegTag rt, bool is_pointer)
   setTarget(this);
 }
 
-
 void MHIphi::replaceIRRegister(map<Instruction *, Register *> instr_map) {
   for (int i = 0; i < opds->size(); i++) {
     auto arg = opds->at(i);
@@ -158,8 +158,6 @@ void MHIphi::replaceRegister(Register *oldReg, Register *newReg) {
   oldReg->removeUse(this);
   newReg->addUse(this);
 }
-
-
 
 ostream &MHIphi::printASM(ostream &os) {
   os << getTarget()->getName() << " = phi ";
@@ -253,33 +251,29 @@ MHIret::MHIret(Register *reg)
   this->r.arg.reg = reg;
 }
 
-
 void MHIret::replaceIRRegister(map<Instruction *, Register *> instr_map) {
-    if (r.tp == MIOprandTp::Reg &&
-        r.arg.reg->getTag() == Register::IR_REGISTER) {
-      auto irr = static_cast<IRRegister *>(r.arg.reg);
-      Instruction *inst = irr->ir_reg;
-      auto it = instr_map.find(inst);
-      if (it != instr_map.end()) {
-        r = MIOprand{MIOprandTp::Reg, arg : {reg : it->second}};
-        it->second->addUse(this);
-        delete irr;
-      } else {
-        std::cout << "Try to replace " << inst->getName() << endl;
-        assert(0);
-      }
+  if (r.tp == MIOprandTp::Reg && r.arg.reg->getTag() == Register::IR_REGISTER) {
+    auto irr = static_cast<IRRegister *>(r.arg.reg);
+    Instruction *inst = irr->ir_reg;
+    auto it = instr_map.find(inst);
+    if (it != instr_map.end()) {
+      r = MIOprand{MIOprandTp::Reg, arg : {reg : it->second}};
+      it->second->addUse(this);
+      delete irr;
+    } else {
+      std::cout << "Try to replace " << inst->getName() << endl;
+      assert(0);
     }
+  }
 }
 
 void MHIret::replaceRegister(Register *oldReg, Register *newReg) {
-    if (r.tp == MIOprandTp::Reg && r.arg.reg == oldReg) {
-      r = MIOprand{MIOprandTp::Reg, arg : {reg : newReg}};
-    }
+  if (r.tp == MIOprandTp::Reg && r.arg.reg == oldReg) {
+    r = MIOprand{MIOprandTp::Reg, arg : {reg : newReg}};
+  }
   oldReg->removeUse(this);
   newReg->addUse(this);
 }
-
-
 
 ostream &MHIret::printASM(ostream &os) {
   os << "ret ";
@@ -696,11 +690,14 @@ IMPLEMENT_MIT_BRANCH_CLASS(bne, BNE)
 IMPLEMENT_MIT_BRANCH_CLASS(bge, BGE)
 IMPLEMENT_MIT_BRANCH_CLASS(blt, BLT)
 
-// MIj
-MIj::MIj(MBasicBlock *targetBB)
-    : MInstruction(MInstruction::J, RegTag::NONE), targetBB(targetBB) {}
+
+
+MIj::MIj(MBasicBlock *targetBB) : MInstruction(MInstruction::J, RegTag::NONE), targetBB(targetBB) {
+
+}
 
 void MIj::setTargetBB(MBasicBlock *bb) { this->targetBB = bb; }
+
 MBasicBlock *MIj::getTargetBB() { return this->targetBB; }
 
 ostream &MIj::printASM(ostream &os) {

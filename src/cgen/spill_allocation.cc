@@ -19,9 +19,9 @@ void spill_registers(MFunction *func, map<Register *, int> *spill,
     }
   }
   // allocate registers
-  for (auto &bb : func->getBasicBlocks()) {
-    for (auto &ins : bb->getPhis()) {
-      auto reg = ins.get();
+  for (auto bb : func->getBasicBlocks()) {
+    for (auto ins : bb->getPhis()) {
+      auto reg = ins;
       if (reg->isPointer()) {
         stack_offset += 8;
       } else {
@@ -29,7 +29,7 @@ void spill_registers(MFunction *func, map<Register *, int> *spill,
       }
       spill->insert({reg, stack_offset});
     }
-    for (auto &ins : bb->getInstructions()) {
+    for (auto ins : bb->getInstructions()) {
       if (ins->getTarget() == nullptr) { // not used as register
         continue;
       }
@@ -53,12 +53,8 @@ static void lower_call_spill_only(MFunction *func, map<Register *, int> *spill,
   // std::cout << "lower_call_spill_only start" << endl;
   map<Register *, Register *> allocation;
   set<Register *> caller_saved;
-  for (auto &bb : func->getBasicBlocks()) {
-    vector<MInstruction *> instrs;
-    for (auto &ins : bb->getInstructions()) {
-      instrs.push_back(&*ins);
-    }
-    for (auto ins : instrs) {
+  for (auto bb : func->getBasicBlocks()) {
+    for (auto ins : bb->getInstructions()) {
       if (ins->getInsTag() == MInstruction::H_CALL) {
         // std::cout << "spill " << *ins << endl;
         auto call = static_cast<MHIcall *>(ins);
@@ -93,9 +89,9 @@ void spill_register_for_func(MFunction *func) {
 }
 
 void spill_all_register(MModule *mod) {
-  for (auto &func : mod->getFunctions()) {
-    out_of_ssa(func.get());
-    spill_register_for_func(func.get());
+  for (auto func : mod->getFunctions()) {
+    out_of_ssa(func);
+    spill_register_for_func(func);
   }
   mod->ssa_out();
 }

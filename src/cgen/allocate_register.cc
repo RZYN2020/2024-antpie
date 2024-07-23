@@ -328,14 +328,18 @@ void fixRange(MFunction *mfunc) {
 }
 
 void out_of_ssa(MFunction *func) {
+  // std::cout << "out of ssa" << std::endl;
   map<MBasicBlock *, vector<MInstruction *>> moves;
-  for (auto &bb : func->getBasicBlocks()) {
-    for (auto &phi : bb->getPhis()) {
+
+  for (auto bb : func->getBasicBlocks()) {
+    for (auto phi : bb->getPhis()) {
+      // std::cout << "check phi " << *phi << endl;
       assert(phi->getTarget()->getTag() == Register::V_FREGISTER ||
              phi->getTarget()->getTag() == Register::V_IREGISTER);
       for (int i = 0; i < phi->getOprandNum(); i++) {
         auto opd = phi->getOprand(i);
         auto pre = phi->getIncomingBlock(i);
+        // std::cout << "  check " << pre->getName() << endl;
         MInstruction *ins;
         if (opd.tp == MIOprandTp::Reg) {
           auto reg = opd.arg.reg;
@@ -357,9 +361,9 @@ void out_of_ssa(MFunction *func) {
         if (pre->getOutgoings().size() > 1 && bb->getIncomings().size() > 1) {
           auto newbb =
               func->addBasicBlock("cirtical" + pre->getName() + bb->getName());
-          newbb->pushJmp(new MIj(&*bb));
+          newbb->pushJmp(new MIj(bb));
 
-          pre->replaceOutgoing(&*bb, newbb);
+          pre->replaceOutgoing(bb, newbb);
           bb->replacePhiIncoming(pre, newbb);
 
           moves.insert({newbb, {}});
@@ -380,7 +384,7 @@ void out_of_ssa(MFunction *func) {
 }
 
 void rewrite_program_spill(MFunction *func, map<Register *, int> *spill) {
-  for (auto &bb : func->getBasicBlocks()) {
+  for (auto bb : func->getBasicBlocks()) {
     auto instrs = vector<MInstruction *>() = bb->getAllInstructions();
     for (auto ins : instrs) {
       // std::cout << "\nrewrite " << *ins << endl;
@@ -417,7 +421,8 @@ void rewrite_program_spill(MFunction *func, map<Register *, int> *spill) {
         } else {
           auto target = Register::getIRegister(int_cnt++);
           int offset = spill->at(reg);
-          // std::cout << "  remove " << reg->getName() << " of " << *ins << endl;
+          // std::cout << "  remove " << reg->getName() << " of " << *ins <<
+          // endl;
           ins->replaceRegister(reg, target);
           load = new MIlw(Register::reg_s0, -offset, target);
           loads.push_back(load);
@@ -464,7 +469,7 @@ void rewrite_program_allocate(MFunction *func,
   // for (auto &[logical_reg, physical_reg] : *allocation) {
   //   logical_reg->replaceRegisterWith(physical_reg);
   // }
-  for (auto &bb : func->getBasicBlocks()) {
+  for (auto bb : func->getBasicBlocks()) {
     auto instrs = vector<MInstruction *>() = bb->getAllInstructions();
     for (auto ins : instrs) {
       auto loads = vector<MInstruction *>();
@@ -493,12 +498,8 @@ void rewrite_program_allocate(MFunction *func,
 }
 
 void lower_alloca(MFunction *func, int &stack_offset) {
-  for (auto &bb : func->getBasicBlocks()) {
-    vector<MInstruction *> instrs;
-    for (auto &ins : bb->getInstructions()) {
-      instrs.push_back(&*ins);
-    }
-    for (auto ins : instrs) {
+  for (auto bb : func->getBasicBlocks()) {
+    for (auto ins : bb->getInstructions()) {
       if (ins->getInsTag() == MInstruction::H_ALLOCA) {
         auto alloca = static_cast<MHIalloca *>(ins);
         auto sz = alloca->getSize();
@@ -515,10 +516,10 @@ void lower_call(MFunction *func, int &stack_offset,
                 map<Register *, Register *> *allocation,
                 map<Register *, int> *spill, LivenessInfo *liveness_ireg,
                 LivenessInfo *liveness_freg) {
-  for (auto &bb : func->getBasicBlocks()) {
-    for (auto &ins : bb->getInstructions()) {
+  for (auto bb : func->getBasicBlocks()) {
+    for (auto ins : bb->getInstructions()) {
       if (ins->getInsTag() == MInstruction::H_CALL) {
-        auto call = static_cast<MHIcall *>(ins.get());
+        auto call = static_cast<MHIcall *>(ins);
         auto live_iregs = liveness_ireg->at(call);
         auto live_fregs = liveness_freg->at(call);
         std::set<Register *> all_live;
@@ -542,6 +543,7 @@ void lower_call(MFunction *func, int &stack_offset,
     }
   }
 }
+
 vector<MInstruction *> MHIcall::generateCallSequence(
     MFunction *func, int stack_offset, map<Register *, int> *spill,
     map<Register *, Register *> *allocation, set<Register *> *caller_saved) {
@@ -760,10 +762,10 @@ void add_conclude(MFunction *func, map<Register *, Register *> *allocation,
                   map<Register *, int> *spill, int stack_offset,
                   set<Register *> *callee_saved) {
 
-  for (auto &bb : func->getBasicBlocks()) {
-    for (auto &jmp : bb->getJmps()) {
+  for (auto bb : func->getBasicBlocks()) {
+    for (auto jmp : bb->getJmps()) {
       if (jmp->getInsTag() == MInstruction::H_RET) {
-        auto hret = static_cast<MHIret *>(jmp.get());
+        auto hret = static_cast<MHIret *>(jmp);
         switch (hret->r.tp) {
         case MIOprandTp::Float: {
           auto g =
@@ -820,8 +822,8 @@ void add_conclude(MFunction *func, map<Register *, Register *> *allocation,
   auto ret = new MIret();
   exit->pushInstrs({load_ra, load_fp, add_sp, ret});
 
-  for (auto &bb : func->getBasicBlocks()) {
-    if (bb.get() == exit)
+  for (auto bb : func->getBasicBlocks()) {
+    if (bb == exit)
       continue;
     for (auto &i : bb->getJmps()) {
       if (i->getInsTag() == MInstruction::RET) {

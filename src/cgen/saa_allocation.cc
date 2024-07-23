@@ -46,7 +46,7 @@ void ssa_liveness_analysis(MFunction *func, LivenessInfo *liveness_i,
                            LivenessInfo *liveness_f) {
 #define VI Register::V_IREGISTER
 #define VF Register::V_FREGISTER
-  for (auto &bb : func->getBasicBlocks()) {
+  for (auto bb : func->getBasicBlocks()) {
     auto instrs = bb->getAllInstructions();
     for (auto ins : instrs) {
       (*liveness_i)[ins] = set<Register *>();
@@ -54,17 +54,15 @@ void ssa_liveness_analysis(MFunction *func, LivenessInfo *liveness_i,
     }
   }
 
-  for (auto &bb : func->getBasicBlocks()) {
+  for (auto bb : func->getBasicBlocks()) {
     auto instrs = bb->getAllInstructions(); // without phi
     for (int i = static_cast<int>(instrs.size()) - 1; i >= 0; i--) {
       auto ins = instrs[i];
       for (auto r : getUses<VI>(ins)) {
-        scan_back(r, bb.get(), instrs, i, liveness_i, getDefs<VI>,
-                  getPhiDefs<VI>);
+        scan_back(r, bb, instrs, i, liveness_i, getDefs<VI>, getPhiDefs<VI>);
       }
       for (auto r : getUses<VF>(ins)) {
-        scan_back(r, bb.get(), instrs, i, liveness_f, getDefs<VF>,
-                  getPhiDefs<VF>);
+        scan_back(r, bb, instrs, i, liveness_f, getDefs<VF>, getPhiDefs<VF>);
       }
     }
     // a lazy handle of phi function...
@@ -223,8 +221,8 @@ void allocatePhis(MBasicBlock *bb, map<Register *, Register *> *allocation,
                   map<Register *, int> *spill) {
   set<Register *> used;
   set<MHIphi *> phis;
-  for (auto &phi : bb->getPhis()) {
-    phis.insert(phi.get());
+  for (auto phi : bb->getPhis()) {
+    phis.insert(phi);
   }
 
   for (auto reg : liveness_ireg->at(bb->getAllInstructions().at(0))) {
@@ -252,12 +250,11 @@ void allocateOtherInstruction(MBasicBlock *bb,
   // todo: maybe i should add a virtual parrel phi instruction...(as a super
   // instruction in normal instrucion vector)
   set<Register *> used;
-  for (auto &instr : bb->getInstructions()) {
+  for (auto instr : bb->getInstructions()) {
     if (instr->getTarget() != nullptr &&
         spill->find(instr->getTarget()) == spill->end()) {
-      setUsedtoLiveIn(instr.get(), &used, allocation, liveness_ireg,
-                      liveness_freg);
-      allocatTheRegister(instr.get(), allocation, used);
+      setUsedtoLiveIn(instr, &used, allocation, liveness_ireg, liveness_freg);
+      allocatTheRegister(instr, allocation, used);
     }
   }
 }
@@ -290,11 +287,11 @@ static void allocate(MFunction *func, map<Register *, Register *> *allocation,
 
 // Register Allocation on SSA Form
 void allocate_register(MModule *mod) {
-  for (auto &func : mod->getFunctions()) {
+  for (auto func : mod->getFunctions()) {
     // step1. Liveness Analysis
     auto liveness_ireg = make_unique<LivenessInfo>();
     auto liveness_freg = make_unique<LivenessInfo>();
-    ssa_liveness_analysis(func.get(), liveness_ireg.get(), liveness_freg.get());
+    ssa_liveness_analysis(func, liveness_ireg.get(), liveness_freg.get());
     std::cout << "Function: " << func->getName() << endl;
 
     // printLivenessInfo(func.get(), liveness_ireg.get(), liveness_freg.get());
@@ -305,39 +302,38 @@ void allocate_register(MModule *mod) {
     spill_registers(offset, spill.get(), liveness_ireg.get(),
                     liveness_freg.get());
 
-    std::cout << "Spill to Memory:" << endl;
-    for (auto &[reg, offset] : *spill) {
-      std::cout << "  " << reg->getName() << " -> " << offset << endl;
-    }
-    std::cout << endl;
+    // std::cout << "Spill to Memory:" << endl;
+    // for (auto &[reg, offset] : *spill) {
+    //   std::cout << "  " << reg->getName() << " -> " << offset << endl;
+    // }
+    // std::cout << endl;
 
     // // step3. Allocate
     auto allocation = make_unique<map<Register *, Register *>>();
-    allocate(func.get(), allocation.get(), spill.get(), liveness_ireg.get(),
+    allocate(func, allocation.get(), spill.get(), liveness_ireg.get(),
              liveness_freg.get());
 
-    std::cout << "Register Allocation:" << endl;
-    for (auto &[logical_reg, physical_reg] : *allocation) {
-      std::cout << "  " << logical_reg->getName() << " -> "
-                << physical_reg->getName() << endl;
-    }
-    std::cout << endl << endl;
+    // std::cout << "Register Allocation:" << endl;
+    // for (auto &[logical_reg, physical_reg] : *allocation) {
+    //   std::cout << "  " << logical_reg->getName() << " -> "
+    //             << physical_reg->getName() << endl;
+    // }
+    // std::cout << endl << endl;
 
     auto callee_saved = getActuallCalleeSavedRegisters(allocation.get());
     offset += callee_saved.size() * 8;
 
     // step4. Rewrite program
-    out_of_ssa(func.get());
-        std::cout << "endl" << endl;
-    lower_call(func.get(), offset, allocation.get(), spill.get(), liveness_ireg.get(), liveness_ireg.get());
-    lower_alloca(func.get(), offset);
-    add_prelude(func.get(), allocation.get(), spill.get(), offset,
-                &callee_saved);
-    add_conclude(func.get(), allocation.get(), spill.get(), offset,
-                 &callee_saved);
-    rewrite_program_allocate(func.get(), allocation.get());
-    rewrite_program_spill(func.get(), spill.get());
-    fixRange(func.get());
+    out_of_ssa(func);
+    // std::cout << "endl" << endl;
+    lower_call(func, offset, allocation.get(), spill.get(), liveness_ireg.get(),
+               liveness_ireg.get());
+    lower_alloca(func, offset);
+    add_prelude(func, allocation.get(), spill.get(), offset, &callee_saved);
+    add_conclude(func, allocation.get(), spill.get(), offset, &callee_saved);
+    rewrite_program_allocate(func, allocation.get());
+    rewrite_program_spill(func, spill.get());
+    fixRange(func);
   }
   mod->ssa_out();
 }

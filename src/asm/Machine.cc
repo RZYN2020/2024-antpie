@@ -294,10 +294,20 @@ void MBasicBlock::insertAfterInstructionWith(MInstruction *ins,
   }
 }
 
-vector<unique_ptr<MHIphi>> &MBasicBlock::getPhis() { return *phis; }
+vector<MHIphi *> MBasicBlock::getPhis() {
+  vector<MHIphi *> result;
+  for (auto &innerPtr : *phis) {
+    result.push_back(innerPtr.get());
+  }
+  return result;
+}
 
-vector<unique_ptr<MInstruction>> &MBasicBlock::getInstructions() {
-  return *instructions;
+vector<MInstruction *> MBasicBlock::getInstructions() {
+  vector<MInstruction *> result;
+  for (auto &innerPtr : *instructions) {
+    result.push_back(innerPtr.get());
+  }
+  return result;
 }
 
 vector<MInstruction *> MBasicBlock::getAllInstructions() {
@@ -311,7 +321,13 @@ vector<MInstruction *> MBasicBlock::getAllInstructions() {
   return res;
 }
 
-vector<unique_ptr<MInstruction>> &MBasicBlock::getJmps() { return *jmps; }
+vector<MInstruction*> MBasicBlock::getJmps() {
+  vector<MInstruction *> result;
+  for (auto &innerPtr : *jmps) {
+    result.push_back(innerPtr.get());
+  }
+  return result;
+}
 
 std::ostream &operator<<(std::ostream &os, const MBasicBlock &obj) {
   os << obj.getName() << ":" << endl;
@@ -501,8 +517,12 @@ FuncType *MFunction::getType() { return type; }
 
 string MFunction::getName() const { return name; }
 
-vector<unique_ptr<MBasicBlock>> &MFunction::getBasicBlocks() {
-  return *basicBlocks;
+vector<MBasicBlock *> MFunction::getBasicBlocks() {
+  vector<MBasicBlock *> result;
+  for (auto &innerPtr : *basicBlocks) {
+    result.push_back(innerPtr.get());
+  }
+  return result;
 }
 
 std::ostream &operator<<(std::ostream &os, const MFunction &obj) {
@@ -555,9 +575,21 @@ MGlobal *MModule::addGlobalFloat(FloatConstant *f) {
   return g;
 }
 
-vector<unique_ptr<MGlobal>> &MModule::getGlobals() { return *globalVariables; }
+vector<MGlobal *> MModule::getGlobals() {
+  vector<MGlobal *> result;
+  for (auto &innerPtr : *globalVariables) {
+    result.push_back(innerPtr.get());
+  }
+  return result;
+}
 
-vector<unique_ptr<MFunction>> &MModule::getFunctions() { return *functions; }
+vector<MFunction *> MModule::getFunctions() {
+  vector<MFunction *> result;
+  for (auto &innerPtr : *functions) {
+    result.push_back(innerPtr.get());
+  }
+  return result;
+}
 
 std::ostream &operator<<(std::ostream &os, const MModule &obj) {
   bool gen_memset = false;

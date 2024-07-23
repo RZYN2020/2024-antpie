@@ -20,7 +20,7 @@ bool is_constant(Value *v) {
 
 void lowerHIicmp(MFunction *mfunc) {
   // 2.1 combine
-  for (auto &mbb : mfunc->getBasicBlocks()) {
+  for (auto mbb : mfunc->getBasicBlocks()) {
     auto jmp = mbb->getJmp(0);
     if (jmp->getInsTag() == MInstruction::H_BR) {
       auto br = static_cast<MHIbr *>(jmp);
@@ -85,12 +85,8 @@ void lowerHIicmp(MFunction *mfunc) {
   }
 
   // 2.2 lowering
-  for (auto &mbb : mfunc->getBasicBlocks()) {
-    vector<MInstruction *> instrs;
-    for (auto &ins : mbb->getInstructions()) {
-      instrs.push_back(&*ins);
-    }
-    for (auto ins : instrs) {
+  for (auto mbb : mfunc->getBasicBlocks()) {
+    for (auto ins : mbb->getInstructions()) {
       if (ins->getInsTag() == MInstruction::H_ICMP) {
         auto icmp = static_cast<MHIicmp *>(&*ins);
         auto opd1 = icmp->getReg(0);
@@ -259,20 +255,20 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     mfunc->setEntry(bb_map->at(func->getEntry()));
 
     // std::cout << "  Select DomTree " << endl;
-    // if (func->getDT() == nullptr) {
-    //   func->buildCFG();
-    //   func->buildDT();
-    // }
-    // auto domt = func->getDT();
-    // auto pr = domt->postOrder();
-    // auto mdompr = new vector<MBasicBlock *>();
-    // for (auto bb : *pr) {
-    //   if (bb->isEmpty())
-    //     continue;
-    //   mdompr->push_back(bb_map->at(bb));
-    // }
-    // std::reverse(mdompr->begin(), mdompr->end());
-    // mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock *>>(mdompr);
+    if (func->getDT() == nullptr) {
+      func->buildCFG();
+      func->buildDT();
+    }
+    auto domt = func->getDT();
+    auto pr = domt->postOrder();
+    auto mdompr = new vector<MBasicBlock *>();
+    for (auto bb : *pr) {
+      if (bb->isEmpty())
+        continue;
+      mdompr->push_back(bb_map->at(bb));
+    }
+    std::reverse(mdompr->begin(), mdompr->end());
+    mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock *>>(mdompr);
 
     // std::cout << "    Select every Instruction " << endl;
     // Select every Instruction
@@ -627,16 +623,16 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
 
     // std::cout << "Reslove IRRegisters to VRegisters" << endl;
     // 1. Reslove IRRegisters to VRegisters
-    for (auto &mbb : mfunc->getBasicBlocks()) {
-      for (auto &mins : mbb->getPhis()) {
+    for (auto mbb : mfunc->getBasicBlocks()) {
+      for (auto mins : mbb->getPhis()) {
         // std::cout << "Reslove " << *mins << endl;
         mins->replaceIRRegister(*instr_map);
       }
-      for (auto &mins : mbb->getInstructions()) {
+      for (auto mins : mbb->getInstructions()) {
         // std::cout << "Reslove " << *mins << endl;
         mins->replaceIRRegister(*instr_map);
       }
-      for (auto &mins : mbb->getJmps()) {
+      for (auto mins : mbb->getJmps()) {
         // std::cout << "Reslove " << *mins << endl;
         mins->replaceIRRegister(*instr_map);
       }

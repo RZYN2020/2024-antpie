@@ -34,7 +34,7 @@ public:
   void clearJmps();
 
   void pushPhi(MHIphi *phi);
-  vector<unique_ptr<MHIphi>> &getPhis();
+  vector<MHIphi*> getPhis();
 
   void removeIncoming(MBasicBlock *bb);
   void addIncoming(MBasicBlock *bb);
@@ -53,8 +53,8 @@ public:
                                   vector<MInstruction *> instrs);
 
   vector<MInstruction *> getAllInstructions();
-  vector<unique_ptr<MInstruction>> &getInstructions();
-  vector<unique_ptr<MInstruction>> &getJmps();
+  vector<MInstruction*> getInstructions();
+  vector<MInstruction*> getJmps();
 
   friend std::ostream &operator<<(std::ostream &os, const MBasicBlock &obj);
 };
@@ -105,7 +105,7 @@ public:
   FuncType *getType();
 
   string getName() const;
-  vector<unique_ptr<MBasicBlock>> &getBasicBlocks();
+  vector<MBasicBlock*> getBasicBlocks();
 
   vector<Register *> &getVariables();
   friend std::ostream &operator<<(std::ostream &os, const MFunction &obj);
@@ -128,8 +128,8 @@ public:
   MGlobal *addGlobalVariable(GlobalVariable *global);
   MGlobal *addGlobalFloat(FloatConstant *f);
 
-  vector<unique_ptr<MGlobal>> &getGlobals();
-  vector<unique_ptr<MFunction>> &getFunctions();
+  vector<MGlobal*> getGlobals();
+  vector<MFunction*> getFunctions();
 
   friend std::ostream &operator<<(std::ostream &os, const MModule &obj);
 };
