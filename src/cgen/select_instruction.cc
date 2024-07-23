@@ -53,7 +53,7 @@ void lowerHIicmp(MFunction *mfunc) {
                 break;
               }
               case OpTag::SLT: {
-                mi = new MIblt(opd2, opd1, tb);
+                mi = new MIblt(opd1, opd2, tb);
                 break;
               }
               case OpTag::SGE: {
