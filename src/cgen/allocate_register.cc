@@ -287,9 +287,9 @@ void fixRange(MFunction *mfunc) {
         if (memop->imm < lo || memop->imm > hi) {
           auto immr = new MIli(memop->imm, Register::reg_t3);
           auto addr =
-              new MIadd(Register::reg_t3, memop->getReg(0), Register::reg_t4);
+              new MIadd(Register::reg_t3, memop->getReg(1), Register::reg_t4);
           memop->imm = 0;
-          memop->setReg(0, Register::reg_t4);
+          memop->setReg(1, Register::reg_t4);
           memop->insertBefore({immr, addr});
         }
       } else if (ins->getInsTag() == MInstruction::SD) {
@@ -297,9 +297,9 @@ void fixRange(MFunction *mfunc) {
         if (memop->imm < lo || memop->imm > hi) {
           auto immr = new MIli(memop->imm, Register::reg_t3);
           auto addr =
-              new MIadd(Register::reg_t3, memop->getReg(0), Register::reg_t4);
+              new MIadd(Register::reg_t3, memop->getReg(1), Register::reg_t4);
           memop->imm = 0;
-          memop->setReg(0, Register::reg_t4);
+          memop->setReg(1, Register::reg_t4);
           memop->insertBefore({immr, addr});
         }
       } else if (ins->getInsTag() == MInstruction::FSD) {
@@ -307,9 +307,9 @@ void fixRange(MFunction *mfunc) {
         if (memop->imm < lo || memop->imm > hi) {
           auto immr = new MIli(memop->imm, Register::reg_t3);
           auto addr =
-              new MIadd(Register::reg_t3, memop->getReg(0), Register::reg_t4);
+              new MIadd(Register::reg_t3, memop->getReg(1), Register::reg_t4);
           memop->imm = 0;
-          memop->setReg(0, Register::reg_t4);
+          memop->setReg(1, Register::reg_t4);
           memop->insertBefore({immr, addr});
         }
       } else if (ins->getInsTag() == MInstruction::FSW) {
@@ -317,9 +317,9 @@ void fixRange(MFunction *mfunc) {
         if (memop->imm < lo || memop->imm > hi) {
           auto immr = new MIli(memop->imm, Register::reg_t3);
           auto addr =
-              new MIadd(Register::reg_t3, memop->getReg(0), Register::reg_t4);
+              new MIadd(Register::reg_t3, memop->getReg(1), Register::reg_t4);
           memop->imm = 0;
-          memop->setReg(0, Register::reg_t4);
+          memop->setReg(1, Register::reg_t4);
           memop->insertBefore({immr, addr});
         }
       }
