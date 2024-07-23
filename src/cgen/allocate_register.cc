@@ -391,7 +391,7 @@ void rewrite_program_spill(MFunction *func, map<Register *, int> *spill) {
       for (int i = 0; i < ins->getRegNum(); i++) {
         auto reg = ins->getReg(i);
         // std::cout << "  check reg " << reg->getName() << IS_VIRTUAL_REG(reg)
-                  // << reg->getTag() << endl;
+        //           << reg->getTag() << endl;
         if (IS_VIRTUAL_REG(reg) && spill->find(reg) != spill->end()) {
           // std::cout << "    handle!" << endl;
           regs.push_back(reg);
@@ -417,6 +417,7 @@ void rewrite_program_spill(MFunction *func, map<Register *, int> *spill) {
         } else {
           auto target = Register::getIRegister(int_cnt++);
           int offset = spill->at(reg);
+          // std::cout << "  remove " << reg->getName() << " of " << *ins << endl;
           ins->replaceRegister(reg, target);
           load = new MIlw(Register::reg_s0, -offset, target);
           loads.push_back(load);

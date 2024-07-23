@@ -123,6 +123,7 @@ void Register::removeUse(MInstruction *use) {
       return;
     }
   }
+  std::cout << "remove " << *use << " of " << this->getName() << endl;
   assert(0);
 }
 

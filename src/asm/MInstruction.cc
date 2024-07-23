@@ -34,7 +34,6 @@ void MInstruction::setComment(string comment) { this->comment = comment; }
 string MInstruction::getComment() { return comment; }
 
 void MInstruction::replaceIRRegister(map<Instruction *, Register *> instr_map) {
-  // todo: for phi
   for (auto &opd : *oprands) {
     if (opd->getTag() == IR_REGISTER) {
       auto irr = static_cast<IRRegister *>(opd);
@@ -42,6 +41,7 @@ void MInstruction::replaceIRRegister(map<Instruction *, Register *> instr_map) {
       auto it = instr_map.find(inst);
       if (it != instr_map.end()) {
         opd = it->second;
+        opd->addUse(this);
         delete irr;
       } else {
         std::cout << "Try to replace " << inst->getName() << endl;
