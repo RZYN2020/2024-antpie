@@ -148,15 +148,16 @@ static void setUsedtoLiveIn(MInstruction *ins, set<Register *> *used,
   auto fregs = liveness_freg->at(ins);
   for (auto reg : iregs) {
     // std::cout << "  Check line IN " << reg->getName() << endl;
-    if (spilled->find(reg) == spilled->end()) {
+    // todo: read ssa book to know how this works
+    if (spilled->find(reg) == spilled->end() && allocation->find(reg) != allocation->end()) {
       // std::cout << "   Insert line IN " << reg->getName() << "->" << endl;
-      //           << allocation->at(reg)->getName() << endl;
+                // << allocation->at(reg)->getName() << endl;
       used->insert(allocation->at(reg));
     }
   }
   for (auto reg : fregs) {
     // std::cout << "  Check line IN " << reg->getName() << endl;
-    if (spilled->find(reg) == spilled->end()) {
+    if (spilled->find(reg) == spilled->end() && allocation->find(reg) != allocation->end()) {
       // std::cout << "    Insert line IN " << reg->getName() << "->"
       //           << allocation->at(reg)->getName() << endl;
       used->insert(allocation->at(reg));
