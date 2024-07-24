@@ -3,7 +3,7 @@ import subprocess
 import sys
 
 lib_dir = "tests/"
-test_dir = "tests/compiler2023/公开样例与运行时库/functional/"
+test_dir = "tests/compiler2023/公开样例与运行时库/performance/"
 compiler_path = "build/compiler"
 tmp_file_base = os.path.abspath(".") + "/tmp/"
 
@@ -71,7 +71,7 @@ def run_single_ir_test(sy_file, out_file, in_file=None):
     prefix = sy_file.split('.')[0] 
     # get llvm ir file
     ir_file = tmp_file_base + prefix + ".ll"
-    gen_command = compiler_path + " " + test_dir + sy_file + " -l "+ " -o " + ir_file
+    gen_command = compiler_path + " -l" + " -o "+ ir_file + " " + test_dir + sy_file
     subprocess.run(gen_command, shell=True)
 
     # llvm ir to bitcode
@@ -117,7 +117,7 @@ def run_single_test(sy_file, out_file, in_file=None):
     prefix = sy_file.split('.')[0] 
     # get riscv asm file
     asm_file = tmp_file_base + prefix + ".s"
-    gen_command = compiler_path + " " + test_dir + sy_file + " -S "+ " -o " + asm_file
+    gen_command = compiler_path + " -S" + " -o "+ asm_file + " " + test_dir + sy_file
     try:
         subprocess.run(gen_command, shell=True, timeout=5)
     except subprocess.TimeoutExpired:

@@ -1108,13 +1108,13 @@ void MySysYParserVisitor::init_extern_function() {
 
   // void starttime()
   funcType = Type::getFuncType(voidType);
-  function = new Function(funcType, true, "starttime");
-  externFunctions.push_back(function);
+  function = new Function(funcType, true, "_sysy_starttime");
+  current->put("starttime", function);
 
   // void stoptime()
   funcType = Type::getFuncType(voidType);
-  function = new Function(funcType, true, "stoptime");
-  externFunctions.push_back(function);
+  function = new Function(funcType, true, "_sysy_stoptime");
+  current->put("stoptime", function);
 
   for (Function* function : externFunctions) {
     current->put(function->getName(), function);
