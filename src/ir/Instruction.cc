@@ -31,6 +31,7 @@ void Instruction::deleteUseList() {
     use->removeFromValue();
     delete use;
   }
+  useList->clear();
 }
 
 bool BranchInst::replaceDestinationWith(BasicBlock* oldBlock,

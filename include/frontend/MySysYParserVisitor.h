@@ -5,6 +5,7 @@
 #ifndef ANTPIE_MYSYSYPARSERVISITOR_H
 #define ANTPIE_MYSYSYPARSERVISITOR_H
 
+#include <cmath>
 #include <functional>
 
 #include "AggregateValue.hh"
