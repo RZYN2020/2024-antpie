@@ -42,11 +42,25 @@ bool DeadCodeElimination::eliminateDeadBlocks(Function* func) {
     for (Instruction* instr : *deadBlock->getInstructions()) {
       instr->deleteUseList();
     }
+
+    // delete phi incoming from deadBlock
+    for (Use* use = deadBlock->getUseHead(); use;) {
+      Instruction* userInstr = use->instr;
+      use = use->next;
+      if (PhiInst* phi = dynamic_cast<PhiInst*>(userInstr)) {
+        phi->deleteIncomingFrom(deadBlock);
+      }
+    }
     cfg->eraseNode(deadBlock);
     deadBlock->eraseFromParent();
     delete deadBlock;
   }
-  return !deadBlocks.empty();
+  bool changed = !deadBlocks.empty();
+  if (changed) {
+    func->resetCFG();
+    func->resetDT();
+  }
+  return changed;
 }
 Value* tmp = 0;
 bool DeadCodeElimination::eliminateDeadInstructions(Function* func) {

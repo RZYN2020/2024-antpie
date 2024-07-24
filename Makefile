@@ -38,8 +38,8 @@ gcc-riscv:
 # Input: llvm ir
 # Output: return value
 llvm-test: run
-	llvm-as $(IRFile) -o $(BCFile)
-	llc -relocation-model=pic $(BCFile) -o $(ASMFile)
+	llvm-as -opaque-pointers $(IRFile) -o $(BCFile)
+	llc -opaque-pointers -relocation-model=pic $(BCFile) -o $(ASMFile)
 	clang -fPIE $(ASMFile) -L tests/ -lsysy -o $(BINFile) 
 	./$(BINFile); echo $$?
 
