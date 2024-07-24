@@ -21,12 +21,12 @@ void create_directories_if_not_exists(const std::filesystem::path &file_path);
 // With option -r, output is RISCV Code.
 int main(int argc, char *argv[]) {
   if (argc != 5 && argc != 6) {
-    std::cerr << "Usage: compiler sourcefile -l/-S -o outputfile [-O1]" << std::endl;
+    std::cerr << "Usage: compiler -l/-S -o outputfile sourcefile [-O1]" << std::endl;
     return 1;
   }
 
-  std::string sourcefile = argv[1];
-  std::string outputfile = argv[4];
+  std::string sourcefile = argv[4];
+  std::string outputfile = argv[3];
   enum { LLVM, RISCV } mode = strcmp(argv[2], "-l") == 0 ? LLVM : RISCV;
 
   create_directories_if_not_exists(outputfile);
