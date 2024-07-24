@@ -511,7 +511,7 @@ antlrcpp::Any MySysYParserVisitor::visitMulExp(
         } else if (ctx->op[i]->getText() == "/") {
           ret_float = lhs / rhs;
         } else {
-          ret_float = (int)lhs % (int)rhs;
+          ret_float = std::fmod(lhs, rhs);
         }
         l_Val = FloatConstant::getConstFloat(ret_float);
         continue;

@@ -16,4 +16,5 @@ add_library(
     LoopUnroll.cc
     TailRecursionElimination.cc
     DeadCodeElimination.cc
+    ConstantFolding.cc
 )
