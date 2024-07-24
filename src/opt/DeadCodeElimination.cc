@@ -59,8 +59,6 @@ bool DeadCodeElimination::eliminateDeadBlocks(Function* func) {
   if (changed) {
     func->resetCFG();
     func->resetDT();
-    func->buildCFG();
-    func->buildDT();
   }
   return changed;
 }
@@ -135,6 +133,10 @@ bool DeadCodeElimination::simplifyInstruction(Function* func) {
           }
         }
       }
+    }
+
+    if (changed) {
+      func->resetDT();
     }
 
     // delete single entry phi

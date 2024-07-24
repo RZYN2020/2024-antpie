@@ -20,10 +20,10 @@ ASMFile = $(patsubst %.ll,%.s,$(IRFile))
 OBJFile = $(patsubst %.ll,%.o,$(IRFile))
 BINFile = $(patsubst %.ll,%,$(IRFile))
 run:
-	$(BIN_DIR)/compiler tests/test.sy -o tests/test.ll -l
+	$(BIN_DIR)/compiler -l -o tests/test.ll tests/test.sy
 
 runs:
-	$(BIN_DIR)/compiler tests/test.sy -o tests/test.s -r
+	$(BIN_DIR)/compiler -S -o tests/test.s tests/test.sy
 	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
 	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
 	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?

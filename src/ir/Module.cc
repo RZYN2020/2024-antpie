@@ -311,13 +311,11 @@ void Module::irOptimize() {
 
   // run all pass
   for (auto& pass : optimizations) {
-    // if (dynamic_cast<GlobalCodeMotion*>(pass) ||
-    //     dynamic_cast<GlobalValueNumbering*>(pass)) {
-    //   printIR(std::cout);
-    // }
     pass->runOnModule(this);
-    // if (dynamic_cast<ConstantFolding*>(pass)) {
-    //   printIR(std::cout);
-    // }
+  }
+
+  for (Function* func: functions) {
+    func->buildCFG();
+    func->buildDT();
   }
 }
