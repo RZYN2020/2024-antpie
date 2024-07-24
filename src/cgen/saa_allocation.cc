@@ -12,13 +12,16 @@ static void scan_back(Register *r, MBasicBlock *bb,
                       vector<MInstruction *> instrs, int pos,
                       map<MInstruction *, set<Register *>> *liveness,
                       GET_DEFS get_defs, GET_PHIS get_phis) {
+  // std::cout << "Back scan " << r->getName() << " of " << bb->getName() << endl;
   for (int i = pos; i >= 0; i--) {
     auto ins = instrs[i];
     if ((*liveness)[ins].find(r) != (*liveness)[ins].end()) {
       return;
     }
+    // std::cout << "  check def or " << *ins << endl;
     vector<Register *> defRegs = get_defs(ins);
     for (auto defReg : defRegs) {
+        // std::cout << "    check" << defReg->getName() << endl;
       if (defReg == r) {
         return;
       }
@@ -77,13 +80,13 @@ void ssa_liveness_analysis(MFunction *func, LivenessInfo *liveness_i,
             (*liveness_i)[first].insert(opd.arg.reg);
             scan_back(opd.arg.reg, pred, pred->getAllInstructions(),
                       pred->getAllInstructions().size() - 1, liveness_i,
-                      getDefs<VF>, getPhiDefs<VF>);
+                      getDefs<VI>, getPhiDefs<VI>);
           } else {
             assert(opd.arg.reg->getTag() == Register::V_FREGISTER);
             (*liveness_f)[first].insert(opd.arg.reg);
             scan_back(opd.arg.reg, pred, pred->getAllInstructions(),
                       pred->getAllInstructions().size() - 1, liveness_f,
-                      getDefs<VI>, getPhiDefs<VI>);
+                      getDefs<VF>, getPhiDefs<VF>);
           }
         }
       }
@@ -146,7 +149,7 @@ static void setUsedtoLiveIn(MInstruction *ins, set<Register *> *used,
   for (auto reg : iregs) {
     // std::cout << "  Check line IN " << reg->getName() << endl;
     if (spilled->find(reg) == spilled->end()) {
-      // std::cout << "   Insert line IN " << reg->getName() << "->"
+      // std::cout << "   Insert line IN " << reg->getName() << "->" << endl;
       //           << allocation->at(reg)->getName() << endl;
       used->insert(allocation->at(reg));
     }
