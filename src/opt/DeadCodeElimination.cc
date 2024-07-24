@@ -59,6 +59,8 @@ bool DeadCodeElimination::eliminateDeadBlocks(Function* func) {
   if (changed) {
     func->resetCFG();
     func->resetDT();
+    func->buildCFG();
+    func->buildDT();
   }
   return changed;
 }

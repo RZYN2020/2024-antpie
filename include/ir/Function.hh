@@ -70,12 +70,18 @@ class Function : public GlobalValue {
   // Control Flow Graph
   CFG* buildCFG();
   CFG* getCFG() { return cfg; }
-  void resetCFG() { cfg = 0; }
+  void resetCFG() {
+    delete cfg;
+    cfg = 0;
+  }
 
   // Dominance Tree
   DomTree* buildDT();
   DomTree* getDT() { return dt; }
-  void resetDT() { dt = 0; }
+  void resetDT() {
+    delete dt;
+    dt = 0;
+  }
 
   // Function propertites analysis
   bool isRecursive() { return props.isRecursive; }
