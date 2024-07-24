@@ -6,7 +6,7 @@ ANTLR = java -jar $(ANTLR_PATH) -listener -visitor -long-messages
 PFILE = $(shell find . -name "SysYParser.g4")
 
 all:
-	cmake -DCMAKE_BUILD_TYPE=Release -B build
+	cmake -DCMAKE_BUILD_TYPE=Debug -B build
 	cmake --build build
 
 debug:
@@ -69,8 +69,11 @@ antlr: $(PFILE)
 	$(ANTLR) -Dlanguage=Cpp $(PFILE)
 
 
-# todo: official docker test
+# docker test
 # https://pan.educg.net/#/s/V2oiq?path=%2F
+# `docker load -i riscv_v3.tar` to load image
+docker-test:
+	docker run --rm -it -v ./:/coursegrader/submitdata cg/compile-x86:rust2ndclang12 bash
 
 # Test in LLVM IR form: make test MODE=LLVM
 # Test in RISCV form: make test MODE=RISCV

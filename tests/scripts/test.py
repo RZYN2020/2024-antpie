@@ -71,7 +71,7 @@ def run_single_ir_test(sy_file, out_file, in_file=None):
     prefix = sy_file.split('.')[0] 
     # get llvm ir file
     ir_file = tmp_file_base + prefix + ".ll"
-    gen_command = compiler_path + " " + test_dir + sy_file + " -o " + ir_file + " -l"
+    gen_command = compiler_path + " " + test_dir + sy_file + " -l "+ " -o " + ir_file
     subprocess.run(gen_command, shell=True)
 
     # llvm ir to bitcode
@@ -117,7 +117,7 @@ def run_single_test(sy_file, out_file, in_file=None):
     prefix = sy_file.split('.')[0] 
     # get riscv asm file
     asm_file = tmp_file_base + prefix + ".s"
-    gen_command = compiler_path + " " + test_dir + sy_file + " -o " + asm_file + " -r"
+    gen_command = compiler_path + " " + test_dir + sy_file + " -S "+ " -o " + asm_file
     try:
         subprocess.run(gen_command, shell=True, timeout=5)
     except subprocess.TimeoutExpired:
