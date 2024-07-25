@@ -12,7 +12,8 @@ static void scan_back(Register *r, MBasicBlock *bb,
                       vector<MInstruction *> instrs, int pos,
                       map<MInstruction *, set<Register *>> *liveness,
                       GET_DEFS get_defs, GET_PHIS get_phis) {
-  // std::cout << "Back scan " << r->getName() << " of " << bb->getName() << endl;
+  // std::cout << "Back scan " << r->getName() << " of " << bb->getName() <<
+  // endl;
   for (int i = pos; i >= 0; i--) {
     auto ins = instrs[i];
     if ((*liveness)[ins].find(r) != (*liveness)[ins].end()) {
@@ -21,7 +22,7 @@ static void scan_back(Register *r, MBasicBlock *bb,
     // std::cout << "  check def or " << *ins << endl;
     vector<Register *> defRegs = get_defs(ins);
     for (auto defReg : defRegs) {
-        // std::cout << "    check" << defReg->getName() << endl;
+      // std::cout << "    check" << defReg->getName() << endl;
       if (defReg == r) {
         return;
       }
@@ -152,15 +153,16 @@ static void setUsedtoLiveIn(MInstruction *ins, set<Register *> *used,
   for (auto reg : iregs) {
     // std::cout << "  Check line IN " << reg->getName() << endl;
     // todo: read ssa book to know how this works
-    if (spilled->find(reg) == spilled->end() && allocation->find(reg) != allocation->end()) {
+    if (allocation->find(reg) != allocation->end()) {
       // std::cout << "   Insert line IN " << reg->getName() << "->" << endl;
-                // << allocation->at(reg)->getName() << endl;
+      // << allocation->at(reg)->getName() << endl;
       used->insert(allocation->at(reg));
     }
   }
   for (auto reg : fregs) {
     // std::cout << "  Check line IN " << reg->getName() << endl;
-    if (spilled->find(reg) == spilled->end() && allocation->find(reg) != allocation->end()) {
+    if (spilled->find(reg) == spilled->end() &&
+        allocation->find(reg) != allocation->end()) {
       // std::cout << "    Insert line IN " << reg->getName() << "->"
       //           << allocation->at(reg)->getName() << endl;
       used->insert(allocation->at(reg));
@@ -241,21 +243,24 @@ void allocatTheRegister(Register *reg, map<Register *, Register *> *allocation,
 void allocatePhis(MBasicBlock *bb, map<Register *, Register *> *allocation,
                   LivenessInfo *liveness_ireg, LivenessInfo *liveness_freg,
                   map<Register *, int> *spill) {
+  auto first = bb->getAllInstructions().at(0);
   set<Register *> used;
+  setUsedtoLiveIn(first, &used, allocation, liveness_ireg, liveness_freg,
+                  spill);
   set<MHIphi *> phis;
   for (auto phi : bb->getPhis()) {
     // std::cout << "  check phi : " << *phi << endl;
     phis.insert(phi);
   }
 
-  for (auto reg : liveness_ireg->at(bb->getAllInstructions().at(0))) {
+  for (auto reg : liveness_ireg->at(first)) {
     // std::cout << "    check reg of i: " << reg->getName() << endl;
     if (phis.find(static_cast<MHIphi *>(reg)) != phis.end() &&
         (spill->find(reg) == spill->end())) {
       allocatTheRegister(reg, allocation, used);
     }
   }
-  for (auto reg : liveness_freg->at(bb->getAllInstructions().at(0))) {
+  for (auto reg : liveness_freg->at(first)) {
     // std::cout << "    check reg of f: " << reg->getName() << endl;
     if (phis.find(static_cast<MHIphi *>(reg)) != phis.end() &&
         (spill->find(reg) == spill->end())) {
@@ -356,7 +361,8 @@ void allocate_register(MModule *mod) {
     offset += callee_saved.size() * 8;
 
     // step4. Rewrite program
-    out_of_ssa(func, liveness_ireg.get(), liveness_freg.get(), allocation.get());
+    out_of_ssa(func, liveness_ireg.get(), liveness_freg.get(),
+               allocation.get());
     // std::cout << "endl" << endl;
     lower_call(func, offset, allocation.get(), spill.get(), liveness_ireg.get(),
                liveness_ireg.get());
