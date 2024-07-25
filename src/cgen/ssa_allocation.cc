@@ -235,7 +235,6 @@ void allocatTheRegister(Register *reg, map<Register *, Register *> *allocation,
   used.insert(phyreg);
   allocation->insert({reg, phyreg});
   // std::cout << "  allocate " << reg->getName() << " to " << phyreg->getName()
-  //           << endl;
 }
 
 // the way we allcate (aggrate all phi together) can increase the register
