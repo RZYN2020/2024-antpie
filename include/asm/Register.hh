@@ -135,7 +135,7 @@ public:
 
 class ParaRegister : public VRegister {
 private:
-  Register *reg;
+  Register *reg = nullptr;
   int offset;
   uint size;
 

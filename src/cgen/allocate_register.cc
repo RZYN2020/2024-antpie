@@ -680,6 +680,8 @@ vector<MInstruction *> MHIcall::generateCallSequence(
         if (phyreg->getTag() == Register::F_REGISTER) {
           assignments.push_back(new MIfmv_s(argr, phyreg));
         } else {
+          // std::cout << phyreg->getName() << endl;
+          // std::cout << phyreg->getTag() << endl;
           assert(phyreg->getTag() == Register::I_REGISTER);
           auto argi = static_cast<MInstruction *>(argr);
           assignments.push_back(new MImv(argr, phyreg));
@@ -774,14 +776,35 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
           assignments.push_back(
               new MIsw(para->getRegister(), -addr, Register::reg_s0));
         }
+      } else {
+        // do nothing
       }
     } else {
       auto phyreg = allocation->at(para);
       if (phyreg->getTag() == Register::F_REGISTER) {
-        assignments.push_back(new MIfmv_s(phyreg, para->getRegister()));
+        if (para->getRegister() != nullptr) {
+          assignments.push_back(new MIfmv_s(phyreg, para->getRegister()));
+        } else {
+          auto addr = para->getOffset();
+          assignments.push_back(
+              new MIflw(Register::reg_s0, addr, Register::reg_ft0));
+          assignments.push_back(new MIfmv_s(Register::reg_ft0, phyreg));
+        }
       } else {
         assert(phyreg->getTag() == Register::I_REGISTER);
-        assignments.push_back(new MImv(phyreg, para->getRegister()));
+        if (para->getRegister() != nullptr) {
+          assignments.push_back(new MImv(phyreg, para->getRegister()));
+        } else {
+          auto addr = para->getOffset();
+          if (para->isPointer()) {
+            assignments.push_back(
+                new MIld(Register::reg_s0, addr, Register::reg_t0));
+          } else {
+            assignments.push_back(
+                new MIlw(Register::reg_s0, addr, Register::reg_t0));
+          }
+          assignments.push_back(new MImv(Register::reg_t0, phyreg));
+        }
       }
     }
   }
