@@ -783,7 +783,7 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
       auto phyreg = allocation->at(para);
       if (phyreg->getTag() == Register::F_REGISTER) {
         if (para->getRegister() != nullptr) {
-          assignments.push_back(new MIfmv_s(phyreg, para->getRegister()));
+          assignments.push_back(new MIfmv_s(para->getRegister(), phyreg));
         } else {
           auto addr = para->getOffset();
           assignments.push_back(
@@ -793,7 +793,7 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
       } else {
         assert(phyreg->getTag() == Register::I_REGISTER);
         if (para->getRegister() != nullptr) {
-          assignments.push_back(new MImv(phyreg, para->getRegister()));
+          assignments.push_back(new MImv(para->getRegister(), phyreg));
         } else {
           auto addr = para->getOffset();
           if (para->isPointer()) {
