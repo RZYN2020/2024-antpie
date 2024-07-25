@@ -357,7 +357,7 @@ void out_of_ssa(MFunction *func, LivenessInfo *liveness_ireg,
         auto pre = phi->getIncomingBlock(i);
         // std::cout << "  check " << pre->getName() << endl;
         auto phir = phi->getTarget();
-        if (allocation->find(phir) != allocation->end()) {
+        if (allocation != nullptr && allocation->find(phir) != allocation->end()) {
           phir = allocation->at(phir);
         }
         MInstruction *ins;
@@ -366,7 +366,7 @@ void out_of_ssa(MFunction *func, LivenessInfo *liveness_ireg,
           auto reg_ = opd.arg.reg;
           assert(reg->getTag() == Register::V_FREGISTER ||
                  reg->getTag() == Register::V_IREGISTER);
-          if (allocation->find(reg) != allocation->end()) {
+          if (allocation != nullptr && allocation->find(reg) != allocation->end()) {
             reg_ = allocation->at(reg);
           }
 
