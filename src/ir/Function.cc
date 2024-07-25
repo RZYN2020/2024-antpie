@@ -106,3 +106,17 @@ void Function::insertBasicBlockBefore(BasicBlock* newBlock, BasicBlock* loc) {
   }
   assert(0);
 }
+
+void Function::resetCFG() {
+  if (cfg) {
+    delete cfg;
+    cfg = 0;
+  }
+}
+
+void Function::resetDT() {
+  if (dt) {
+    delete dt;
+    dt = 0;
+  }
+}

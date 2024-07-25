@@ -73,6 +73,7 @@ bool MergeBlock::runOnFunction(Function* func) {
       dt->deleteChildren(block);
       dt->deleteParent(succBlock);
       dt->mergeChildrenTo(succBlock, block);
+      dt->eraseNode(succBlock);
     }
   }
   for (BasicBlock* block : trashList) {

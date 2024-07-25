@@ -6,7 +6,7 @@ ANTLR = java -jar $(ANTLR_PATH) -listener -visitor -long-messages
 PFILE = $(shell find . -name "SysYParser.g4")
 
 all:
-	cmake -DCMAKE_BUILD_TYPE=Release -B build
+	cmake -DCMAKE_BUILD_TYPE=Debug -B build
 	cmake --build build
 
 debug:
@@ -20,10 +20,10 @@ ASMFile = $(patsubst %.ll,%.s,$(IRFile))
 OBJFile = $(patsubst %.ll,%.o,$(IRFile))
 BINFile = $(patsubst %.ll,%,$(IRFile))
 run:
-	$(BIN_DIR)/compiler tests/test.sy -o tests/test.ll -l
+	$(BIN_DIR)/compiler -l -o tests/test.ll tests/test.sy
 
 runs:
-	$(BIN_DIR)/compiler tests/test.sy -o tests/test.s -r
+	$(BIN_DIR)/compiler -S -o tests/test.s tests/test.sy
 	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
 	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
 	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
@@ -38,8 +38,8 @@ gcc-riscv:
 # Input: llvm ir
 # Output: return value
 llvm-test: run
-	llvm-as $(IRFile) -o $(BCFile)
-	llc -relocation-model=pic $(BCFile) -o $(ASMFile)
+	llvm-as -opaque-pointers $(IRFile) -o $(BCFile)
+	llc -opaque-pointers -relocation-model=pic $(BCFile) -o $(ASMFile)
 	clang -fPIE $(ASMFile) -L tests/ -lsysy -o $(BINFile) 
 	./$(BINFile); echo $$?
 
@@ -69,8 +69,11 @@ antlr: $(PFILE)
 	$(ANTLR) -Dlanguage=Cpp $(PFILE)
 
 
-# todo: official docker test
+# docker test
 # https://pan.educg.net/#/s/V2oiq?path=%2F
+# `docker load -i riscv_v3.tar` to load image
+docker-test:
+	docker run --rm -it -v ./:/coursegrader/submitdata cg/compile-x86:rust2ndclang12 bash
 
 # Test in LLVM IR form: make test MODE=LLVM
 # Test in RISCV form: make test MODE=RISCV

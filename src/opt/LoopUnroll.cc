@@ -308,6 +308,7 @@ bool LoopUnroll::runOnLoop(LoopInfo* loopInfo) {
   }
   Instruction* newBranch = newHeader->getTailInstr();
   newBranch->eraseFromParent();
+  newBranch->deleteUseList();
   newHeader->pushInstr(new JumpInst(bodyBlock));
 
   // rest loop
@@ -359,6 +360,7 @@ bool LoopUnroll::runOnLoop(LoopInfo* loopInfo) {
 
     Instruction* newBranch = newHeader->getTailInstr();
     newBranch->eraseFromParent();
+    newBranch->deleteUseList();
     newHeader->pushInstr(new JumpInst(bodyBlock));
 
     preValueMap = &newValueMap;

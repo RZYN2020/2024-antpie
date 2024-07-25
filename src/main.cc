@@ -20,14 +20,15 @@ void create_directories_if_not_exists(const std::filesystem::path &file_path);
 // With option -l, output is LLVM IR;
 // With option -r, output is RISCV Code.
 int main(int argc, char *argv[]) {
-  if (argc != 5) {
-    std::cerr << "Usage: compiler sourcefile -o outputfile -l/-r" << std::endl;
+  if (argc != 5 && argc != 6) {
+    std::cout << argc << std::endl;
+    std::cerr << "Usage: compiler -l/-S -o outputfile sourcefile [-O1]" << std::endl;
     return 1;
   }
 
-  std::string sourcefile = argv[1];
+  std::string sourcefile = argv[4];
   std::string outputfile = argv[3];
-  enum { LLVM, RISCV } mode = strcmp(argv[4], "-l") == 0 ? LLVM : RISCV;
+  enum { LLVM, RISCV } mode = strcmp(argv[1], "-l") == 0 ? LLVM : RISCV;
 
   create_directories_if_not_exists(outputfile);
 
@@ -50,14 +51,14 @@ int main(int argc, char *argv[]) {
   ANTPIE::Module *module = &visitor->module;
 
   std::ofstream out_ll;
-  out_ll.open("tests/test.ll");
-  module->printIR(out_ll);
+  // out_ll.open("tests/test.ll");
+  // module->printIR(out_ll);
 
   module->irOptimize();
 
-  std::ofstream out_opt_ll;
-  out_opt_ll.open("tests/test.opt.ll");
-  module->printIR(out_opt_ll);
+  // std::ofstream out_opt_ll;
+  // out_opt_ll.open("tests/test.opt.ll");
+  // module->printIR(out_opt_ll);
 
   if (mode == LLVM) {
     out_ll.open(outputfile);
@@ -78,8 +79,7 @@ int main(int argc, char *argv[]) {
 
 void create_directories_if_not_exists(const std::filesystem::path &file_path) {
   std::filesystem::path parent_path = file_path.parent_path();
-
-  if (!std::filesystem::exists(parent_path)) {
+  if (!(std::filesystem::exists(parent_path) || parent_path.empty())) {
     std::filesystem::create_directories(parent_path);
   }
 }

@@ -82,6 +82,7 @@ public:
   void deleteParent(BasicBlock* block) {
     dtNodeMap.at(block)->dominator = nullptr;
   }
+  void eraseNode(BasicBlock* block);
   void draw();
 
   void calculateIDF(BBListPtr src, BBListPtr result);

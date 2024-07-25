@@ -70,9 +70,11 @@ bool GlobalCodeMotion::runOnFunction(Function* func) {
   }
   for (BasicBlock* bb : *func->getBasicBlocks()) {
     auto instrList = bb->getInstructions();
-    for (auto it = instrList->begin(); it != instrList->end();) {
-      Instruction* instr = *it;
-      ++it;
+    vector<Instruction*> cloneList;
+    for (Instruction* instr : *instrList) {
+      cloneList.push_back(instr);
+    }
+    for (auto instr: cloneList) {
       if (!visited.count(instr)) {
         scheduleLate(instr, dt, liBase);
       }
@@ -87,8 +89,8 @@ bool GlobalCodeMotion::isPinned(Instruction* instr) {
     return !callee->isPureFunction();
   }
   return !(instr->isa(VT_ICMP) || instr->isa(VT_FCMP) || instr->isa(VT_BOP) ||
-         instr->isa(VT_FPTOSI) || instr->isa(VT_SITOFP) ||
-         instr->isa(VT_ZEXT) || instr->isa(VT_GEP));
+           instr->isa(VT_FPTOSI) || instr->isa(VT_SITOFP) ||
+           instr->isa(VT_ZEXT) || instr->isa(VT_GEP));
 }
 
 Instruction* GlobalCodeMotion::scheduleEarly(Instruction* instr, DomTree* dt) {

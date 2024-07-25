@@ -148,15 +148,15 @@ void DomTree::calculateDF() {
     }
   }
   dfActive = true;
-// #ifdef DEBUG_MODE
-//   for (BasicBlock *bb : *blocks) {
-//     std::cout << bb->getName() << ": ";
-//     for (BasicBlock *df : *getDF(bb)) {
-//       std::cout << df->getName() << " ";
-//     }
-//     std::cout << std::endl;
-//   }
-// #endif
+  // #ifdef DEBUG_MODE
+  //   for (BasicBlock *bb : *blocks) {
+  //     std::cout << bb->getName() << ": ";
+  //     for (BasicBlock *df : *getDF(bb)) {
+  //       std::cout << df->getName() << " ";
+  //     }
+  //     std::cout << std::endl;
+  //   }
+  // #endif
 }
 
 void DomTree::calculateIDF(BBListPtr src, BBListPtr result) {
@@ -246,4 +246,8 @@ BasicBlock *DomTree::findLCA(BasicBlock *bbx, BasicBlock *bby) {
     bby = getDominator(bby);
   }
   return bbx;
+}
+
+void DomTree::eraseNode(BasicBlock *block) {
+  dtNodeMap.erase(block);
 }
