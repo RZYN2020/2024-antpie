@@ -23,9 +23,14 @@
 //////////////////////////////////////
 
 void peephole_optimize(MModule *mod) {
-  for (auto &func : mod->getFunctions()) {
-    for (auto &bb : func->getBasicBlocks()) {
-      for (auto &ins : bb->getAllInstructions()) {
+  for (auto func : mod->getFunctions()) {
+    for (auto bb : func->getBasicBlocks()) {
+      for (auto ins : bb->getAllInstructions()) {
+        if (ins->getInsTag() == MInstruction::MV || ins->getInsTag() == MInstruction::FMV_S) {
+          if (ins->getReg(0) == ins->getTarget()) {
+            ins->replaceWith({});
+          }
+        } 
       }
     }
   }

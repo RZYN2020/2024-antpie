@@ -5,4 +5,5 @@ add_library(
     allocate_register.cc
     spill_allocation.cc
     saa_allocation.cc
+    peephole_optimization.cc
 )

@@ -14,4 +14,6 @@ void generate_code(MModule *res, ANTPIE::Module *ir, bool opt) {
   } else {
     spill_all_register(res);
   }
+
+  peephole_optimize(res);
 }
