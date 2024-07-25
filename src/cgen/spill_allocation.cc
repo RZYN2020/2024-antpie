@@ -3,6 +3,13 @@
 
 void spill_registers(MFunction *func, map<Register *, int> *spill,
                      int &stack_offset) {
+#ifdef DEBUG_MODE
+  static set<Register *> temp_registers = {
+      Register::reg_t0,  Register::reg_t1,  Register::reg_t2,
+      Register::reg_ft0, Register::reg_ft1, Register::reg_ft2,
+  };
+#endif
+
   // allocate arguments
   auto ftp = func->getType();
   for (int i = 0; i < func->getType()->getArgSize(); i++) {
@@ -37,8 +44,17 @@ void spill_registers(MFunction *func, map<Register *, int> *spill,
       if (spill->find(reg) != spill->end()) { // already spilled
         continue;
       }
-      assert(reg->getTag() == Register::V_IREGISTER || reg->getTag() == Register::V_FREGISTER);
-      if (static_cast<VRegister*>(reg)->isPointer()) {
+
+      if (!(reg->getTag() == Register::V_IREGISTER ||
+            reg->getTag() == Register::V_FREGISTER)) {
+#ifdef DEBUG_MODE
+        if (temp_registers.find(reg) == temp_registers.end()) {
+          assert(0);
+        }
+#endif
+        continue;
+      }
+      if (static_cast<VRegister *>(reg)->isPointer()) {
         stack_offset += 8;
       } else {
         stack_offset += 4;
@@ -75,10 +91,10 @@ void spill_register_for_func(MFunction *func) {
   spill_registers(func, spill.get(), stack_offset);
 
   // for (const auto &pair : *spill) {
-  //   std::cout << "Register ID: " << pair.first->getName() << ", Offset: " << pair.second
+  //   std::cout << "Register ID: " << pair.first->getName() << ", Offset: " <<
+  //   pair.second
   //             << std::endl;
   // }
-
 
   lower_alloca(func, stack_offset);
   lower_call_spill_only(func, spill.get(), stack_offset);
