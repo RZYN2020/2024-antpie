@@ -36,7 +36,8 @@ void Instruction::deleteUseList() {
 
 bool BranchInst::replaceDestinationWith(BasicBlock* oldBlock,
                                         BasicBlock* newBlock) {
-  for (int i = 1; i < 3; i++) {
+  int n = getRValueSize();
+  for (int i = 1; i < n; i++) {
     BasicBlock* expectOldBB = dynamic_cast<BasicBlock*>(getRValue(i));
     if (expectOldBB == oldBlock) {
       Use* use = useList->at(i);

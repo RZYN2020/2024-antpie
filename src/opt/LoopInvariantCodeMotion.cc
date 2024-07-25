@@ -79,6 +79,8 @@ bool LoopInvariantCodeMotion::isMovable(Instruction* instr, LoopInfo* loopInfo,
       return false;
 
     case VT_LOAD: {
+      // FIX
+      return false;
       if (mayContainStoreTo(instr->getRValue(0))) return false;
       break;
     }

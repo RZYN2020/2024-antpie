@@ -7,8 +7,8 @@
 #include "LoopInfo.hh"
 #include "Optimization.hh"
 
-#define UNROLL_FACTOR 2  // Unroll time
-#define MAX_LINE 50
+#define UNROLL_FACTOR 8  // Unroll time
+#define MAX_LINE 20
 
 struct ClonedLoop {
   LoopInfo* originLoop;

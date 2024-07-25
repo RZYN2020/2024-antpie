@@ -301,20 +301,21 @@ void Module::irOptimize() {
   optimizations.pushBack(new DeadCodeElimination());
   // GVM and GCM need DCE
   // Add GVM pass
-  optimizations.pushBack(new GlobalValueNumbering());
+  // optimizations.pushBack(new GlobalValueNumbering());
   // // Add GCM pass
-  optimizations.pushBack(new GlobalCodeMotion());
+  // optimizations.pushBack(new GlobalCodeMotion());
 
   // // Add tail recursion elimination
   optimizations.pushBack(new TailRecursionElimination());
   optimizations.pushBack(new MergeBlock());
+  optimizations.pushBack(new DeadCodeElimination());
 
   // run all pass
   for (auto& pass : optimizations) {
     pass->runOnModule(this);
   }
 
-  for (Function* func: functions) {
+  for (Function* func : functions) {
     func->buildCFG();
     func->buildDT();
   }

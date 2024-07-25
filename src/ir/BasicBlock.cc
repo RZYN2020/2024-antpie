@@ -11,13 +11,16 @@ BasicBlock::~BasicBlock() {
 void BasicBlock::printIR(ostream& stream) const {
   stream << getName() << ":" << endl;
   for (const auto& instr : instructions) {
-    
     if (instr->getParent() != this) {
       std::cout << getName() << std::endl;
       assert(0);
     }
     stream << "  ";
     instr->printIR(stream);
+    // for (Use* use = instr->getUseHead(); use; use = use->next) {
+    //   stream << use->instr->getName() << "||";
+    // }
+
     stream << endl;
   }
 }
@@ -67,7 +70,7 @@ BasicBlock* BasicBlock::split(LinkedList<Instruction*>::Iterator iter) {
   splitBlock->tail = tail;
   tail = nullptr;
   splitBlock->function = function;
-  for (Instruction* splitInstr: *splitBlock->getInstructions()) {
+  for (Instruction* splitInstr : *splitBlock->getInstructions()) {
     splitInstr->setParent(splitBlock);
   }
   return splitBlock;
