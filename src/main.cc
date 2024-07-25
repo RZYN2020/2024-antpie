@@ -20,10 +20,15 @@ void create_directories_if_not_exists(const std::filesystem::path &file_path);
 // With option -l, output is LLVM IR;
 // With option -r, output is RISCV Code.
 int main(int argc, char *argv[]) {
+  bool opt = false;
   if (argc != 5 && argc != 6) {
     std::cout << argc << std::endl;
-    std::cerr << "Usage: compiler -l/-S -o outputfile sourcefile [-O1]" << std::endl;
+    std::cerr << "Usage: compiler -l/-S -o outputfile sourcefile [-O1]"
+              << std::endl;
     return 1;
+  }
+  if (argc == 6) {
+    opt = true;
   }
 
   std::string sourcefile = argv[4];
@@ -51,25 +56,23 @@ int main(int argc, char *argv[]) {
   ANTPIE::Module *module = &visitor->module;
 
   std::ofstream out_ll;
-  // out_ll.open("tests/test.ll");
-  // module->printIR(out_ll);
+  out_ll.open("tests/test.ll");
+  module->printIR(out_ll);
 
   module->irOptimize();
 
-  // std::ofstream out_opt_ll;
-  // out_opt_ll.open("tests/test.opt.ll");
-  // module->printIR(out_opt_ll);
+  std::ofstream out_opt_ll;
+  out_opt_ll.open("tests/test.opt.ll");
+  module->printIR(out_opt_ll);
 
   if (mode == LLVM) {
     out_ll.open(outputfile);
     module->printIR(out_ll);
     return 0;
   }
-  
-  // module->irOptimize();
 
   MModule *mmodule = new MModule();
-  generate_code(mmodule, module);
+  generate_code(mmodule, module, opt);
   std::ofstream out_s;
   out_s.open(outputfile);
   out_s << *mmodule;

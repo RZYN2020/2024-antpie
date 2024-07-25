@@ -90,7 +90,7 @@ void spill_register_for_func(MFunction *func) {
 
 void spill_all_register(MModule *mod) {
   for (auto func : mod->getFunctions()) {
-    out_of_ssa(func);
+    out_of_ssa(func, nullptr, nullptr, nullptr);
     spill_register_for_func(func);
   }
   mod->ssa_out();

@@ -1,4 +1,5 @@
 #include "allocate_register.hh"
+#include <sstream>
 
 ///////////////////////////////////////
 ///////////////////////////////////////
@@ -182,6 +183,9 @@ vector<MInstruction *> solveParallelAssignment(vector<MInstruction *> instrs) {
     loads_mp.insert({ins, loads});
   }
   vector<MInstruction *> result;
+  for (auto instr : stores) {
+    result.push_back(instr);
+  }
   for (auto instr : instrs) {
     auto loads = loads_mp.at(instr);
     for (auto load : loads) {
@@ -327,12 +331,24 @@ void fixRange(MFunction *mfunc) {
   }
 }
 
-void out_of_ssa(MFunction *func) {
+void out_of_ssa(MFunction *func, LivenessInfo *liveness_ireg,
+                LivenessInfo *liveness_freg,
+                map<Register *, Register *> *allocation) {
   // std::cout << "out of ssa" << std::endl;
   map<MBasicBlock *, vector<MInstruction *>> moves;
 
   for (auto bb : func->getBasicBlocks()) {
     for (auto phi : bb->getPhis()) {
+
+      if (liveness_freg != nullptr && liveness_ireg != nullptr) {
+        auto liveIni = &liveness_ireg->at(bb->getAllInstructions().at(0));
+        auto liveInf = &liveness_freg->at(bb->getAllInstructions().at(0));
+        if (liveIni->find(phi) == liveIni->end() &&
+            liveInf->find(phi) == liveInf->end()) {
+          continue;
+        }
+      }
+
       // std::cout << "check phi " << *phi << endl;
       assert(phi->getTarget()->getTag() == Register::V_FREGISTER ||
              phi->getTarget()->getTag() == Register::V_IREGISTER);
@@ -340,23 +356,31 @@ void out_of_ssa(MFunction *func) {
         auto opd = phi->getOprand(i);
         auto pre = phi->getIncomingBlock(i);
         // std::cout << "  check " << pre->getName() << endl;
+        auto phir = phi->getTarget();
+        if (allocation->find(phir) != allocation->end()) {
+          phir = allocation->at(phir);
+        }
         MInstruction *ins;
         if (opd.tp == MIOprandTp::Reg) {
           auto reg = opd.arg.reg;
-          // std::cout << reg->getTag() << " " << reg->getName() << endl;
+          auto reg_ = opd.arg.reg;
           assert(reg->getTag() == Register::V_FREGISTER ||
                  reg->getTag() == Register::V_IREGISTER);
+          if (allocation->find(reg) != allocation->end()) {
+            reg_ = allocation->at(reg);
+          }
+
           if (reg->getTag() == Register::V_FREGISTER) {
-            ins = new MIfmv_s(reg, phi->getTarget());
+            ins = new MIfmv_s(reg_, phir);
           } else {
-            ins = new MImv(reg, phi->getTarget());
+            ins = new MImv(reg_, phir);
           }
         } else if (opd.tp == MIOprandTp::Float) {
           auto g = func->getMod()->addGlobalFloat(new FloatConstant(opd.arg.f));
           auto addr = new MIla(g, Register::reg_t0);
-          ins = new MIflw(Register::reg_t0, 0, phi->getTarget());
+          ins = new MIflw(Register::reg_t0, 0, phir);
         } else {
-          ins = new MIli(opd.arg.i, phi->getTarget());
+          ins = new MIli(opd.arg.i, phir);
         }
         // If critical path
         if (pre->getOutgoings().size() > 1 && bb->getIncomings().size() > 1) {
@@ -388,6 +412,10 @@ void rewrite_program_spill(MFunction *func, map<Register *, int> *spill) {
   for (auto bb : func->getBasicBlocks()) {
     auto instrs = vector<MInstruction *>() = bb->getAllInstructions();
     for (auto ins : instrs) {
+      // std::ostringstream oss;
+      // oss << " " << *ins;
+      // ins->setComment(oss.str());
+
       // std::cout << "\nrewrite " << *ins << endl;
       int float_cnt = 0;
       int int_cnt = 5;
@@ -473,6 +501,9 @@ void rewrite_program_allocate(MFunction *func,
   for (auto bb : func->getBasicBlocks()) {
     auto instrs = vector<MInstruction *>() = bb->getAllInstructions();
     for (auto ins : instrs) {
+      std::ostringstream oss;
+      oss << " " << *ins;
+      ins->setComment(oss.str());
       auto loads = vector<MInstruction *>();
       auto regs = std::vector<Register *>();
       for (int i = 0; i < ins->getRegNum(); i++) {
@@ -492,7 +523,7 @@ void rewrite_program_allocate(MFunction *func,
           (allocation->find(ins->getTarget()) != allocation->end())) {
         auto reg = ins->getTarget();
         ins->replaceRegister(reg, (*allocation)[reg]);
-        ins->setComment(" ASSIGN TO " + reg->getName());
+        // ins->setComment(" ASSIGN TO " + reg->getName());
       }
     }
   }

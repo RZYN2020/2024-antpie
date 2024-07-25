@@ -68,22 +68,25 @@ void ssa_liveness_analysis(MFunction *func, LivenessInfo *liveness_i,
         scan_back(r, bb, instrs, i, liveness_f, getDefs<VF>, getPhiDefs<VF>);
       }
     }
-    // a lazy handle of phi function...
-    // merge the program point of all phi and the first instuction together
-    auto first = instrs[0];
+    // Definition 9.1 (Liveness for φ-Function Operands—Multiplexing Mode) For a
+    // φ-function a0 = φ(a1, . . . , an) in block B0, where ai comes from block
+    // Bi:
+    // + Its definition-operand is considered to be at the entry of B0, in
+    // other words variable a0 is live-in of B0.
+    // + Its use operands are at the
+    // exit of the corresponding direct predecessor basic blocks, in other
+    // words, variable ai is live-out of basic block Bi
     for (auto &phi : bb->getPhis()) {
       for (int i = 0; i < phi->getOprandNum(); i++) {
         auto pred = phi->getIncomingBlock(i);
         auto opd = phi->getOprand(i);
         if (opd.tp == MIOprandTp::Reg) {
           if (opd.arg.reg->getTag() == Register::V_IREGISTER) {
-            (*liveness_i)[first].insert(opd.arg.reg);
             scan_back(opd.arg.reg, pred, pred->getAllInstructions(),
                       pred->getAllInstructions().size() - 1, liveness_i,
                       getDefs<VI>, getPhiDefs<VI>);
           } else {
             assert(opd.arg.reg->getTag() == Register::V_FREGISTER);
-            (*liveness_f)[first].insert(opd.arg.reg);
             scan_back(opd.arg.reg, pred, pred->getAllInstructions(),
                       pred->getAllInstructions().size() - 1, liveness_f,
                       getDefs<VF>, getPhiDefs<VF>);
@@ -353,7 +356,7 @@ void allocate_register(MModule *mod) {
     offset += callee_saved.size() * 8;
 
     // step4. Rewrite program
-    out_of_ssa(func);
+    out_of_ssa(func, liveness_ireg.get(), liveness_freg.get(), allocation.get());
     // std::cout << "endl" << endl;
     lower_call(func, offset, allocation.get(), spill.get(), liveness_ireg.get(),
                liveness_ireg.get());

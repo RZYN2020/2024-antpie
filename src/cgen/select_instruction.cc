@@ -257,10 +257,11 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     mfunc->setEntry(bb_map->at(func->getEntry()));
 
     // std::cout << "  Select DomTree " << endl;
-    if (func->getDT() == nullptr) {
-      func->buildCFG();
-      func->buildDT();
-    }
+
+    
+    if (!func->getCFG()) func->buildCFG();
+    if (!func->getDT()) func->buildDT();
+
     auto domt = func->getDT();
     auto pr = domt->postOrder();
     auto mdompr = new vector<MBasicBlock *>();
