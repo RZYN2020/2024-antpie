@@ -3,7 +3,7 @@ import subprocess
 import sys
 
 lib_dir = "tests/"
-test_dir = "tests/compiler2023/公开样例与运行时库/performance/"
+test_dir = "tests/compiler2023/公开样例与运行时库/hidden_functional/"
 compiler_path = "build/compiler"
 tmp_file_base = os.path.abspath(".") + "/tmp/"
 

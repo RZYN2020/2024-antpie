@@ -386,14 +386,20 @@ antlrcpp::Any MySysYParserVisitor::visitUnaryExpFuncR(
   FuncType* funcType = (FuncType*)callee->getType();
   int arg_size = funcType->getArgSize();
   args.reserve(arg_size);
-  for (int i = 0; i < arg_size; i++) {
-    visit(ctx->funcRParams()->funcRParam()[i]);
-    currentRet = tranformType(currentRet, funcType->getArgument(i)->getType());
-    args.push_back(currentRet);
-  }
 
   if (callee->isExtern()) {
     module.pushExternFunction(callee);
+  }
+  if (callee->getName() == "_sysy_starttime" ||
+      callee->getName() == "_sysy_stoptime") {
+    args.push_back(IntegerConstant::getConstInt(ctx->getStart()->getLine()));
+  } else {
+    for (int i = 0; i < arg_size; i++) {
+      visit(ctx->funcRParams()->funcRParam()[i]);
+      currentRet =
+          tranformType(currentRet, funcType->getArgument(i)->getType());
+      args.push_back(currentRet);
+    }
   }
   currentRet =
       module.addCallInst(callee, args, "call" + ctx->Identifier()->getText());
@@ -1106,13 +1112,15 @@ void MySysYParserVisitor::init_extern_function() {
 
   // void putf(<format>, int, …)putf ??
 
-  // void starttime()
-  funcType = Type::getFuncType(voidType);
+  // void starttime() -> void _sysy_starttime(int line)
+  vector<Argument*> startArgs = {new Argument("l", i32Type)};
+  funcType = Type::getFuncType(voidType, startArgs);
   function = new Function(funcType, true, "_sysy_starttime");
   current->put("starttime", function);
 
-  // void stoptime()
-  funcType = Type::getFuncType(voidType);
+  // void stoptime() -> void _sysy_stoptime(int line)
+  vector<Argument*> stopArgs = {new Argument("l", i32Type)};
+  funcType = Type::getFuncType(voidType, stopArgs);
   function = new Function(funcType, true, "_sysy_stoptime");
   current->put("stoptime", function);
 
