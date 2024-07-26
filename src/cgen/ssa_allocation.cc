@@ -377,7 +377,7 @@ void allocate_register(MModule *mod) {
                allocation.get());
     // std::cout << "endl" << endl;
     lower_call(func, offset, allocation.get(), spill.get(), liveness_ireg.get(),
-               liveness_ireg.get());
+               liveness_freg.get());
     lower_alloca(func, offset);
     add_prelude(func, allocation.get(), spill.get(), offset, &callee_saved);
     add_conclude(func, allocation.get(), spill.get(), offset, &callee_saved);
