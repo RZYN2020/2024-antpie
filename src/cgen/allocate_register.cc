@@ -517,7 +517,11 @@ void rewrite_program_allocate(MFunction *func,
     for (auto ins : instrs) {
       std::ostringstream oss;
       oss << " " << *ins;
-      ins->setComment(oss.str());
+      if (ins->getComment() != "") {
+          ins->setComment(ins->getComment() + oss.str());
+      } else {
+        ins->setComment(oss.str());
+      }
       auto loads = vector<MInstruction *>();
       auto regs = std::vector<Register *>();
       for (int i = 0; i < ins->getRegNum(); i++) {
@@ -677,8 +681,12 @@ vector<MInstruction *> MHIcall::generateCallSequence(
             assert(reg->getTag() == Register::V_IREGISTER);
             res.push_back(
                 new MIlw(Register::reg_s0, -offset, Register::reg_t0));
-            res.push_back(new MIsw(Register::reg_t0, para->getOffset(),
-                                   Register::reg_sp));
+            auto sw = new MIsw(Register::reg_t0, para->getOffset(),
+                                   Register::reg_sp);
+            std::ostringstream oss;
+            oss << " STORE" << reg->getName() << " ";
+            sw->setComment(oss.str());
+            res.push_back(sw);
           }
         } else {
           auto phyreg = allocation->at(reg);
@@ -715,6 +723,7 @@ vector<MInstruction *> MHIcall::generateCallSequence(
         // todo: maybe we can extract this bunch of things away...
         auto phyreg = para->getRegister();
         auto argr = static_cast<VRegister *>(arg.arg.reg);
+        // std::cout << " HANDLE " <<  argr->getName() << endl;
         if (spill->find(argr) != spill->end()) {
           auto offset = spill->at(argr);
           if (phyreg->getTag() == Register::F_REGISTER) {
@@ -722,11 +731,11 @@ vector<MInstruction *> MHIcall::generateCallSequence(
                 new MIflw(Register::reg_s0, -offset, phyreg));
           } else if (argr->isPointer()) {
             assert(argr->getTag() == Register::V_IREGISTER);
-            res.push_back(
+            assignments.push_back(
                 new MIld(Register::reg_s0, -offset, phyreg));
           } else {
             assert(argr->getTag() == Register::V_IREGISTER);
-            res.push_back(
+            assignments.push_back(
                 new MIlw(Register::reg_s0, -offset, phyreg));
           }
         } else {
