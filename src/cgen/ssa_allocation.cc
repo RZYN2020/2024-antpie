@@ -184,7 +184,7 @@ static void allocateParaRegister(ParaRegister *para,
       used.find(para->getRegister()) == used.end()) {
     allocation->insert({para, para->getRegister()});
     // std::cout << "  allocate " << para->getName() << " to "
-              // << para->getRegister()->getName() << endl;
+    // << para->getRegister()->getName() << endl;
     used.insert(para->getRegister());
   } else {
     while (auto tryr = (para->getTag() == Register::V_FREGISTER)
@@ -345,12 +345,6 @@ void allocate_register(MModule *mod) {
     spill_registers(offset, spill.get(), liveness_ireg.get(),
                     liveness_freg.get());
 
-    // std::cout << "Spill to Memory:" << endl;
-    // for (auto &[reg, offset] : *spill) {
-    //   std::cout << "  " << reg->getName() << " -> " << offset << endl;
-    // }
-    // std::cout << endl;
-
     // // step3. Allocate
     auto allocation = make_unique<map<Register *, Register *>>();
     allocate(func, allocation.get(), spill.get(), liveness_ireg.get(),
@@ -367,8 +361,16 @@ void allocate_register(MModule *mod) {
     int callee_saved_sz = callee_saved.size() * 8;
     offset += callee_saved_sz;
     for (auto &it : *spill) {
-      it.second = it.second + callee_saved_sz;
+      if (static_cast<VRegister *>(it.first)->isInstruction()) {
+        it.second = it.second + callee_saved_sz;
+      }
     }
+
+    // std::cout << "Spill to Memory:" << endl;
+    // for (auto &[reg, offset] : *spill) {
+    //   std::cout << "  " << reg->getName() << " -> " << offset << endl;
+    // }
+    // std::cout << endl;
 
     // step4. Rewrite program
     out_of_ssa(func, liveness_ireg.get(), liveness_freg.get(),
