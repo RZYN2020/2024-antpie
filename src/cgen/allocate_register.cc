@@ -719,18 +719,15 @@ vector<MInstruction *> MHIcall::generateCallSequence(
           auto offset = spill->at(argr);
           if (phyreg->getTag() == Register::F_REGISTER) {
             assignments.push_back(
-                new MIflw(Register::reg_s0, -offset, Register::reg_ft0));
-            assignments.push_back(new MIfmv_s(Register::reg_ft0, phyreg));
+                new MIflw(Register::reg_s0, -offset, phyreg));
           } else if (argr->isPointer()) {
             assert(argr->getTag() == Register::V_IREGISTER);
             res.push_back(
-                new MIld(Register::reg_s0, -offset, Register::reg_t0));
-            res.push_back(new MImv(Register::reg_t0, phyreg));
+                new MIld(Register::reg_s0, -offset, phyreg));
           } else {
             assert(argr->getTag() == Register::V_IREGISTER);
             res.push_back(
-                new MIlw(Register::reg_s0, -offset, Register::reg_t0));
-            res.push_back(new MImv(Register::reg_t0, phyreg));
+                new MIlw(Register::reg_s0, -offset, phyreg));
           }
         } else {
           auto phyargr = allocation->at(argr);
@@ -842,8 +839,7 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
         } else {
           auto addr = para->getOffset();
           assignments.push_back(
-              new MIflw(Register::reg_s0, addr, Register::reg_ft0));
-          assignments.push_back(new MIfmv_s(Register::reg_ft0, phyreg));
+              new MIflw(Register::reg_s0, addr, phyreg));
         }
       } else {
         assert(phyreg->getTag() == Register::I_REGISTER);
@@ -853,12 +849,11 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
           auto addr = para->getOffset();
           if (para->isPointer()) {
             assignments.push_back(
-                new MIld(Register::reg_s0, addr, Register::reg_t0));
+                new MIld(Register::reg_s0, addr, phyreg));
           } else {
             assignments.push_back(
-                new MIlw(Register::reg_s0, addr, Register::reg_t0));
+                new MIlw(Register::reg_s0, addr, phyreg));
           }
-          assignments.push_back(new MImv(Register::reg_t0, phyreg));
         }
       }
     } else { // unused argument
