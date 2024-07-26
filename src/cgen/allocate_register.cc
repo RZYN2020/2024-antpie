@@ -369,7 +369,7 @@ void out_of_ssa(MFunction *func, LivenessInfo *liveness_ireg,
             allocation->find(phir) != allocation->end()) {
           phir = allocation->at(phir);
         }
-        MInstruction *ins;
+        vector<MInstruction *> inss;
         if (opd.tp == MIOprandTp::Reg) {
           auto reg = opd.arg.reg;
           auto reg_ = opd.arg.reg;
@@ -381,16 +381,16 @@ void out_of_ssa(MFunction *func, LivenessInfo *liveness_ireg,
           }
 
           if (reg->getTag() == Register::V_FREGISTER) {
-            ins = new MIfmv_s(reg_, phir);
+            inss.push_back(new MIfmv_s(reg_, phir));
           } else {
-            ins = new MImv(reg_, phir);
+            inss.push_back(new MImv(reg_, phir));
           }
         } else if (opd.tp == MIOprandTp::Float) {
           auto g = func->getMod()->addGlobalFloat(new FloatConstant(opd.arg.f));
-          auto addr = new MIla(g, Register::reg_t0);
-          ins = new MIflw(Register::reg_t0, 0, phir);
+          inss.push_back(new MIla(g, Register::reg_t0));
+          inss.push_back(new MIflw(Register::reg_t0, 0, phir));
         } else {
-          ins = new MIli(opd.arg.i, phir);
+          inss.push_back(new MIli(opd.arg.i, phir));
         }
         // If critical path
         if (pre->getOutgoings().size() > 1 && bb->getIncomings().size() > 1) {
@@ -402,12 +402,16 @@ void out_of_ssa(MFunction *func, LivenessInfo *liveness_ireg,
           bb->replacePhiIncoming(pre, newbb);
 
           moves.insert({newbb, {}});
-          moves[newbb].push_back(ins);
+          for (auto ins : inss) {
+            moves[newbb].push_back(ins);
+          }
         } else {
           if (moves.find(pre) == moves.end()) {
             moves.insert({pre, {}});
           }
-          moves[pre].push_back(ins);
+          for (auto ins : inss) {
+            moves[pre].push_back(ins);
+          }
         }
       }
     }
@@ -891,14 +895,14 @@ void add_conclude(MFunction *func, map<Register *, Register *> *allocation,
           auto reg = hret->r.arg.reg;
           if (allocation->find(reg) != allocation->end()) {
             auto phyreg = allocation->at(reg);
-            if (reg->getTag() == Register::F_REGISTER) {
+            if (reg->getTag() == Register::V_FREGISTER) {
               bb->pushInstr(new MIfmv_s(phyreg, Register::reg_fa0));
             } else {
               bb->pushInstr(new MImv(phyreg, Register::reg_a0));
             }
           } else {
             auto addr = spill->at(reg);
-            if (reg->getTag() == Register::F_REGISTER) {
+            if (reg->getTag() == Register::V_FREGISTER) {
               bb->pushInstr(
                   new MIflw(Register::reg_s0, -addr, Register::reg_fa0));
             } else {
