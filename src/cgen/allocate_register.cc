@@ -834,7 +834,7 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
       } else {
         // do nothing
       }
-    } else {
+    } else if (allocation->find(para) != allocation->end()) {
       auto phyreg = allocation->at(para);
       if (phyreg->getTag() == Register::F_REGISTER) {
         if (para->getRegister() != nullptr) {
@@ -861,6 +861,7 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
           assignments.push_back(new MImv(Register::reg_t0, phyreg));
         }
       }
+    } else { // unused argument
     }
   }
   auto rearranged_assignments = solveParallelAssignment(assignments);

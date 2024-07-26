@@ -180,12 +180,11 @@ static void allocateParaRegister(ParaRegister *para,
                                  map<Register *, Register *> *allocation,
                                  set<Register *> &used, int &ireg_cnt,
                                  int &freg_cnt) {
-  // std::cout << "Allocate Paremeters" << endl;
   if (para->getRegister() != nullptr &&
       used.find(para->getRegister()) == used.end()) {
     allocation->insert({para, para->getRegister()});
     // std::cout << "  allocate " << para->getName() << " to "
-    //           << para->getRegister()->getName() << endl;
+              // << para->getRegister()->getName() << endl;
     used.insert(para->getRegister());
   } else {
     while (auto tryr = (para->getTag() == Register::V_FREGISTER)
@@ -213,10 +212,18 @@ static void allocateParameters(MFunction *func,
 
   // don't allocate for unused parameters
   auto livei = liveness_ireg->at(func->getEntry()->getAllInstructions().at(0));
+  // std::cout << "Live In:" << endl;
+  // for (auto reg: livei) {
+  //   std::cout << reg->getName() << endl;
+  // }
   auto livef = liveness_freg->at(func->getEntry()->getAllInstructions().at(0));
+  //   for (auto reg: livef) {
+  //   std::cout << reg->getName() << endl;
+  // }
   for (int i = 0; i < func->getParaSize(); i++) {
     auto para = func->getPara(i);
-    if (livei.find(para) != livei.end() || livef.find(para) != livei.end()) {
+    // std::cout << "Allocate Paremeter " << para->getName() << endl;
+    if (livei.find(para) != livei.end() || livef.find(para) != livef.end()) {
       if (spill->find(para) == spill->end()) {
         allocateParaRegister(para, allocation, used, ireg_cnt, freg_cnt);
       }
