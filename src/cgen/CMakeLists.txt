@@ -4,6 +4,6 @@ add_library(
     select_instruction.cc
     allocate_register.cc
     spill_allocation.cc
-    saa_allocation.cc
+    ssa_allocation.cc
     peephole_optimization.cc
 )
