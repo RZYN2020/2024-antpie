@@ -891,14 +891,14 @@ void add_conclude(MFunction *func, map<Register *, Register *> *allocation,
           auto reg = hret->r.arg.reg;
           if (allocation->find(reg) != allocation->end()) {
             auto phyreg = allocation->at(reg);
-            if (reg->getTag() == Register::F_REGISTER) {
+            if (reg->getTag() == Register::V_FREGISTER) {
               bb->pushInstr(new MIfmv_s(phyreg, Register::reg_fa0));
             } else {
               bb->pushInstr(new MImv(phyreg, Register::reg_a0));
             }
           } else {
             auto addr = spill->at(reg);
-            if (reg->getTag() == Register::F_REGISTER) {
+            if (reg->getTag() == Register::V_FREGISTER) {
               bb->pushInstr(
                   new MIflw(Register::reg_s0, -addr, Register::reg_fa0));
             } else {
