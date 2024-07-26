@@ -517,7 +517,11 @@ void rewrite_program_allocate(MFunction *func,
     for (auto ins : instrs) {
       std::ostringstream oss;
       oss << " " << *ins;
-      ins->setComment(oss.str());
+      if (ins->getComment() != "") {
+          ins->setComment(ins->getComment() + oss.str());
+      } else {
+        ins->setComment(oss.str());
+      }
       auto loads = vector<MInstruction *>();
       auto regs = std::vector<Register *>();
       for (int i = 0; i < ins->getRegNum(); i++) {
@@ -677,8 +681,12 @@ vector<MInstruction *> MHIcall::generateCallSequence(
             assert(reg->getTag() == Register::V_IREGISTER);
             res.push_back(
                 new MIlw(Register::reg_s0, -offset, Register::reg_t0));
-            res.push_back(new MIsw(Register::reg_t0, para->getOffset(),
-                                   Register::reg_sp));
+            auto sw = new MIsw(Register::reg_t0, para->getOffset(),
+                                   Register::reg_sp);
+            std::ostringstream oss;
+            oss << " STORE" << reg->getName() << " ";
+            sw->setComment(oss.str());
+            res.push_back(sw);
           }
         } else {
           auto phyreg = allocation->at(reg);
@@ -715,22 +723,20 @@ vector<MInstruction *> MHIcall::generateCallSequence(
         // todo: maybe we can extract this bunch of things away...
         auto phyreg = para->getRegister();
         auto argr = static_cast<VRegister *>(arg.arg.reg);
+        // std::cout << " HANDLE " <<  argr->getName() << endl;
         if (spill->find(argr) != spill->end()) {
           auto offset = spill->at(argr);
           if (phyreg->getTag() == Register::F_REGISTER) {
             assignments.push_back(
-                new MIflw(Register::reg_s0, -offset, Register::reg_ft0));
-            assignments.push_back(new MIfmv_s(Register::reg_ft0, phyreg));
+                new MIflw(Register::reg_s0, -offset, phyreg));
           } else if (argr->isPointer()) {
             assert(argr->getTag() == Register::V_IREGISTER);
-            res.push_back(
-                new MIld(Register::reg_s0, -offset, Register::reg_t0));
-            res.push_back(new MImv(Register::reg_t0, phyreg));
+            assignments.push_back(
+                new MIld(Register::reg_s0, -offset, phyreg));
           } else {
             assert(argr->getTag() == Register::V_IREGISTER);
-            res.push_back(
-                new MIlw(Register::reg_s0, -offset, Register::reg_t0));
-            res.push_back(new MImv(Register::reg_t0, phyreg));
+            assignments.push_back(
+                new MIlw(Register::reg_s0, -offset, phyreg));
           }
         } else {
           auto phyargr = allocation->at(argr);
@@ -834,7 +840,7 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
       } else {
         // do nothing
       }
-    } else {
+    } else if (allocation->find(para) != allocation->end()) {
       auto phyreg = allocation->at(para);
       if (phyreg->getTag() == Register::F_REGISTER) {
         if (para->getRegister() != nullptr) {
@@ -842,8 +848,7 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
         } else {
           auto addr = para->getOffset();
           assignments.push_back(
-              new MIflw(Register::reg_s0, addr, Register::reg_ft0));
-          assignments.push_back(new MIfmv_s(Register::reg_ft0, phyreg));
+              new MIflw(Register::reg_s0, addr, phyreg));
         }
       } else {
         assert(phyreg->getTag() == Register::I_REGISTER);
@@ -853,14 +858,14 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
           auto addr = para->getOffset();
           if (para->isPointer()) {
             assignments.push_back(
-                new MIld(Register::reg_s0, addr, Register::reg_t0));
+                new MIld(Register::reg_s0, addr, phyreg));
           } else {
             assignments.push_back(
-                new MIlw(Register::reg_s0, addr, Register::reg_t0));
+                new MIlw(Register::reg_s0, addr, phyreg));
           }
-          assignments.push_back(new MImv(Register::reg_t0, phyreg));
         }
       }
+    } else { // unused argument
     }
   }
   auto rearranged_assignments = solveParallelAssignment(assignments);
