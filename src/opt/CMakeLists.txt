@@ -17,4 +17,5 @@ add_library(
     TailRecursionElimination.cc
     DeadCodeElimination.cc
     ConstantFolding.cc
+    GlobalVariableLocalize.cc
 )

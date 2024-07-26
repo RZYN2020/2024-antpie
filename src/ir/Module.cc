@@ -7,6 +7,7 @@
 #include "FunctionPropAnalysis.hh"
 #include "GlobalCodeMotion.h"
 #include "GlobalValueNumbering.hh"
+#include "GlobalVariableLocalize.hh"
 #include "Inlining.hh"
 #include "LoopAnalysis.hh"
 #include "LoopInvariantCodeMotion.hh"
@@ -273,39 +274,25 @@ void Module::buildCFG() {
 
 void Module::irOptimize() {
   LinkedList<Optimization*> optimizations;
-  // Add dead code elimination
   optimizations.pushBack(new DeadCodeElimination());
-  // Add mem2reg Pass
+  optimizations.pushBack(new FunctionPropAnalysis());
+  optimizations.pushBack(new Inlining());
+  optimizations.pushBack(new FunctionPropAnalysis());
+  // GloablVariableLocalize should before mem2reg, after function analysis
+  optimizations.pushBack(new GlobalVariableLocalize());
   optimizations.pushBack(new MemToReg());
   optimizations.pushBack(new ConstantFolding());
-  // Add function analysis pass
-  optimizations.pushBack(new FunctionPropAnalysis());
-  // Add function inlining pass
   optimizations.pushBack(new DeadCodeElimination());
-  optimizations.pushBack(new Inlining());
 
-  // Add mergeBlock pass
   optimizations.pushBack(new MergeBlock());
-  // Add earlyCSE pass
   optimizations.pushBack(new CommonSubexpElimination());
-  // Add loop Analysis
   optimizations.pushBack(new LoopAnalysis());
-  // Add loop simplify pass
   optimizations.pushBack(new LoopSimplify());
-  // Add alias analysis pass
   optimizations.pushBack(new AliasAnalysis());
-  // Add LICM pass
   optimizations.pushBack(new LoopInvariantCodeMotion());
-  // Add Loop Unroll pass
   optimizations.pushBack(new LoopUnroll());
   optimizations.pushBack(new DeadCodeElimination());
   // GVM and GCM need DCE
-  // Add GVM pass
-  // optimizations.pushBack(new GlobalValueNumbering());
-  // // Add GCM pass
-  // optimizations.pushBack(new GlobalCodeMotion());
-
-  // // Add tail recursion elimination
   optimizations.pushBack(new TailRecursionElimination());
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new DeadCodeElimination());

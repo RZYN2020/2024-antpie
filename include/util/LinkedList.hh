@@ -218,9 +218,12 @@ class LinkedList {
       size++;
       return;
     }
-
-    while (current != nullptr && current->data != loc) {
-      current = current->next;
+    if (tail->data == loc) {
+      current = tail;
+    } else {
+      while (current != nullptr && current->data != loc) {
+        current = current->next;
+      }
     }
 
     if (current == nullptr) {
