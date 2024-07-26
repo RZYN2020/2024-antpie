@@ -15,6 +15,7 @@
 #include "LoopUnroll.hh"
 #include "MemToReg.hh"
 #include "MergeBlock.hh"
+#include "StrengthReduction.hh"
 #include "TailRecursionElimination.hh"
 
 using ANTPIE::Module;
@@ -276,14 +277,14 @@ void Module::irOptimize() {
   LinkedList<Optimization*> optimizations;
   optimizations.pushBack(new DeadCodeElimination());
   optimizations.pushBack(new FunctionPropAnalysis());
+
+  optimizations.pushBack(new MemToReg());
   optimizations.pushBack(new Inlining());
   optimizations.pushBack(new FunctionPropAnalysis());
-  // GloablVariableLocalize should before mem2reg, after function analysis
   optimizations.pushBack(new GlobalVariableLocalize());
-  optimizations.pushBack(new MemToReg());
   optimizations.pushBack(new ConstantFolding());
+  optimizations.pushBack(new StrengthReduction());
   optimizations.pushBack(new DeadCodeElimination());
-
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new CommonSubexpElimination());
   optimizations.pushBack(new LoopAnalysis());

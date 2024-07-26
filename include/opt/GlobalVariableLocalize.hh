@@ -8,6 +8,7 @@
 class GlobalVariableLocalize : public Optimization {
  private:
   bool localize(GlobalVariable* gv);
+  unordered_set<Function*> changedFunctions;
 
  public:
   GlobalVariableLocalize() {}

@@ -28,6 +28,7 @@ class BasicBlock : public Value {
   ~BasicBlock();
   bool pushInstr(Instruction* i);
   void pushInstrAtHead(Instruction* i);
+  void pushInstrBefore(Instruction* i, LinkedList<Instruction*>::Iterator iter);
   void printIR(ostream& stream) const override;
   Instruction* getTailInstr() { return tail; }
   void setTailInstr(Instruction* tail_) { tail = tail_; }
