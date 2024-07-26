@@ -357,7 +357,11 @@ void allocate_register(MModule *mod) {
     // std::cout << endl << endl;
 
     auto callee_saved = getActuallCalleeSavedRegisters(allocation.get());
-    offset += callee_saved.size() * 8;
+    int callee_saved_sz = callee_saved.size() * 8;
+    offset += callee_saved_sz;
+    for (auto &it : *spill) {
+      it.second = it.second + callee_saved_sz;
+    }
 
     // step4. Rewrite program
     out_of_ssa(func, liveness_ireg.get(), liveness_freg.get(),
