@@ -28,6 +28,12 @@ runs:
 	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
 	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
 
+runso:
+	$(BIN_DIR)/compiler -S -o tests/test.s tests/test.sy -O1
+	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
+	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
+	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
+
 gcc-riscv:
 	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
 	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
@@ -72,8 +78,8 @@ antlr: $(PFILE)
 # docker test
 # https://pan.educg.net/#/s/V2oiq?path=%2F
 # `docker load -i riscv_v3.tar` to load image
-docker-test:
-	docker run --rm -it -v ./:/coursegrader/submitdata cg/compile-x86:rust2ndclang12 bash
+# docker-test:
+# 	docker run --rm -it -v ./:/coursegrader/submitdata cg/compile-x86:rust2ndclang12 bash
 
 # Test in LLVM IR form: make test MODE=LLVM
 # Test in RISCV form: make test MODE=RISCV
