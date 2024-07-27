@@ -21,13 +21,11 @@ bool MergeBlock::runOnFunction(Function* func) {
   }
   LinkedList<BasicBlock*> trashList;
   for (BasicBlock* block : *func->getBasicBlocks()) {
-
     // this block has been merge
     if (!block->getInstructions()->getSize()) {
       continue;
     }
     while (cfg->getSuccOf(block)->getSize() == 1) {
-
       BasicBlock* succBlock = cfg->getSuccOf(block)->front();
       // have multiple pred block or self loop
       if (cfg->getPredOf(succBlock)->getSize() != 1 || succBlock == block ||
