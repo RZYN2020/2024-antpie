@@ -281,6 +281,7 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
       auto bb = *it;
       if (bb->isEmpty())
         continue;
+        // std::cout << "depth of " << bb->getName() << " is " << loopinfo->getDepth(bb) << endl;
       mlf->insert({bb_map->at(bb), loopinfo->getDepth(bb)});
     }
     mfunc->bbDepth = unique_ptr<map<MBasicBlock*, unsigned int>>(mlf);

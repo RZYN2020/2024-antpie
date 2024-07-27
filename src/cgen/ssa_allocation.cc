@@ -161,31 +161,30 @@ static void spillRegisters(std::map<Register *, int> *spilled,
 unique_ptr<map<Register *, unsigned int>> cal_reg_cost(MFunction *func) {
   auto reg_cost = make_unique<map<Register *, unsigned int>>();
   for (auto bb : func->getBasicBlocks()) {
-    // todo: use loop as hypr
-    // int depth = 0;
-    // if (func->bbDepth->find(bb) != func->bbDepth->end()) {
-    //   // std::cout << "  " << bb->getName() <<  endl << depth << endl;
-    //   depth = func->bbDepth->at(bb);
-    // }
+    int depth = 0;
+    if (func->bbDepth->find(bb) != func->bbDepth->end()) {
+      depth = func->bbDepth->at(bb);
+    }
     unsigned int base = 1;
-    // for (int i = 0; i < depth; i++) {
-    //   base *= 10;
-    // }
+    for (int i = 0; i < depth; i++) {
+      base *= 10;
+    }
     for (auto ins : bb->getInstructions()) {
       auto iused = getUses<Register::V_IREGISTER>(ins);
+      auto iwrite = getDefs<Register::V_IREGISTER>(ins);
       auto fused = getUses<Register::V_FREGISTER>(ins);
-      for (auto i : iused) {
-        if (reg_cost->find(i) == reg_cost->end()) {
-          reg_cost->insert({i, 0});
-        }
-        (*reg_cost)[i] = (*reg_cost)[i] + base;
-      }
-      for (auto f : fused) {
-        if (reg_cost->find(f) == reg_cost->end()) {
-          reg_cost->insert({f, 0});
-        }
-        (*reg_cost)[f] = (*reg_cost)[f] + base;
-      }
+      auto fwrite = getDefs<Register::V_IREGISTER>(ins);
+#define LOOP_REG(REGS)                                                         \
+  for (auto i : REGS) {                                                        \
+    if (reg_cost->find(i) == reg_cost->end()) {                                \
+      reg_cost->insert({i, 0});                                                \
+    }                                                                          \
+    (*reg_cost)[i] = (*reg_cost)[i] + base;                                    \
+  }
+      LOOP_REG(iused);
+      LOOP_REG(iwrite);
+      LOOP_REG(fused);
+      LOOP_REG(fwrite);
     }
   }
   return reg_cost;
@@ -376,6 +375,20 @@ void allocate_register(MModule *mod) {
 
     // step2. Spill
     auto reg_cost = cal_reg_cost(func);
+
+    // for (auto &[reg, cost] : *reg_cost) {
+    //   if (reg_cost->find(reg) != reg_cost->end()) {
+    //     std::cout << reg->getName() << ": " << reg_cost->at(reg) << endl;
+    //   } else {
+    //     std::cout << reg->getName() << ": 0" << endl;
+    //   }
+    // }
+
+    //
+    //   std::cout << "  " << logical_reg->getName() << " -> "
+    //             << physical_reg->getName() << endl;
+    // }
+
     int offset = 16; // from fp, upward->minus
     auto spill = make_unique<map<Register *, int>>();
     spill_registers(offset, spill.get(), liveness_ireg.get(),
