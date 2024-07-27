@@ -18,11 +18,16 @@ struct ClonedLoop {
   BasicBlock* getHeader() {
     return (BasicBlock*)valueMap.at(originLoop->header);
   }
-  Value* getNewValue(Value* oldValue) { return valueMap.at(oldValue); }
+  Value* getNewValue(Value* oldValue) {
+    auto it = valueMap.find(oldValue);
+    return it != valueMap.end() ? it->second : nullptr;
+  }
 };
 
 class LoopUnroll : public Optimization {
  private:
+  bool canAllUnroll(LoopInfo* loopInfo);
+  bool allUnroll(LoopInfo* loopInfo);
   ClonedLoop* cloneLoop(LoopInfo* originLoop);
   bool runOnLoop(LoopInfo* loopInfo);
   uint32_t collectBlocksAndCountLine(LoopInfo* loopInfo,
