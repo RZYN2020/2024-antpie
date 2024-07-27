@@ -21,13 +21,11 @@ bool MergeBlock::runOnFunction(Function* func) {
   }
   LinkedList<BasicBlock*> trashList;
   for (BasicBlock* block : *func->getBasicBlocks()) {
-
     // this block has been merge
     if (!block->getInstructions()->getSize()) {
       continue;
     }
     while (cfg->getSuccOf(block)->getSize() == 1) {
-
       BasicBlock* succBlock = cfg->getSuccOf(block)->front();
       // have multiple pred block or self loop
       if (cfg->getPredOf(succBlock)->getSize() != 1 || succBlock == block ||
@@ -47,6 +45,9 @@ bool MergeBlock::runOnFunction(Function* func) {
       for (Instruction* instr : *succBlock->getInstructions()) {
         if (instr->isa(VT_PHI)) {
           // it must have only one incoming value from block
+          if (instr->getRValueSize() != 2) {
+            std::cout << "Dsfsa" << std::endl;
+          }
           assert(instr->getRValueSize() == 2);
           assert((BasicBlock*)instr->getRValue(1) == block);
           PhiInst* phi = dynamic_cast<PhiInst*>(instr);

@@ -40,6 +40,8 @@ bool AliasAnalysis::runOnFunction(Function* func) {
     }
   }
 
+  unordered_map<Value*, unordered_set<GetElemPtrInst*>> memGEPS;
+
   // instruction
   unordered_set<attr_t> stackSet;
   for (BasicBlock* block : *func->getBasicBlocks()) {
@@ -56,6 +58,15 @@ bool AliasAnalysis::runOnFunction(Function* func) {
         case VT_GEP: {
           Value* base = instr->getRValue(0);
           aaResult->pushAttrs(instr, aaResult->getAttrs(base));
+          if (instr->getRValueSize() == 3 &&
+              instr->getRValue(2)->isa(VT_INTCONST)) {
+            if (AllocaInst* alloca = dynamic_cast<AllocaInst*>(base)) {
+              memGEPS[alloca].insert((GetElemPtrInst*)instr);
+            } else if (GlobalVariable* gv =
+                           dynamic_cast<GlobalVariable*>(base)) {
+              memGEPS[gv].insert((GetElemPtrInst*)instr);
+            }
+          }
           break;
         }
         default:
@@ -66,6 +77,24 @@ bool AliasAnalysis::runOnFunction(Function* func) {
     }
   }
   aaResult->addDistinctSet(std::move(stackSet));
+
+  for (auto& [mem, geps] : memGEPS) {
+    unordered_map<int, attr_t> locToAttr;
+    unordered_set<attr_t> distinctAttrs;
+    for (auto& gep: geps) {
+      int loc = ((IntegerConstant*)gep->getRValue(2))->getValue();
+      auto it = locToAttr.find(loc);
+      if (it != locToAttr.end()) {
+        aaResult->pushAttr(gep, it->second);
+      } else {
+        attr_t newAttr = attrId++;
+        aaResult->pushAttr(gep, newAttr);
+        locToAttr[loc] = newAttr;
+        distinctAttrs.insert(newAttr);
+      }
+    }
+    aaResult->addDistinctSet(std::move(distinctAttrs));
+  }
 
   func->setAliasAnalysisResult(aaResult);
   return true;

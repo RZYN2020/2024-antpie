@@ -9,6 +9,7 @@
 #include "GlobalValueNumbering.hh"
 #include "GlobalVariableLocalize.hh"
 #include "Inlining.hh"
+#include "LoadElimination.hh"
 #include "LoopAnalysis.hh"
 #include "LoopInvariantCodeMotion.hh"
 #include "LoopSimplify.hh"
@@ -276,14 +277,13 @@ void Module::irOptimize() {
   LinkedList<Optimization*> optimizations;
   optimizations.pushBack(new DeadCodeElimination());
   optimizations.pushBack(new FunctionPropAnalysis());
+
+  optimizations.pushBack(new MemToReg());
   optimizations.pushBack(new Inlining());
   optimizations.pushBack(new FunctionPropAnalysis());
-  // GloablVariableLocalize should before mem2reg, after function analysis
   optimizations.pushBack(new GlobalVariableLocalize());
-  optimizations.pushBack(new MemToReg());
   optimizations.pushBack(new ConstantFolding());
   optimizations.pushBack(new DeadCodeElimination());
-
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new CommonSubexpElimination());
   optimizations.pushBack(new LoopAnalysis());
@@ -293,6 +293,14 @@ void Module::irOptimize() {
   optimizations.pushBack(new LoopUnroll());
   optimizations.pushBack(new DeadCodeElimination());
   // GVM and GCM need DCE
+  optimizations.pushBack(new GlobalValueNumbering());
+  optimizations.pushBack(new GlobalCodeMotion());
+  optimizations.pushBack(new MergeBlock());
+  optimizations.pushBack(new AliasAnalysis());
+  optimizations.pushBack(new LoadElimination());
+  optimizations.pushBack(new LoopAnalysis());
+  optimizations.pushBack(new LoopSimplify());
+  optimizations.pushBack(new LoopInvariantCodeMotion());
   optimizations.pushBack(new TailRecursionElimination());
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new DeadCodeElimination());
@@ -300,6 +308,7 @@ void Module::irOptimize() {
   // run all pass
   for (auto& pass : optimizations) {
     pass->runOnModule(this);
+    // if (dynamic_cast<LoopUnroll*>(pass)) printIR(std::cout);
   }
 
   for (Function* func : functions) {
