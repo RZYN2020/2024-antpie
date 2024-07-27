@@ -621,6 +621,9 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
             BINARY_OP_CASE(FSUB, MIfsub_s)
             BINARY_OP_CASE(FMUL, MIfmul_s)
             BINARY_OP_CASE(FDIV, MIfdiv_s)
+            BINARY_OP_WITH_IMM_CASE(SHL, MIsllw, MIslliw, IntegerConstant)
+            BINARY_OP_WITH_IMM_CASE(LSHR, MIsrlw, MIsrliw, IntegerConstant)
+            BINARY_OP_WITH_IMM_CASE(ASHR, MIsraw, MIsraiw, IntegerConstant)
           case FREM: {
             assert(0);
           }

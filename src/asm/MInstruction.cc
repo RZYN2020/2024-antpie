@@ -558,6 +558,14 @@ IMPLEMENT_MI_IMM_CLASS(slti, SLTI, V_IREGISTER, slti, false)
 IMPLEMENT_MI_BIN_CLASS(sltu, SLTU, V_IREGISTER, sltu, false)
 IMPLEMENT_MI_IMM_CLASS(sltiu, SLTIU, V_IREGISTER, sltiu, false)
 
+// shifts
+IMPLEMENT_MI_IMM_CLASS(slliw, SLLIW, V_IREGISTER, slliw, true)
+IMPLEMENT_MI_BIN_CLASS(sllw, SLLW, V_IREGISTER, sllw, true)
+IMPLEMENT_MI_IMM_CLASS(srliw, SRLIW, V_IREGISTER, srliw, true)
+IMPLEMENT_MI_BIN_CLASS(srlw, SRLW, V_IREGISTER, srlw, true)
+IMPLEMENT_MI_IMM_CLASS(sraiw, SRAIW, V_IREGISTER, sraiw, true)
+IMPLEMENT_MI_BIN_CLASS(sraw, SRAW, V_IREGISTER, sraw, true)
+
 #define IMPLEMENT_MI_LOAD_CLASS(NAME, INS_TAG, REG_TAG, IS_POINTER)            \
   MI##NAME::MI##NAME(MGlobal *global)                                          \
       : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER),      \
