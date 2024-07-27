@@ -18,5 +18,6 @@ add_library(
     DeadCodeElimination.cc
     ConstantFolding.cc
     GlobalVariableLocalize.cc
+    StrengthReduction.cc
     LoadElimination.cc
 )
