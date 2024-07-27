@@ -104,6 +104,14 @@ void ssa_liveness_analysis(MFunction *func, LivenessInfo *liveness_i,
 ///////////////////////////////////////
 ///////////////////////////////////////
 
+#include <algorithm>
+
+struct RegisterComparator {
+  bool operator()(Register *a, Register *b) {
+    return a->getUses().size() > b->getUses().size();
+  }
+};
+
 template <int MAX_REG_NUM>
 static void spillRegisters(std::map<Register *, int> *spilled,
                            LivenessInfo *liveness, int &stackOffset) {
@@ -116,6 +124,9 @@ static void spillRegisters(std::map<Register *, int> *spilled,
         regs.push_back(reg);
       }
     }
+
+    std::sort(regs.begin(), regs.end(), RegisterComparator());
+
     while (regs.size() >= MAX_REG_NUM) {
       auto reg = static_cast<VRegister *>(regs.back());
       regs.pop_back();
@@ -361,9 +372,14 @@ void allocate_register(MModule *mod) {
     int callee_saved_sz = callee_saved.size() * 8;
     offset += callee_saved_sz;
     for (auto &it : *spill) {
-      if (static_cast<VRegister *>(it.first)->isInstruction()) {
-        it.second = it.second + callee_saved_sz;
+      auto vreg = static_cast<VRegister *>(it.first);
+      if (!vreg->isInstruction()) {
+        auto para = static_cast<ParaRegister *>(vreg);
+        if (para->getRegister() == nullptr) { // already on stack (on top of current func stack)
+          continue;
+        }
       }
+      it.second = it.second + callee_saved_sz;
     }
 
     // std::cout << "Spill to Memory:" << endl;
