@@ -52,6 +52,7 @@ bool LoopAnalysis::runOnFunction(Function* func) {
       }
     }
   }
+  loopInfoBase->calculateDepth();
   func->setLoopInfoBase(loopInfoBase);
 
   // #ifdef DEBUG_MODE

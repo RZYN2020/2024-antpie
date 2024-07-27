@@ -29,21 +29,16 @@ runs:
 	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
 
 runso:
-	$(BIN_DIR)/compiler -S -o tests/test.reg.s tests/test.sy -O1
-	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.reg.s -o tests/test.reg.o
-	riscv64-linux-gnu-gcc-10 tests/test.reg.o -Ltests -lrvsysy -o tests/test.reg
-	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test.reg < tests/test.in; echo $$?
+	$(BIN_DIR)/compiler -S -o tests/test.s tests/test.sy -O1
+	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
+	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
+	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
 
 gcc-riscv:
 	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
 	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
 	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
 
-
-gcc-riscvo:
-	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.reg.s -o tests/test.reg.o
-	riscv64-linux-gnu-gcc-10 tests/test.reg.o -Ltests -lrvsysy -o tests/test.reg
-	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test.reg < tests/test.in; echo $$?
 
 # Test llvm
 # Input: llvm ir
@@ -52,7 +47,7 @@ llvm-test: run
 	llvm-as -opaque-pointers $(IRFile) -o $(BCFile)
 	llc -opaque-pointers -relocation-model=pic $(BCFile) -o $(ASMFile)
 	clang -fPIE $(ASMFile) -L tests/ -lsysy -o $(BINFile) 
-	./$(BINFile); echo $$?
+	./$(BINFile) < tests/test.in; echo $$?
 
 EXE := tests/test
 INPUT := tests/test.in
@@ -66,17 +61,6 @@ qemu-debug:
 		-ex "set sysroot /usr/riscv64-linux-gnu" \
 		-ex "file $(EXE)" \
 		-ex "target remote localhost:$(PORT)" \
-		-ex "break main" \
-		-ex "continue"
-
-EXEO := tests/test.reg
-PORTO := 1238
-qemu-debugo:
-	qemu-riscv64 -cpu sifive-u54 -L /usr/riscv64-linux-gnu -g $(PORTO) $(EXEO) &
-	gdb-multiarch -q \
-		-ex "set sysroot /usr/riscv64-linux-gnu" \
-		-ex "file $(EXEO)" \
-		-ex "target remote localhost:$(PORTO)" \
 		-ex "break main" \
 		-ex "continue"
 
@@ -108,4 +92,9 @@ test:
 single-test:
 	gdb build/compiler -x init.gdb
 
-	
+PER_DIR := /home/sprooc/compiler2024/antpie/tests/compiler2024/testdata/performance/
+per-test:
+	$(BIN_DIR)/compiler -S -o tests/test.s $(PER_DIR)$(PFILE).sy
+	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
+	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
+	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < $(PER_DIR)$(PFILE).in; echo $$?
