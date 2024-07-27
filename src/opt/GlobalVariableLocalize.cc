@@ -1,11 +1,16 @@
 #include "GlobalVariableLocalize.hh"
-
+#include "MemToReg.hh"
 bool GlobalVariableLocalize::runOnModule(ANTPIE::Module* module) {
   bool changed = false;
+  changedFunctions.clear();
   for (GlobalVariable* gv : *module->getGlobalVariables()) {
     if (gv->getInitValue()->getType()->getTypeTag() != TT_ARRAY) {
       changed |= localize(gv);
     }
+  }
+  MemToReg* memToReg = new MemToReg();
+  for (Function* func: changedFunctions) {
+    memToReg->runOnFunction(func);
   }
   return changed;
 }
@@ -54,6 +59,7 @@ bool GlobalVariableLocalize::localize(GlobalVariable* gv) {
     entry->pushInstrAtHead(store);
     entry->pushInstrAtHead(alloca);
     gv->replaceAllUsesWith(alloca);
+    changedFunctions.insert(mainFunc);
     return true;
   }
 
@@ -93,25 +99,34 @@ bool GlobalVariableLocalize::localize(GlobalVariable* gv) {
     if (flag) continue;
     AllocaInst* lvAlloca =
         new AllocaInst(initValue->getType(), gv->getName() + ".lv");
-    // load at entry
-    LoadInst* loadFromGv = new LoadInst(gv, gv->getName());
-    StoreInst* storeToLv = new StoreInst(loadFromGv, lvAlloca);
-    BasicBlock* entry = func->getEntry();
-    entry->pushInstrAtHead(storeToLv);
-    entry->pushInstrAtHead(loadFromGv);
-    entry->pushInstrAtHead(lvAlloca);
 
     // replace use in func
     bool hasStore = false;
+    bool hasLoad = false;
     for (auto& instr : instrs) {
       if (instr->isa(VT_LOAD)) {
         instr->replaceRValueAt(0, lvAlloca);
+        hasLoad = true;
       } else if (instr->isa(VT_STORE)) {
         instr->replaceRValueAt(1, lvAlloca);
         hasStore = true;
       } else {
         assert(0);
       }
+    }
+    // load at entry
+    if (hasLoad) {
+      LoadInst* loadFromGv = new LoadInst(gv, gv->getName());
+      StoreInst* storeToLv = new StoreInst(loadFromGv, lvAlloca);
+      BasicBlock* entry = func->getEntry();
+      entry->pushInstrAtHead(storeToLv);
+      entry->pushInstrAtHead(loadFromGv);
+      entry->pushInstrAtHead(lvAlloca);
+    } else {
+      StoreInst* storeToLv = new StoreInst(initValue, lvAlloca);
+      BasicBlock* entry = func->getEntry();
+      entry->pushInstrAtHead(storeToLv);
+      entry->pushInstrAtHead(lvAlloca);
     }
     // store before return
     if (hasStore) {
@@ -124,7 +139,7 @@ bool GlobalVariableLocalize::localize(GlobalVariable* gv) {
         storeToGv->moveBefore(tail);
       }
     }
-
+    changedFunctions.insert(func);
     changed = true;
   }
   return changed;

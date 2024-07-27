@@ -107,7 +107,7 @@ void DomTree::buildDomTree() {
 DomTree::DomTree(Function *func) : dtActive(false) {
   blocks = func->getBasicBlocks();
   cfg = func->getCFG();
-  assert(cfg);
+  if (!cfg) cfg = func->buildCFG();
   for (BasicBlock *bb : *blocks) {
     dtNodeMap[bb] = new DomTreeNode();
   }
