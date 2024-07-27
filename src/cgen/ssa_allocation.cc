@@ -161,15 +161,16 @@ static void spillRegisters(std::map<Register *, int> *spilled,
 unique_ptr<map<Register *, unsigned int>> cal_reg_cost(MFunction *func) {
   auto reg_cost = make_unique<map<Register *, unsigned int>>();
   for (auto bb : func->getBasicBlocks()) {
-    int depth = 0;
-    if (func->bbDepth->find(bb) != func->bbDepth->end()) {
-      // std::cout << "  " << bb->getName() <<  endl << depth << endl;
-      depth = func->bbDepth->at(bb);
-    }
+    // todo: use loop as hypr
+    // int depth = 0;
+    // if (func->bbDepth->find(bb) != func->bbDepth->end()) {
+    //   // std::cout << "  " << bb->getName() <<  endl << depth << endl;
+    //   depth = func->bbDepth->at(bb);
+    // }
     unsigned int base = 1;
-    for (int i = 0; i < depth; i++) {
-      base *= 10;
-    }
+    // for (int i = 0; i < depth; i++) {
+    //   base *= 10;
+    // }
     for (auto ins : bb->getInstructions()) {
       auto iused = getUses<Register::V_IREGISTER>(ins);
       auto fused = getUses<Register::V_FREGISTER>(ins);
