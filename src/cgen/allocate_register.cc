@@ -405,12 +405,21 @@ void out_of_ssa(MFunction *func, LivenessInfo *liveness_ireg,
           for (auto ins : inss) {
             moves[newbb].push_back(ins);
           }
-        } else {
+        } else if (bb->getIncomings().size() > 1) {
+          assert(pre->getOutgoings().size() == 1);
           if (moves.find(pre) == moves.end()) {
             moves.insert({pre, {}});
           }
           for (auto ins : inss) {
             moves[pre].push_back(ins);
+          }
+        } else {
+          assert(bb->getIncomings().size() == 1);
+          if (moves.find(bb) == moves.end()) {
+            moves.insert({bb, {}});
+          }
+          for (auto ins : inss) {
+            moves[bb].push_back(ins);
           }
         }
       }
