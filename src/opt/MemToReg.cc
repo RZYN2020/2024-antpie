@@ -122,14 +122,14 @@ void MemToReg::renameRecursive(BasicBlock* bb) {
 
 bool MemToReg::runOnModule(ANTPIE::Module* module) {
   for (Function* func : *module->getFunctions()) {
-    instToValueInfo.clear();
-    valueInfos.clear();
     runOnFunction(func);
   }
   return true;
 }
 
 bool MemToReg::runOnFunction(Function* func) {
+  instToValueInfo.clear();
+  valueInfos.clear();
   if (!func->getCFG()) func->buildCFG();
   if (!func->getDT()) func->buildDT();
   if (!func->getDT()->dfReady()) func->getDT()->calculateDF();
