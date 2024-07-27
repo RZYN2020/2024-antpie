@@ -107,14 +107,25 @@ void ssa_liveness_analysis(MFunction *func, LivenessInfo *liveness_i,
 #include <algorithm>
 
 struct RegisterComparator {
+  map<Register *, unsigned int> *reg_cost;
   bool operator()(Register *a, Register *b) {
-    return a->getUses().size() > b->getUses().size();
+    assert(reg_cost);
+    int a_cost = 0;
+    int b_cost = 0;
+    if (reg_cost->find(a) != reg_cost->end()) {
+      a_cost = reg_cost->at(a);
+    }
+    if (reg_cost->find(b) != reg_cost->end()) {
+      b_cost = reg_cost->at(b);
+    }
+    return a_cost > b_cost;
   }
 };
 
 template <int MAX_REG_NUM>
 static void spillRegisters(std::map<Register *, int> *spilled,
-                           LivenessInfo *liveness, int &stackOffset) {
+                           LivenessInfo *liveness, int &stackOffset,
+                           map<Register *, unsigned int> *reg_cost) {
   for (auto &pair : *liveness) {
     std::vector<Register *> regs;
     // std::cout << "consider spill for " << *pair.first << endl;
@@ -125,7 +136,9 @@ static void spillRegisters(std::map<Register *, int> *spilled,
       }
     }
 
-    std::sort(regs.begin(), regs.end(), RegisterComparator());
+    auto cmp = RegisterComparator();
+    cmp.reg_cost = reg_cost;
+    std::sort(regs.begin(), regs.end(), cmp);
 
     while (regs.size() >= MAX_REG_NUM) {
       auto reg = static_cast<VRegister *>(regs.back());
@@ -145,11 +158,44 @@ static void spillRegisters(std::map<Register *, int> *spilled,
   }
 }
 
+unique_ptr<map<Register *, unsigned int>> cal_reg_cost(MFunction *func) {
+  auto reg_cost = make_unique<map<Register *, unsigned int>>();
+  for (auto bb : func->getBasicBlocks()) {
+    int depth = 0;
+    if (func->bbDepth->find(bb) != func->bbDepth->end()) {
+      depth = func->bbDepth->at(bb);
+    }
+    unsigned int base = 1;
+    for (int i = 0; i < depth; i++) {
+      base *= 10;
+    }
+    for (auto ins : bb->getInstructions()) {
+      auto iused = getUses<Register::V_IREGISTER>(ins);
+      auto iwrite = getDefs<Register::V_IREGISTER>(ins);
+      auto fused = getUses<Register::V_FREGISTER>(ins);
+      auto fwrite = getDefs<Register::V_IREGISTER>(ins);
+#define LOOP_REG(REGS)                                                         \
+  for (auto i : REGS) {                                                        \
+    if (reg_cost->find(i) == reg_cost->end()) {                                \
+      reg_cost->insert({i, 0});                                                \
+    }                                                                          \
+    (*reg_cost)[i] = (*reg_cost)[i] + base;                                    \
+  }
+      LOOP_REG(iused);
+      LOOP_REG(iwrite);
+      LOOP_REG(fused);
+      LOOP_REG(fwrite);
+    }
+  }
+  return reg_cost;
+}
+
 static void spill_registers(int &stk_offset, std::map<Register *, int> *spilled,
                             LivenessInfo *liveness_ireg,
-                            LivenessInfo *liveness_freg) {
-  spillRegisters<MAX_I_REG_NUM>(spilled, liveness_ireg, stk_offset);
-  spillRegisters<MAX_F_REG_NUM>(spilled, liveness_freg, stk_offset);
+                            LivenessInfo *liveness_freg,
+                            map<Register *, unsigned int> *reg_cost) {
+  spillRegisters<MAX_F_REG_NUM>(spilled, liveness_freg, stk_offset, reg_cost);
+  spillRegisters<MAX_I_REG_NUM>(spilled, liveness_ireg, stk_offset, reg_cost);
 }
 
 static void setUsedtoLiveIn(MInstruction *ins, set<Register *> *used,
@@ -187,61 +233,6 @@ static void setUsedtoLiveIn(MInstruction *ins, set<Register *> *used,
 ///////////////////////////////////////
 ///////////////////////////////////////
 
-static void allocateParaRegister(ParaRegister *para,
-                                 map<Register *, Register *> *allocation,
-                                 set<Register *> &used, int &ireg_cnt,
-                                 int &freg_cnt) {
-  if (para->getRegister() != nullptr &&
-      used.find(para->getRegister()) == used.end()) {
-    allocation->insert({para, para->getRegister()});
-    // std::cout << "  allocate " << para->getName() << " to "
-    // << para->getRegister()->getName() << endl;
-    used.insert(para->getRegister());
-  } else {
-    while (auto tryr = (para->getTag() == Register::V_FREGISTER)
-                           ? Register::getFRegister(freg_cnt++)
-                           : Register::getIRegister(ireg_cnt++)) {
-      if (used.find(tryr) == used.end()) {
-        allocation->insert({para, tryr});
-        // std::cout << "  allocate " << para->getName() << " to "
-        //           << tryr->getName() << endl;
-        used.insert(tryr);
-        break;
-      }
-    }
-  }
-}
-
-static void allocateParameters(MFunction *func,
-                               map<Register *, Register *> *allocation,
-                               map<Register *, int> *spill,
-                               LivenessInfo *liveness_ireg,
-                               LivenessInfo *liveness_freg) {
-  set<Register *> used;
-  int ireg_cnt = 9;
-  int freg_cnt = 3;
-
-  // don't allocate for unused parameters
-  auto livei = liveness_ireg->at(func->getEntry()->getAllInstructions().at(0));
-  // std::cout << "Live In:" << endl;
-  // for (auto reg: livei) {
-  //   std::cout << reg->getName() << endl;
-  // }
-  auto livef = liveness_freg->at(func->getEntry()->getAllInstructions().at(0));
-  //   for (auto reg: livef) {
-  //   std::cout << reg->getName() << endl;
-  // }
-  for (int i = 0; i < func->getParaSize(); i++) {
-    auto para = func->getPara(i);
-    // std::cout << "Allocate Paremeter " << para->getName() << endl;
-    if (livei.find(para) != livei.end() || livef.find(para) != livef.end()) {
-      if (spill->find(para) == spill->end()) {
-        allocateParaRegister(para, allocation, used, ireg_cnt, freg_cnt);
-      }
-    }
-  }
-}
-
 void allocatTheRegister(Register *reg, map<Register *, Register *> *allocation,
                         set<Register *> &used) {
   Register *phyreg;
@@ -253,6 +244,38 @@ void allocatTheRegister(Register *reg, map<Register *, Register *> *allocation,
   used.insert(phyreg);
   allocation->insert({reg, phyreg});
   // std::cout << "  allocate " << reg->getName() << " to " << phyreg->getName()
+}
+
+static void allocateParaRegister(ParaRegister *para,
+                                 map<Register *, Register *> *allocation,
+                                 set<Register *> &used) {
+  if (para->getRegister() != nullptr &&
+      used.find(para->getRegister()) == used.end()) {
+    allocation->insert({para, para->getRegister()});
+    used.insert(para->getRegister());
+  } else {
+    allocatTheRegister(para, allocation, used);
+  }
+}
+
+static void allocateParameters(MFunction *func,
+                               map<Register *, Register *> *allocation,
+                               map<Register *, int> *spill,
+                               LivenessInfo *liveness_ireg,
+                               LivenessInfo *liveness_freg) {
+  set<Register *> used;
+  // don't allocate for unused parameters
+  auto livei = liveness_ireg->at(func->getEntry()->getAllInstructions().at(0));
+  auto livef = liveness_freg->at(func->getEntry()->getAllInstructions().at(0));
+  for (int i = 0; i < func->getParaSize(); i++) {
+    auto para = func->getPara(i);
+    // std::cout << "Allocate Paremeter " << para->getName() << endl;
+    if (livei.find(para) != livei.end() || livef.find(para) != livef.end()) {
+      if (spill->find(para) == spill->end()) {
+        allocateParaRegister(para, allocation, used);
+      }
+    }
+  }
 }
 
 // the way we allcate (aggrate all phi together) can increase the register
@@ -351,10 +374,25 @@ void allocate_register(MModule *mod) {
     // printLivenessInfo(func, liveness_ireg.get(), liveness_freg.get());
 
     // step2. Spill
+    auto reg_cost = cal_reg_cost(func);
+
+    // for (auto &[reg, cost] : *reg_cost) {
+    //   if (reg_cost->find(reg) != reg_cost->end()) {
+    //     std::cout << reg->getName() << ": " << reg_cost->at(reg) << endl;
+    //   } else {
+    //     std::cout << reg->getName() << ": 0" << endl;
+    //   }
+    // }
+
+    //
+    //   std::cout << "  " << logical_reg->getName() << " -> "
+    //             << physical_reg->getName() << endl;
+    // }
+
     int offset = 16; // from fp, upward->minus
     auto spill = make_unique<map<Register *, int>>();
     spill_registers(offset, spill.get(), liveness_ireg.get(),
-                    liveness_freg.get());
+                    liveness_freg.get(), reg_cost.get());
 
     // // step3. Allocate
     auto allocation = make_unique<map<Register *, Register *>>();
@@ -375,16 +413,23 @@ void allocate_register(MModule *mod) {
       auto vreg = static_cast<VRegister *>(it.first);
       if (!vreg->isInstruction()) {
         auto para = static_cast<ParaRegister *>(vreg);
-        if (para->getRegister() == nullptr) { // already on stack (on top of current func stack)
+        if (para->getRegister() ==
+            nullptr) { // already on stack (on top of current func stack)
           continue;
         }
       }
       it.second = it.second + callee_saved_sz;
     }
+    // std::cout << "Saved Registers:" << endl;
+    // int pof = 16;
+    // for (auto reg : callee_saved) {
+    //   std::cout << "  " << reg->getName() << " -> " << -pof << endl;
+    //   pof += 8;
+    // }
 
     // std::cout << "Spill to Memory:" << endl;
     // for (auto &[reg, offset] : *spill) {
-    //   std::cout << "  " << reg->getName() << " -> " << offset << endl;
+    //   std::cout << "  " << reg->getName() << " -> " << -offset << endl;
     // }
     // std::cout << endl;
 

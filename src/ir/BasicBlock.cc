@@ -48,6 +48,12 @@ void BasicBlock::pushInstrAtHead(Instruction* instr) {
   instructions.pushFront(instr);
 }
 
+void BasicBlock::pushInstrBefore(Instruction* instr,
+                                 LinkedList<Instruction*>::Iterator iter) {
+  instructions.insertBefore(iter, instr);
+  instr->setParent(this);
+}
+
 void BasicBlock::eraseFromParent() {
   getParent()->getBasicBlocks()->remove(this);
   function = nullptr;
