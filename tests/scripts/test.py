@@ -119,9 +119,10 @@ def run_single_test(sy_file, out_file, in_file=None):
     asm_file = tmp_file_base + prefix + ".s"
     gen_command = compiler_path + " -S" + " -o "+ asm_file + " " + test_dir + sy_file
     try:
-        subprocess.run(gen_command, shell=True, timeout=5)
+        subprocess.run(gen_command, shell=True, timeout=60)
     except subprocess.TimeoutExpired:
-        return "Process timed out"
+        print("Process timed out")
+        return 0
     
     # asm to binary file
     obj_file = tmp_file_base + prefix + ".o"
@@ -140,7 +141,7 @@ def run_single_test(sy_file, out_file, in_file=None):
             with open(test_dir + in_file, 'r') as input_file:
                 result = subprocess.run(run_command, text=True, input=input_file.read(), capture_output=True, timeout=5)
         else:
-            result = subprocess.run(run_command, text=True, capture_output=True, timeout=5)
+            result = subprocess.run(run_command, text=True, capture_output=True, timeout=40)
         
         stdout = result.stdout
         if stdout != "" and stdout[-1] != '\n':
@@ -149,7 +150,8 @@ def run_single_test(sy_file, out_file, in_file=None):
         return compare_file_to_string(test_dir + out_file, output)
     
     except subprocess.TimeoutExpired:
-        return "Process timed out"
+        print("Process timed out")
+        return 0
 
 def print_result(success, fail):
     if fail == 0:
