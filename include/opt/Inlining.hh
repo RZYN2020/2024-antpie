@@ -5,7 +5,7 @@
 #define _INLINING_H_
 
 // Max function size to preform inlining
-#define INLINE_THRESHOLD 100
+#define INLINE_THRESHOLD 1000
 
 #include <set>
 

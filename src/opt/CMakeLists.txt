@@ -19,4 +19,5 @@ add_library(
     ConstantFolding.cc
     GlobalVariableLocalize.cc
     StrengthReduction.cc
+    LoadElimination.cc
 )

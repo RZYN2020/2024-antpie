@@ -52,11 +52,12 @@ bool LoopAnalysis::runOnFunction(Function* func) {
       }
     }
   }
+  loopInfoBase->calculateDepth();
   func->setLoopInfoBase(loopInfoBase);
 
-// #ifdef DEBUG_MODE
-//   loopInfoBase->dump();
-// #endif
+  // #ifdef DEBUG_MODE
+  //   loopInfoBase->dump();
+  // #endif
 
   return true;
 }
@@ -69,9 +70,11 @@ void LoopAnalysis::discoverAndMapSubloop(LoopInfo* loopInfo,
   for (BasicBlock* latch : latches) {
     workList.pushBack(latch);
   }
+  unordered_set<BasicBlock*> visited;
   while (!workList.isEmpty()) {
     BasicBlock* pred = workList.popFront();
-
+    if (visited.count(pred)) continue;
+    visited.insert(pred);
     LoopInfo* subloop = li->getLoopOf(pred);
     if (!subloop) {
       loopInfo->addBlock(pred);

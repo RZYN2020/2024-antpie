@@ -1,4 +1,5 @@
 #include "DomTree.hh"
+#include "LoopInfo.hh"
 #include "Machine.hh"
 #include "Module.hh"
 #include <algorithm>
@@ -258,10 +259,10 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
 
     // std::cout << "  Select DomTree " << endl;
 
-    
-    if (!func->getCFG()) func->buildCFG();
-    if (!func->getDT()) func->buildDT();
-
+    if (!func->getCFG())
+      func->buildCFG();
+    if (!func->getDT())
+      func->buildDT();
     auto domt = func->getDT();
     auto pr = domt->postOrder();
     auto mdompr = new vector<MBasicBlock *>();
@@ -272,6 +273,17 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     }
     std::reverse(mdompr->begin(), mdompr->end());
     mfunc->domtPreOrder = unique_ptr<vector<MBasicBlock *>>(mdompr);
+
+    auto loopinfo = func->getLoopInfoBase();
+    assert(loopinfo);
+    auto mlf = new map<MBasicBlock *, unsigned int>;
+    for (auto it = basicBlocks->begin(); it != basicBlocks->end(); ++it) {
+      auto bb = *it;
+      if (bb->isEmpty())
+        continue;
+      mlf->insert({bb_map->at(bb), loopinfo->getDepth(bb)});
+    }
+    mfunc->bbDepth = unique_ptr<map<MBasicBlock*, unsigned int>>(mlf);
 
     // std::cout << "    Select every Instruction " << endl;
     // Select every Instruction
@@ -516,7 +528,9 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
             dest = addr;
           }
           if (dest == base) {
-            ADD_INSTR(addr, MIaddi, base, 0); // we do not use mv because mv used only for non-pointer...
+            ADD_INSTR(
+                addr, MIaddi, base,
+                0); // we do not use mv because mv used only for non-pointer...
             dest = addr;
           }
           dest->setName(ins->getName());

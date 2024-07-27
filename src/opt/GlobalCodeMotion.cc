@@ -47,7 +47,7 @@ bool GlobalCodeMotion::runOnFunction(Function* func) {
 
   // 2. Schedule late
   LoopInfoBase* liBase = func->getLoopInfoBase();
-  liBase->calculateDepth();
+  // liBase->calculateDepth();
   visited.clear();
   for (BasicBlock* bb : *func->getBasicBlocks()) {
     auto instrList = bb->getInstructions();
