@@ -45,9 +45,6 @@ bool MergeBlock::runOnFunction(Function* func) {
       for (Instruction* instr : *succBlock->getInstructions()) {
         if (instr->isa(VT_PHI)) {
           // it must have only one incoming value from block
-          if (instr->getRValueSize() != 2) {
-            std::cout << "Dsfsa" << std::endl;
-          }
           assert(instr->getRValueSize() == 2);
           assert((BasicBlock*)instr->getRValue(1) == block);
           PhiInst* phi = dynamic_cast<PhiInst*>(instr);
