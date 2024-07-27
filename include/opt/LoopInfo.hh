@@ -79,8 +79,12 @@ struct SimpleLoopInfo {
   PhiInst* phiInstr;
   BinaryOpInst* strideInstr;
   BranchInst* brInstr;
-
+  // init, stride, end is all constant
+  // strideInstr is add
+  int init, stride, end;
   bool pureIdv;
+  int getIdvAt(int t) { return init + t * stride; }
+  int getTimes() { return (end - init) / stride; }
 };
 
 #endif
