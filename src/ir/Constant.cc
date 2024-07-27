@@ -29,12 +29,13 @@ FloatConstant* FloatConstant::getConstFloat(float num) {
 Constant* Constant::getZeroConstant(Type* t) {
   switch (t->getTypeTag()) {
     case TT_INT1:
+      return BoolConstant::getConstBool(0);
     case TT_INT32:
-      return new IntegerConstant();
+      return IntegerConstant::getConstInt(0);
     case TT_FLOAT:
-      return new FloatConstant();
+      return FloatConstant::getConstFloat(0);
     case TT_ARRAY:
-      return new ArrayConstant(t);
+      return ArrayConstant::getConstArray((ArrayType*)t);
     default:
       return nullptr;
   }

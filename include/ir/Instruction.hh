@@ -26,6 +26,9 @@ enum OpTag {
   FDIV,
   SREM,
   FREM,
+  LSHR,
+  ASHR,
+  SHL,
   AND,
   OR,
   XOR,
@@ -87,13 +90,14 @@ class BinaryOpInst : public Instruction {
  private:
   OpTag bOpType;
   BinaryOpInst(OpTag opType, Type* type, string name)
-      : Instruction(type, name, VT_BOP), bOpType(opType){};
+      : Instruction(type, name, VT_BOP), bOpType(opType) {};
 
  public:
   BinaryOpInst(OpTag opType, Value* op1, Value* op2, string name);
   void printIR(ostream& stream) const override;
   const OpTag getOpTag() const { return bOpType; }
   Instruction* clone() override;
+  void setOpTag(OpTag op) { bOpType = op; }
 };
 
 class BranchInst : public Instruction {
@@ -188,8 +192,7 @@ class LoadInst : public Instruction {
 };
 
 class PhiInst : public Instruction {
-
- public:  
+ public:
   PhiInst(Type* type, string name) : Instruction(type, name, VT_PHI) {}
   PhiInst(string name);
   void printIR(ostream& stream) const override;

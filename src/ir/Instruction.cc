@@ -277,10 +277,11 @@ void AllocaInst::printIR(ostream& stream) const {
 }
 
 string Instruction::getOpName(OpTag op) const {
-  static string opNames[25] = {
-      "add",  "fadd", "sub", "fsub", "mul", "fmul", "sdiv", "fdiv", "srem",
-      "frem", "and",  "or",  "xor",  "eq",  "ne",   "sle",  "slt",  "sge",
-      "sgt",  "oeq",  "one", "ogt",  "oge", "ole",  "olt"};
+  static string opNames[28] = {"add",  "fadd", "sub",  "fsub", "mul",  "fmul",
+                               "sdiv", "fdiv", "srem", "frem", "lshr", "ashr",
+                               "shl",  "and",  "or",   "xor",  "eq",   "ne",
+                               "sle",  "slt",  "sge",  "sgt",  "oeq",  "one",
+                               "ogt",  "oge",  "ole",  "olt"};
   return opNames[op];
 }
 
