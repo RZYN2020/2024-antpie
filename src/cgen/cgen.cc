@@ -10,11 +10,11 @@ void generate_code(MModule *res, ANTPIE::Module *ir, bool opt) {
   // out_s.open("tests/test.phi.s");
   // out_s << *res;
 
-  if (opt) {
-    allocate_register(res);
-  } else {
-    spill_all_register(res);
-  }
+  // if (opt) {
+  allocate_register(res);
+  // } else {
+  //   spill_all_register(res);
+  // }
 
   peephole_optimize(res);
 }
