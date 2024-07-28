@@ -104,23 +104,23 @@ void ssa_liveness_analysis(MFunction *func, LivenessInfo *liveness_i,
 ///////////////////////////////////////
 ///////////////////////////////////////
 
-#include <algorithm>
+// #include <algorithm>
 
-struct RegisterComparator {
-  map<Register *, unsigned int> *reg_cost;
-  bool operator()(Register *a, Register *b) {
-    assert(reg_cost);
-    int a_cost = 0;
-    int b_cost = 0;
-    if (reg_cost->find(a) != reg_cost->end()) {
-      a_cost = reg_cost->at(a);
-    }
-    if (reg_cost->find(b) != reg_cost->end()) {
-      b_cost = reg_cost->at(b);
-    }
-    return a_cost > b_cost;
-  }
-};
+// struct RegisterComparator {
+//   map<Register *, unsigned int> *reg_cost;
+//   bool operator()(Register *a, Register *b) {
+//     assert(reg_cost);
+//     int a_cost = 0;
+//     int b_cost = 0;
+//     if (reg_cost->find(a) != reg_cost->end()) {
+//       a_cost = reg_cost->at(a);
+//     }
+//     if (reg_cost->find(b) != reg_cost->end()) {
+//       b_cost = reg_cost->at(b);
+//     }
+//     return a_cost > b_cost;
+//   }
+// };
 
 template <int MAX_REG_NUM>
 static void spillRegisters(std::map<Register *, int> *spilled,
@@ -135,11 +135,26 @@ static void spillRegisters(std::map<Register *, int> *spilled,
         regs.push_back(reg);
       }
     }
+    // todo: we should use <= actually...
+    // if (regs.size() < MAX_REG_NUM) {
+    //   continue;
+    // }
+    // auto cmp = RegisterComparator();
+    // cmp.reg_cost = reg_cost;
+    // std::sort(regs.begin(), regs.end(), cmp);
 
-    auto cmp = RegisterComparator();
-    cmp.reg_cost = reg_cost;
-    std::sort(regs.begin(), regs.end(), cmp);
+// std::cout << endl;
+//     for (auto reg : regs) {
+//       int cost = 0;
+//       if (reg_cost->find(reg) != reg_cost->end()) {
+//         cost = reg_cost->at(reg);
+//       }
+//       std::cout << " " << cost;
+//     }
+// std::cout << endl;
 
+
+    // std::cout << endl;
     while (regs.size() >= MAX_REG_NUM) {
       auto reg = static_cast<VRegister *>(regs.back());
       regs.pop_back();
@@ -160,33 +175,58 @@ static void spillRegisters(std::map<Register *, int> *spilled,
 
 unique_ptr<map<Register *, unsigned int>> cal_reg_cost(MFunction *func) {
   auto reg_cost = make_unique<map<Register *, unsigned int>>();
-  for (auto bb : func->getBasicBlocks()) {
-    int depth = 0;
-    if (func->bbDepth->find(bb) != func->bbDepth->end()) {
-      depth = func->bbDepth->at(bb);
-    }
-    unsigned int base = 1;
-    for (int i = 0; i < depth; i++) {
-      base *= 10;
-    }
-    for (auto ins : bb->getInstructions()) {
-      auto iused = getUses<Register::V_IREGISTER>(ins);
-      auto iwrite = getDefs<Register::V_IREGISTER>(ins);
-      auto fused = getUses<Register::V_FREGISTER>(ins);
-      auto fwrite = getDefs<Register::V_IREGISTER>(ins);
-#define LOOP_REG(REGS)                                                         \
-  for (auto i : REGS) {                                                        \
-    if (reg_cost->find(i) == reg_cost->end()) {                                \
-      reg_cost->insert({i, 0});                                                \
-    }                                                                          \
-    (*reg_cost)[i] = (*reg_cost)[i] + base;                                    \
-  }
-      LOOP_REG(iused);
-      LOOP_REG(iwrite);
-      LOOP_REG(fused);
-      LOOP_REG(fwrite);
-    }
-  }
+//   for (auto bb : func->getBasicBlocks()) {
+//     int depth = 0;
+//     if (func->bbDepth->find(bb) != func->bbDepth->end()) {
+//       depth = func->bbDepth->at(bb);
+//     }
+//     // std::cout << " depth of " << bb->getName() << " is " << depth << endl;
+//     unsigned int base = 1;
+//     for (int i = 0; i < depth; i++) {
+//       base *= 10;
+//     }
+//     // std::cout << " base of " << bb->getName() << " is " << base << endl;
+//     for (auto next : bb->getOutgoings()) {
+//       for (auto ins : next->getPhis()) {
+//         auto phi = static_cast<MHIphi *>(ins);
+//         for (int i = 0; i < phi->getOprandNum(); i++) {
+//           if (phi->getIncomingBlock(i) == bb) {
+//             if (reg_cost->find(phi->getTarget()) == reg_cost->end()) {
+//               reg_cost->insert({phi->getTarget(), 0});
+//             }
+//             (*reg_cost)[phi->getTarget()] =
+//                 (*reg_cost)[phi->getTarget()] + base;
+//             auto opd = phi->getOprand(i);
+//             if (opd.tp == MIOprandTp::Reg) {
+//               auto reg = opd.arg.reg;
+//               if (reg_cost->find(reg) == reg_cost->end()) {
+//                 reg_cost->insert({reg, 0});
+//               }
+//               (*reg_cost)[reg] = (*reg_cost)[reg] + base;
+//             }
+//           }
+//         }
+//       }
+//     }
+
+//     for (auto ins : bb->getAllInstructions()) {
+//       auto iused = getUses<Register::V_IREGISTER>(ins);
+//       auto iwrite = getDefs<Register::V_IREGISTER>(ins);
+//       auto fused = getUses<Register::V_FREGISTER>(ins);
+//       auto fwrite = getDefs<Register::V_IREGISTER>(ins);
+// #define LOOP_REG(REGS)                                                         \
+//   for (auto i : REGS) {                                                        \
+//     if (reg_cost->find(i) == reg_cost->end()) {                                \
+//       reg_cost->insert({i, 0});                                                \
+//     }                                                                          \
+//     (*reg_cost)[i] = (*reg_cost)[i] + base;                                    \
+//   }
+//       LOOP_REG(iused);
+//       LOOP_REG(iwrite);
+//       LOOP_REG(fused);
+//       LOOP_REG(fwrite);
+//     }
+//   }
   return reg_cost;
 }
 
@@ -315,14 +355,12 @@ void allocateOtherInstruction(MBasicBlock *bb,
                               LivenessInfo *liveness_ireg,
                               LivenessInfo *liveness_freg,
                               map<Register *, int> *spill) {
-  // setUsedtoLiveIn(first, &used, allocation, liveness_ireg, liveness_freg);
-  // can not use setUsedtoLiveIn, beacuse phi def is also in LiveIn!
-  // todo: maybe i should add a virtual parrel phi instruction...(as a super
-  // instruction in normal instrucion vector)
   set<Register *> used;
   for (auto instr : bb->getInstructions()) {
     if (instr->getTarget() != nullptr &&
         spill->find(instr->getTarget()) == spill->end()) {
+      // todo: we should use LiveOut for normal Instruction, but LiveIn for phi
+      // Instruction... but for simplity, we just use LiveIn here...
       setUsedtoLiveIn(instr, &used, allocation, liveness_ireg, liveness_freg,
                       spill);
       // std::cout << "  Used Registers before " << *instr << endl;
