@@ -397,6 +397,11 @@ void out_of_ssa(MFunction *func, LivenessInfo *liveness_ireg,
           auto newbb =
               func->addBasicBlock("cirtical" + pre->getName() + bb->getName());
           newbb->pushJmp(new MIj(bb));
+          int new_dp = func->bbDepth->at(pre);
+          if (func->bbDepth->at(bb) < new_dp) {
+            new_dp = func->bbDepth->at(bb);
+          }
+          func->bbDepth->insert({newbb, new_dp});
 
           pre->replaceOutgoing(bb, newbb);
           bb->replacePhiIncoming(pre, newbb);
@@ -527,7 +532,7 @@ void rewrite_program_allocate(MFunction *func,
       std::ostringstream oss;
       oss << " " << *ins;
       if (ins->getComment() != "") {
-          ins->setComment(ins->getComment() + oss.str());
+        ins->setComment(ins->getComment() + oss.str());
       } else {
         ins->setComment(oss.str());
       }
@@ -690,8 +695,8 @@ vector<MInstruction *> MHIcall::generateCallSequence(
             assert(reg->getTag() == Register::V_IREGISTER);
             res.push_back(
                 new MIlw(Register::reg_s0, -offset, Register::reg_t0));
-            auto sw = new MIsw(Register::reg_t0, para->getOffset(),
-                                   Register::reg_sp);
+            auto sw =
+                new MIsw(Register::reg_t0, para->getOffset(), Register::reg_sp);
             std::ostringstream oss;
             oss << " STORE" << reg->getName() << " ";
             sw->setComment(oss.str());
@@ -736,16 +741,13 @@ vector<MInstruction *> MHIcall::generateCallSequence(
         if (spill->find(argr) != spill->end()) {
           auto offset = spill->at(argr);
           if (phyreg->getTag() == Register::F_REGISTER) {
-            assignments.push_back(
-                new MIflw(Register::reg_s0, -offset, phyreg));
+            assignments.push_back(new MIflw(Register::reg_s0, -offset, phyreg));
           } else if (argr->isPointer()) {
             assert(argr->getTag() == Register::V_IREGISTER);
-            assignments.push_back(
-                new MIld(Register::reg_s0, -offset, phyreg));
+            assignments.push_back(new MIld(Register::reg_s0, -offset, phyreg));
           } else {
             assert(argr->getTag() == Register::V_IREGISTER);
-            assignments.push_back(
-                new MIlw(Register::reg_s0, -offset, phyreg));
+            assignments.push_back(new MIlw(Register::reg_s0, -offset, phyreg));
           }
         } else {
           auto phyargr = allocation->at(argr);
@@ -856,8 +858,7 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
           assignments.push_back(new MIfmv_s(para->getRegister(), phyreg));
         } else {
           auto addr = para->getOffset();
-          assignments.push_back(
-              new MIflw(Register::reg_s0, addr, phyreg));
+          assignments.push_back(new MIflw(Register::reg_s0, addr, phyreg));
         }
       } else {
         assert(phyreg->getTag() == Register::I_REGISTER);
@@ -866,11 +867,9 @@ void add_prelude(MFunction *func, map<Register *, Register *> *allocation,
         } else {
           auto addr = para->getOffset();
           if (para->isPointer()) {
-            assignments.push_back(
-                new MIld(Register::reg_s0, addr, phyreg));
+            assignments.push_back(new MIld(Register::reg_s0, addr, phyreg));
           } else {
-            assignments.push_back(
-                new MIlw(Register::reg_s0, addr, phyreg));
+            assignments.push_back(new MIlw(Register::reg_s0, addr, phyreg));
           }
         }
       }
@@ -890,7 +889,8 @@ void add_conclude(MFunction *func, map<Register *, Register *> *allocation,
                   set<Register *> *callee_saved) {
 
   for (auto bb : func->getBasicBlocks()) {
-    for (auto jmp : bb->getJmps()) {
+    if (bb->getJmpNum() != 0) {
+      auto jmp = bb->getJmp(bb->getJmpNum() - 1);
       if (jmp->getInsTag() == MInstruction::H_RET) {
         auto hret = static_cast<MHIret *>(jmp);
         switch (hret->r.tp) {
@@ -927,12 +927,14 @@ void add_conclude(MFunction *func, map<Register *, Register *> *allocation,
           break;
         }
         }
-        hret->replaceWith({new MIret()});
+        hret->replaceWith({});
+        bb->pushJmp(new MIret());
       }
     }
   }
 
   auto exit = func->addBasicBlock(func->getName() + "_exit");
+  func->bbDepth->insert({exit, 0});
   int offset = 16;
   for (auto reg : *callee_saved) {
     offset += 8;
@@ -953,10 +955,9 @@ void add_conclude(MFunction *func, map<Register *, Register *> *allocation,
   for (auto bb : func->getBasicBlocks()) {
     if (bb == exit)
       continue;
-    for (auto &i : bb->getJmps()) {
-      if (i->getInsTag() == MInstruction::RET) {
-        i->replaceWith({new MIj(exit)});
-      }
+    if (bb->getJmpNum() != 0 && bb->getJmp(bb->getJmpNum() - 1)->getInsTag() == MInstruction::RET) {
+      bb->getJmp(bb->getJmpNum() - 1)->replaceWith({});
+      bb->pushJmp(new MIj(exit));
     }
   }
 }

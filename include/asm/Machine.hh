@@ -86,6 +86,7 @@ private:
   MModule *mod;
 
 public:
+  unique_ptr<vector<MBasicBlock*>> ordered_blocks;
   unique_ptr<map<MBasicBlock*, unsigned int>> bbDepth;
   unique_ptr<vector<MBasicBlock *>> domtPreOrder;
   int stack_offset;
@@ -107,6 +108,7 @@ public:
 
   string getName() const;
   vector<MBasicBlock*> getBasicBlocks();
+  void removeBasicBlock(MBasicBlock* block);
 
   vector<Register *> &getVariables();
   friend std::ostream &operator<<(std::ostream &os, const MFunction &obj);
@@ -120,6 +122,7 @@ private:
   bool if_ssa = true;
 
 public:
+  bool if_linearized = false;
   MModule();
 
   bool is_ssa() { return if_ssa; }
@@ -155,3 +158,6 @@ static uint32_t cal_size(const Type *tp) {
   }
   return 0;
 }
+
+
+MBasicBlock* getTargetOfJmp(MInstruction* ins);
