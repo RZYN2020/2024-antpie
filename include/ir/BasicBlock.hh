@@ -44,7 +44,8 @@ class BasicBlock : public Value {
   BasicBlock* clone(unordered_map<Value*, Value*>& replaceMap);
   bool isEmpty() { return empty; }
   BasicBlock* split(LinkedList<Instruction*>::Iterator iter);
-  BasicBlock* splitBlockPredecessors(vector<BasicBlock*>& preds);
+  BasicBlock* splitBlockPredecessors(vector<BasicBlock*>& preds,
+                                     unordered_map<Value*, Value*>& phiMap);
 };
 
 struct BasicBlockPtrHash {

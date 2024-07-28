@@ -84,7 +84,7 @@ BasicBlock* BasicBlock::split(LinkedList<Instruction*>::Iterator iter) {
 
 // This method introduces at least one new basic block into the function and
 // moves some of the predecessors of BB to be predecessors of the new block.
-BasicBlock* BasicBlock::splitBlockPredecessors(vector<BasicBlock*>& preds) {
+BasicBlock* BasicBlock::splitBlockPredecessors(vector<BasicBlock*>& preds, unordered_map<Value*,Value*>& phiMap) {
   BasicBlock* newBlock = new BasicBlock(getName() + "_pred");
   JumpInst* jumpInst = new JumpInst(this);
   newBlock->pushInstr(jumpInst);
@@ -124,6 +124,7 @@ BasicBlock* BasicBlock::splitBlockPredecessors(vector<BasicBlock*>& preds) {
       }
       phiInstr->pushIncoming(newPhi, newBlock);
       newBlock->pushInstrAtHead(newPhi);
+      phiMap.emplace(phiInstr, newPhi);
     } else {
       break;
     }

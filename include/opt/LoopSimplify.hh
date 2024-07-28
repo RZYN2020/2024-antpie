@@ -6,10 +6,12 @@
 
 class LoopSimplify : public Optimization {
  private:
+  bool needGuard = 0;
   bool simplyOneLoop(LoopInfo* loopInfo, CFG* cfg);
+  bool simplyOneLoopWithGuard(LoopInfo* loopInfo, CFG* cfg);
 
  public:
-  LoopSimplify() {}
+  LoopSimplify(bool ng) { needGuard = ng; }
   bool runOnModule(ANTPIE::Module* module) override;
   bool runOnFunction(Function* func) override;
 };
