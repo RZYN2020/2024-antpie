@@ -6,4 +6,5 @@ add_library(
     spill_allocation.cc
     ssa_allocation.cc
     peephole_optimization.cc
+    branch_simplification.cc
 )
