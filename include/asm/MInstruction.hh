@@ -417,10 +417,8 @@ public:
 };
 
 class MIli : public MInstruction { // presudo
-private:
-  int imm;
-
 public:
+  int imm;
   MIli(int32_t imm);
   MIli(int32_t imm, string name);
   MIli(int32_t imm, Register *target);
