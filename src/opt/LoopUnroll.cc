@@ -463,15 +463,21 @@ bool LoopUnroll::canAllUnroll(LoopInfo* loopInfo) {
       !endValue->isa(VT_INTCONST)) {
     return false;
   }
-  if (strideInstr->getOpTag() != ADD) return false;
+  if (strideInstr->getOpTag() == ADD) {
+    simpleLoop->isAsc = true;
+  } else if (strideInstr->getOpTag() != SUB) {
+    simpleLoop->isAsc = false;
+  }
   simpleLoop->init = ((IntegerConstant*)initValue)->getValue();
   simpleLoop->stride = ((IntegerConstant*)stride)->getValue();
   if (simpleLoop->stride <= 0) return false;
   OpTag op = ((IcmpInst*)condInstr)->getOpTag();
-  if (op == SLT) {
+  if (op == SLT || op == SGT || op == NE) {
     simpleLoop->end = ((IntegerConstant*)endValue)->getValue();
   } else if (op == SLE) {
     simpleLoop->end = ((IntegerConstant*)endValue)->getValue() + 1;
+  } else if (op == SGE) {
+    simpleLoop->end = ((IntegerConstant*)endValue)->getValue() - 1;
   } else {
     return false;
   }
