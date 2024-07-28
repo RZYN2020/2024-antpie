@@ -19,6 +19,7 @@ class LoopInfo {
   vector<LoopInfo*> subLoops;
   unordered_set<BasicBlock*> blocks;
 
+  BasicBlock* guard = 0;
   BasicBlock* preHeader = 0;
   BasicBlock* header = 0;
   unordered_set<BasicBlock*> latches;
