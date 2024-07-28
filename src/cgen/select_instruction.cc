@@ -556,11 +556,18 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
               } // what if v == 1? ==> optimize it in peephole optimization...
             }
 
-            Register *index = GET_VREG(gep->getRValue(i));
-            ADD_INSTR(elesz, MIli, sz);
-            ADD_INSTR(offset, MImul, index, elesz);
-            ADD_INSTR(addr, MIadd, base, offset);
-            dest = addr;
+            if (is_constant(gep->getRValue(i))) {
+              auto index =
+                  static_cast<IntegerConstant *>(gep->getRValue(i))->getValue();
+              ADD_INSTR(addr, MIaddi, base, index * sz);
+              dest = addr;
+            } else {
+              Register *index = GET_VREG(gep->getRValue(i));
+              ADD_INSTR(elesz, MIli, sz);
+              ADD_INSTR(offset, MImul, index, elesz);
+              ADD_INSTR(addr, MIadd, base, offset);
+              dest = addr;
+            }
           }
           if (dest == base) {
             ADD_INSTR(
@@ -662,7 +669,23 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
             BINARY_OP_WITH_IMM_CASE(AND, MIand, MIandi, IntegerConstant)
             BINARY_OP_WITH_IMM_CASE(OR, MIor, MIori, IntegerConstant)
             BINARY_OP_WITH_IMM_CASE(XOR, MIxor, MIxori, IntegerConstant)
-            BINARY_OP_CASE(SUB, MIsubw)
+          case SUB: {
+            int lo = -2048;
+            int hi = 2047;
+            if (is_constant(opd2)) {
+              auto imm = -static_cast<IntegerConstant *>(opd2)->getValue();
+              if (imm < hi && imm > lo) {
+                ADD_INSTR(sub, MIaddiw, GET_VREG(opd1), imm, ins->getName());
+                instr_map->insert({ins, sub});
+              }
+              break;
+            }
+            ADD_INSTR(sub, MIsubw, GET_VREG(opd1), GET_VREG(opd2),
+                      ins->getName());
+            instr_map->insert({ins, sub});
+            break;
+          }
+
             BINARY_OP_CASE(MUL, MImulw)
             BINARY_OP_CASE(SDIV, MIdivw)
             BINARY_OP_CASE(SREM, MIremw)
