@@ -268,6 +268,21 @@ bool LoopUnroll::runOnLoop(LoopInfo* loopInfo) {
       function->pushBasicBlock(newBlock);
     }
   }
+  // fix phi in exit
+  BasicBlock* exit = *loopInfo->exits.begin();
+  for (Instruction* instr : *exit->getInstructions()) {
+    if (PhiInst* phiInst = dynamic_cast<PhiInst*>(instr)) {
+      int icSize = phiInst->getRValueSize() / 2;
+      for (int i = 0; i < icSize; i++) {
+        if ((BasicBlock*)phiInst->getRValue(2 * i + 1) == loopInfo->header) {
+          phiInst->replaceRValueAt(2 * i + 1, remainLoop->getHeader());
+          break;
+        }
+      }
+    } else {
+      break;
+    }
+  }
   // origin loop jump out to remain loop
   brInst->replaceDestinationWith(*loopInfo->exits.begin(),
                                  remainLoop->getHeader());
@@ -631,10 +646,10 @@ bool LoopUnroll::allUnroll(LoopInfo* loopInfo) {
   }
   // fix phi in exit
   BasicBlock* exit = *loopInfo->exits.begin();
-  for (Instruction* instr: *exit->getInstructions()) {
+  for (Instruction* instr : *exit->getInstructions()) {
     if (PhiInst* phiInst = dynamic_cast<PhiInst*>(instr)) {
       int icSize = phiInst->getRValueSize() / 2;
-      for (int i = 0;i < icSize; i++) {
+      for (int i = 0; i < icSize; i++) {
         if ((BasicBlock*)phiInst->getRValue(2 * i + 1) == loopInfo->header) {
           phiInst->replaceRValueAt(2 * i + 1, lastHeader);
           break;

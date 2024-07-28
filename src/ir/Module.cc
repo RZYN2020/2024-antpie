@@ -289,7 +289,7 @@ void Module::irOptimize() {
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new CommonSubexpElimination());
   optimizations.pushBack(new LoopAnalysis());
-  optimizations.pushBack(new LoopSimplify());
+  optimizations.pushBack(new LoopSimplify(false));
   optimizations.pushBack(new AliasAnalysis());
   optimizations.pushBack(new LoopInvariantCodeMotion());
   optimizations.pushBack(new LoopUnroll());
@@ -301,7 +301,7 @@ void Module::irOptimize() {
   optimizations.pushBack(new AliasAnalysis());
   optimizations.pushBack(new LoadElimination());
   optimizations.pushBack(new LoopAnalysis());
-  optimizations.pushBack(new LoopSimplify());
+  optimizations.pushBack(new LoopSimplify(false));
   optimizations.pushBack(new LoopInvariantCodeMotion());
   optimizations.pushBack(new TailRecursionElimination());
   optimizations.pushBack(new MergeBlock());
