@@ -387,21 +387,21 @@ static void allocate(MFunction *func, map<Register *, Register *> *allocation,
 /////////   Main Entry
 ///////////////////////////////////////
 ///////////////////////////////////////
-#include <iomanip>
-void print_stack_layout(int callee_saved_sz, int spilled_sz, int alloca_sz) {
-  std::cout << std::left << std::setw(20) << "Stack Layout:" << std::endl;
-  std::cout << std::left << std::setw(20) << "16 bytes:"
-            << "ra, sp" << std::endl;
-  std::cout << std::left << std::setw(20)
-            << std::to_string(callee_saved_sz) + " bytes:"
-            << "callee saved registers" << std::endl;
-  std::cout << std::left << std::setw(20)
-            << std::to_string(spilled_sz) + " bytes:"
-            << "spilled registers" << std::endl;
-  std::cout << std::left << std::setw(20)
-            << std::to_string(alloca_sz) + " bytes:"
-            << "allocated memory" << std::endl;
-}
+// #include <iomanip>
+// void print_stack_layout(int callee_saved_sz, int spilled_sz, int alloca_sz) {
+//   std::cout << std::left << std::setw(20) << "Stack Layout:" << std::endl;
+//   std::cout << std::left << std::setw(20) << "16 bytes:"
+//             << "ra, sp" << std::endl;
+//   std::cout << std::left << std::setw(20)
+//             << std::to_string(callee_saved_sz) + " bytes:"
+//             << "callee saved registers" << std::endl;
+//   std::cout << std::left << std::setw(20)
+//             << std::to_string(spilled_sz) + " bytes:"
+//             << "spilled registers" << std::endl;
+//   std::cout << std::left << std::setw(20)
+//             << std::to_string(alloca_sz) + " bytes:"
+//             << "allocated memory" << std::endl;
+// }
 
 // Register Allocation on SSA Form
 void allocate_register(MModule *mod) {
@@ -410,9 +410,9 @@ void allocate_register(MModule *mod) {
     auto liveness_ireg = make_unique<LivenessInfo>();
     auto liveness_freg = make_unique<LivenessInfo>();
     ssa_liveness_analysis(func, liveness_ireg.get(), liveness_freg.get());
-    std::cout << "Function: " << func->getName() << endl;
+    // std::cout << "Function: " << func->getName() << endl;
 
-    printLivenessInfo(func, liveness_ireg.get(), liveness_freg.get());
+    // printLivenessInfo(func, liveness_ireg.get(), liveness_freg.get());
 
     // step2. Spill
     auto reg_cost = cal_reg_cost(func);
@@ -441,12 +441,12 @@ void allocate_register(MModule *mod) {
     allocate(func, allocation.get(), spill.get(), liveness_ireg.get(),
              liveness_freg.get());
 
-    std::cout << "Register Allocation:" << endl;
-    for (auto &[logical_reg, physical_reg] : *allocation) {
-      std::cout << "  " << logical_reg->getName() << " -> "
-                << physical_reg->getName() << endl;
-    }
-    std::cout << endl << endl;
+    // std::cout << "Register Allocation:" << endl;
+    // for (auto &[logical_reg, physical_reg] : *allocation) {
+    //   std::cout << "  " << logical_reg->getName() << " -> "
+    //             << physical_reg->getName() << endl;
+    // }
+    // std::cout << endl << endl;
 
     auto callee_saved = getActuallCalleeSavedRegisters(allocation.get());
     int callee_saved_sz = callee_saved.size() * 8;
@@ -469,30 +469,30 @@ void allocate_register(MModule *mod) {
     //   pof += 8;
     // }
 
-    std::cout << "Spill to Memory:" << endl;
-    for (auto &[reg, offset] : *spill) {
-      auto size = 4;
-      if (reg->getTag() == Register::V_FREGISTER ||
-          reg->getTag() == Register::V_IREGISTER) {
-        if (static_cast<VRegister *>(reg)->isPointer()) {
-          size = 8;
-        }
-      }
-      std::cout << "  " << reg->getName() << "(" << size << " bytes) -> "
-                << -offset << endl;
-    }
-    std::cout << endl;
+    // std::cout << "Spill to Memory:" << endl;
+    // for (auto &[reg, offset] : *spill) {
+    //   auto size = 4;
+    //   if (reg->getTag() == Register::V_FREGISTER ||
+    //       reg->getTag() == Register::V_IREGISTER) {
+    //     if (static_cast<VRegister *>(reg)->isPointer()) {
+    //       size = 8;
+    //     }
+    //   }
+    //   std::cout << "  " << reg->getName() << "(" << size << " bytes) -> "
+    //             << -offset << endl;
+    // }
+    // std::cout << endl;
 
     // step4. Rewrite program
     out_of_ssa(func, liveness_ireg.get(), liveness_freg.get(),
                allocation.get());
 
-    int offset_before_alloca = offset; // debug
+    // int offset_before_alloca = offset; // debug
     lower_alloca(func, offset);
 
-    int alloca_sz = offset - offset_before_alloca; // debug
+    // int alloca_sz = offset - offset_before_alloca; // debug
 
-    print_stack_layout(callee_saved_sz, spilled_sz, alloca_sz);
+    // print_stack_layout(callee_saved_sz, spilled_sz, alloca_sz);
 
     lower_call(func, offset, allocation.get(), spill.get(), liveness_ireg.get(),
                liveness_freg.get());

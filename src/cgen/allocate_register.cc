@@ -217,121 +217,121 @@ void fixRange(MFunction *mfunc) {
       if (ins->getInsTag() == MInstruction::ADDI) {
         auto addi = static_cast<MIaddi *>(ins);
         if (addi->imm < lo || addi->imm > hi) {
-          auto immr = new MIli(addi->imm, Register::reg_t3);
+          auto immr = new MIli(addi->imm, Register::reg_t2);
           auto add =
-              new MIadd(Register::reg_t3, addi->getReg(0), addi->getTarget());
+              new MIadd(Register::reg_t2, addi->getReg(0), addi->getTarget());
           mfunc->reg_pool->push_back(addi->replaceWith({immr, add}));
         }
       } else if (ins->getInsTag() == MInstruction::ADDIW) {
         auto addiw = static_cast<MIaddiw *>(ins);
         if (addiw->imm < lo || addiw->imm > hi) {
-          auto immr = new MIli(addiw->imm, Register::reg_t3);
-          auto addw = new MIaddw(Register::reg_t3, addiw->getReg(0),
+          auto immr = new MIli(addiw->imm, Register::reg_t2);
+          auto addw = new MIaddw(Register::reg_t2, addiw->getReg(0),
                                  addiw->getTarget());
           mfunc->reg_pool->push_back(addiw->replaceWith({immr, addw}));
         }
       } else if (ins->getInsTag() == MInstruction::ANDI) {
         auto andi = static_cast<MIandi *>(ins);
         if (andi->imm < lo || andi->imm > hi) {
-          auto immr = new MIli(andi->imm, Register::reg_t3);
+          auto immr = new MIli(andi->imm, Register::reg_t2);
           auto and_ =
-              new MIand(Register::reg_t3, andi->getReg(0), andi->getTarget());
+              new MIand(Register::reg_t2, andi->getReg(0), andi->getTarget());
           mfunc->reg_pool->push_back(andi->replaceWith({immr, and_}));
         }
       } else if (ins->getInsTag() == MInstruction::XORI) {
         auto xori = static_cast<MIxori *>(ins);
         if (xori->imm < lo || xori->imm > hi) {
-          auto immr = new MIli(xori->imm, Register::reg_t3);
+          auto immr = new MIli(xori->imm, Register::reg_t2);
           auto xor_ =
-              new MIxor(Register::reg_t3, xori->getReg(0), xori->getTarget());
+              new MIxor(Register::reg_t2, xori->getReg(0), xori->getTarget());
           mfunc->reg_pool->push_back(xori->replaceWith({immr, xor_}));
         }
       } else if (ins->getInsTag() == MInstruction::SLTI) {
         auto slti = static_cast<MIslti *>(ins);
         if (slti->imm < lo || slti->imm > hi) {
-          auto immr = new MIli(slti->imm, Register::reg_t3);
+          auto immr = new MIli(slti->imm, Register::reg_t2);
           auto slt =
-              new MIslt(Register::reg_t3, slti->getReg(0), slti->getTarget());
+              new MIslt(Register::reg_t2, slti->getReg(0), slti->getTarget());
           mfunc->reg_pool->push_back(slti->replaceWith({immr, slt}));
         }
       } else if (ins->getInsTag() == MInstruction::LW) { // todo: deduplicate
         auto memop = static_cast<MIlw *>(ins);
         if (memop->imm < lo || memop->imm > hi) {
-          auto immr = new MIli(memop->imm, Register::reg_t3);
+          auto immr = new MIli(memop->imm, Register::reg_t2);
           auto addr =
-              new MIadd(Register::reg_t3, memop->getReg(0), Register::reg_t4);
+              new MIadd(Register::reg_t2, memop->getReg(0), Register::reg_t2);
           memop->imm = 0;
-          memop->setReg(0, Register::reg_t4);
+          memop->setReg(0, Register::reg_t2);
           memop->insertBefore({immr, addr});
         }
       } else if (ins->getInsTag() == MInstruction::LD) {
         auto memop = static_cast<MIld *>(ins);
         if (memop->imm < lo || memop->imm > hi) {
-          auto immr = new MIli(memop->imm, Register::reg_t3);
+          auto immr = new MIli(memop->imm, Register::reg_t2);
           auto addr =
-              new MIadd(Register::reg_t3, memop->getReg(0), Register::reg_t4);
+              new MIadd(Register::reg_t2, memop->getReg(0), Register::reg_t2);
           memop->imm = 0;
-          memop->setReg(0, Register::reg_t4);
+          memop->setReg(0, Register::reg_t2);
           memop->insertBefore({immr, addr});
         }
       } else if (ins->getInsTag() == MInstruction::FLD) {
         auto memop = static_cast<MIfld *>(ins);
         if (memop->imm < lo || memop->imm > hi) {
-          auto immr = new MIli(memop->imm, Register::reg_t3);
+          auto immr = new MIli(memop->imm, Register::reg_t2);
           auto addr =
-              new MIadd(Register::reg_t3, memop->getReg(0), Register::reg_t4);
+              new MIadd(Register::reg_t2, memop->getReg(0), Register::reg_t2);
           memop->imm = 0;
-          memop->setReg(0, Register::reg_t4);
+          memop->setReg(0, Register::reg_t2);
           memop->insertBefore({immr, addr});
         }
       } else if (ins->getInsTag() == MInstruction::FLW) {
         auto memop = static_cast<MIflw *>(ins);
         if (memop->imm < lo || memop->imm > hi) {
-          auto immr = new MIli(memop->imm, Register::reg_t3);
+          auto immr = new MIli(memop->imm, Register::reg_t2);
           auto addr =
-              new MIadd(Register::reg_t3, memop->getReg(0), Register::reg_t4);
+              new MIadd(Register::reg_t2, memop->getReg(0), Register::reg_t2);
           memop->imm = 0;
-          memop->setReg(0, Register::reg_t4);
+          memop->setReg(0, Register::reg_t2);
           memop->insertBefore({immr, addr});
         }
       } else if (ins->getInsTag() == MInstruction::SW) {
         auto memop = static_cast<MIsw *>(ins);
         if (memop->imm < lo || memop->imm > hi) {
-          auto immr = new MIli(memop->imm, Register::reg_t3);
+          auto immr = new MIli(memop->imm, Register::reg_t0);
           auto addr =
-              new MIadd(Register::reg_t3, memop->getReg(1), Register::reg_t4);
+              new MIadd(Register::reg_t0, memop->getReg(1), Register::reg_t0);
           memop->imm = 0;
-          memop->setReg(1, Register::reg_t4);
+          memop->setReg(1, Register::reg_t0);
           memop->insertBefore({immr, addr});
         }
       } else if (ins->getInsTag() == MInstruction::SD) {
         auto memop = static_cast<MIsd *>(ins);
         if (memop->imm < lo || memop->imm > hi) {
-          auto immr = new MIli(memop->imm, Register::reg_t3);
+          auto immr = new MIli(memop->imm, Register::reg_t0);
           auto addr =
-              new MIadd(Register::reg_t3, memop->getReg(1), Register::reg_t4);
+              new MIadd(Register::reg_t0, memop->getReg(1), Register::reg_t0);
           memop->imm = 0;
-          memop->setReg(1, Register::reg_t4);
+          memop->setReg(1, Register::reg_t0);
           memop->insertBefore({immr, addr});
         }
       } else if (ins->getInsTag() == MInstruction::FSD) {
         auto memop = static_cast<MIsd *>(ins);
         if (memop->imm < lo || memop->imm > hi) {
-          auto immr = new MIli(memop->imm, Register::reg_t3);
+          auto immr = new MIli(memop->imm, Register::reg_t0);
           auto addr =
-              new MIadd(Register::reg_t3, memop->getReg(1), Register::reg_t4);
+              new MIadd(Register::reg_t0, memop->getReg(1), Register::reg_t0);
           memop->imm = 0;
-          memop->setReg(1, Register::reg_t4);
+          memop->setReg(1, Register::reg_t0);
           memop->insertBefore({immr, addr});
         }
       } else if (ins->getInsTag() == MInstruction::FSW) {
         auto memop = static_cast<MIfsw *>(ins);
         if (memop->imm < lo || memop->imm > hi) {
-          auto immr = new MIli(memop->imm, Register::reg_t3);
+          auto immr = new MIli(memop->imm, Register::reg_t0);
           auto addr =
-              new MIadd(Register::reg_t3, memop->getReg(1), Register::reg_t4);
+              new MIadd(Register::reg_t0, memop->getReg(1), Register::reg_t0);
           memop->imm = 0;
-          memop->setReg(1, Register::reg_t4);
+          memop->setReg(1, Register::reg_t0);
           memop->insertBefore({immr, addr});
         }
       }
@@ -445,8 +445,7 @@ void rewrite_program_spill(MFunction *func, map<Register *, int> *spill) {
       // ins->setComment(oss.str());
 
       // std::cout << "\nrewrite " << *ins << endl;
-      int float_cnt = 0;
-      int int_cnt = 5;
+
       auto loads = vector<MInstruction *>();
       auto regs = std::vector<Register *>();
       for (int i = 0; i < ins->getRegNum(); i++) {
@@ -458,6 +457,9 @@ void rewrite_program_spill(MFunction *func, map<Register *, int> *spill) {
           regs.push_back(reg);
         }
       }
+      int float_cnt = 0;
+      int int_cnt = 5; // start from t0
+      assert(regs.size() <= 2);
       std::set<Register *> unique_regs(regs.begin(), regs.end());
       regs.assign(unique_regs.begin(), unique_regs.end());
       MInstruction *load;
@@ -501,13 +503,13 @@ void rewrite_program_spill(MFunction *func, map<Register *, int> *spill) {
           store = new MIfsw(target, -offset, Register::reg_s0);
           stores.push_back(store);
         } else if (vreg->isPointer()) {
-          auto target = Register::getIRegister(int_cnt++);
+          auto target = Register::reg_t2; // always t2
           int offset = spill->at(reg);
           ins->replaceRegister(reg, target);
           store = new MIsd(target, -offset, Register::reg_s0);
           stores.push_back(store);
         } else {
-          auto target = Register::getIRegister(int_cnt++);
+          auto target = Register::reg_t2;
           int offset = spill->at(reg);
           ins->replaceRegister(reg, target);
           store = new MIsw(target, -offset, Register::reg_s0);
@@ -664,16 +666,16 @@ vector<MInstruction *> MHIcall::generateCallSequence(
       switch (arg.tp) {
       case MIOprandTp::Float: {
         auto g = func->getMod()->addGlobalFloat(new FloatConstant(arg.arg.f));
-        res.push_back(new MIla(g, Register::reg_t0));
-        res.push_back(new MIflw(Register::reg_t0, 0, Register::reg_ft0));
+        res.push_back(new MIla(g, Register::reg_t2));
+        res.push_back(new MIflw(Register::reg_t2, 0, Register::reg_ft0));
         res.push_back(
-            new MIfsw(Register::reg_ft0, para->getOffset(), Register::reg_sp));
+            new MIfsw(Register::reg_ft2, para->getOffset(), Register::reg_sp));
         break;
       }
       case MIOprandTp::Int: {
-        res.push_back(new MIli(arg.arg.i, Register::reg_t0));
+        res.push_back(new MIli(arg.arg.i, Register::reg_t2));
         res.push_back(
-            new MIsw(Register::reg_t0, para->getOffset(), Register::reg_sp));
+            new MIsw(Register::reg_t2, para->getOffset(), Register::reg_sp));
         break;
       }
       case MIOprandTp::Reg: {
@@ -688,15 +690,15 @@ vector<MInstruction *> MHIcall::generateCallSequence(
           } else if (reg->isPointer()) {
             assert(reg->getTag() == Register::V_IREGISTER);
             res.push_back(
-                new MIld(Register::reg_s0, -offset, Register::reg_t0));
-            res.push_back(new MIsd(Register::reg_t0, para->getOffset(),
+                new MIld(Register::reg_s0, -offset, Register::reg_t2));
+            res.push_back(new MIsd(Register::reg_t2, para->getOffset(),
                                    Register::reg_sp));
           } else {
             assert(reg->getTag() == Register::V_IREGISTER);
             res.push_back(
-                new MIlw(Register::reg_s0, -offset, Register::reg_t0));
+                new MIlw(Register::reg_s0, -offset, Register::reg_t2));
             auto sw =
-                new MIsw(Register::reg_t0, para->getOffset(), Register::reg_sp);
+                new MIsw(Register::reg_t2, para->getOffset(), Register::reg_sp);
             std::ostringstream oss;
             oss << " STORE" << reg->getName() << " ";
             sw->setComment(oss.str());
@@ -724,9 +726,9 @@ vector<MInstruction *> MHIcall::generateCallSequence(
       switch (arg.tp) {
       case Float: {
         auto g = func->getMod()->addGlobalFloat(new FloatConstant(arg.arg.f));
-        assignments.push_back(new MIla(g, Register::reg_t0));
+        assignments.push_back(new MIla(g, Register::reg_t2));
         assignments.push_back(
-            new MIflw(Register::reg_t0, 0, para->getRegister()));
+            new MIflw(Register::reg_t2, 0, para->getRegister()));
         break;
       }
       case Int: {
@@ -955,7 +957,8 @@ void add_conclude(MFunction *func, map<Register *, Register *> *allocation,
   for (auto bb : func->getBasicBlocks()) {
     if (bb == exit)
       continue;
-    if (bb->getJmpNum() != 0 && bb->getJmp(bb->getJmpNum() - 1)->getInsTag() == MInstruction::RET) {
+    if (bb->getJmpNum() != 0 &&
+        bb->getJmp(bb->getJmpNum() - 1)->getInsTag() == MInstruction::RET) {
       bb->getJmp(bb->getJmpNum() - 1)->replaceWith({});
       bb->pushJmp(new MIj(exit));
     }
@@ -970,13 +973,12 @@ void add_conclude(MFunction *func, map<Register *, Register *> *allocation,
 
 Register *getOneIRegiter(set<Register *> *used) {
   static set<Register *> all_registers = {
-      // reserve t3,t4 for load large immidiate
       Register::reg_s1, Register::reg_s2,  Register::reg_s3,  Register::reg_s4,
       Register::reg_s5, Register::reg_s6,  Register::reg_s7,  Register::reg_s8,
-      Register::reg_s9, Register::reg_s10, Register::reg_s11, Register::reg_t5,
-      Register::reg_t6, Register::reg_a0,  Register::reg_a1,  Register::reg_a2,
-      Register::reg_a3, Register::reg_a4,  Register::reg_a5,  Register::reg_a6,
-      Register::reg_a7,
+      Register::reg_s9, Register::reg_s10, Register::reg_s11, Register::reg_t3,
+      Register::reg_t4, Register::reg_t5,  Register::reg_t6,  Register::reg_a0,
+      Register::reg_a1, Register::reg_a2,  Register::reg_a3,  Register::reg_a4,
+      Register::reg_a5, Register::reg_a6,  Register::reg_a7,
   };
   for (Register *reg : all_registers) {
     if (used->find(reg) == used->end()) {

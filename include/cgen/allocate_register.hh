@@ -1,6 +1,5 @@
 #pragma once
-#include "Machine.hh"
-#include "Module.hh"
+#include "cgen.hh"
 #include <set>
 using std::pair;
 using std::set;
@@ -9,7 +8,6 @@ using std::set;
 /////                   Liveness Info
 /////////////////////////////////////////////////////////////////
 
-using LivenessInfo = map<MInstruction *, set<Register *>>;
 
 template <int RegisterTagVal>
 std::vector<Register *> getUses(MInstruction *ins) {
@@ -112,7 +110,7 @@ static int roundUp(int numToRound, int multiple) {
 /////                   Register Op
 /////////////////////////////////////////////////////////////////
 
-#define MAX_I_REG_NUM 21 // without t0 t1 t2, zero ra sp gp tp s0 t3 t4
+#define MAX_I_REG_NUM 23 // without t0 t1 t2, zero ra sp gp tp s0
 #define MAX_F_REG_NUM 29 // without ft0 ft1 ft2
 
 Register *getOneFRegiter(set<Register *> *used);
