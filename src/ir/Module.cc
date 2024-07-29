@@ -294,6 +294,10 @@ void Module::irOptimize() {
   optimizations.pushBack(new LoopInvariantCodeMotion());
   optimizations.pushBack(new LoopUnroll());
   optimizations.pushBack(new DeadCodeElimination());
+  optimizations.pushBack(new LoopAnalysis());
+  optimizations.pushBack(new LoopSimplify(false));
+  optimizations.pushBack(new LoopInvariantCodeMotion());
+  optimizations.pushBack(new MergeBlock());
   // GVM and GCM need DCE
   optimizations.pushBack(new GlobalValueNumbering());
   optimizations.pushBack(new GlobalCodeMotion());

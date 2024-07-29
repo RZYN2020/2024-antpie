@@ -150,16 +150,16 @@ def run_single_test(sy_file, out_file, in_file=None):
     # qemu load...
     run_command = ["qemu-riscv64", "-L", "/usr/riscv64-linux-gnu", "-s", "1024M", bin_file]
     try:
-        start_time = time.time()
+        # start_time = time.time()
         if in_file:
             with open(test_dir + in_file, 'r') as input_file:
                 result = subprocess.run(run_command, text=True, input=input_file.read(), capture_output=True, timeout=300)
         else:
             result = subprocess.run(run_command, text=True, capture_output=True, timeout=300)
-        end_time = time.time()
+        # end_time = time.time()
 
         stdout = result.stdout
-        print_log(prefix, get_time_str(end_time - start_time))
+        print_log(prefix, result.stderr.split('\n', 1)[0])
         if stdout != "" and stdout[-1] != '\n':
             result.stdout += "\n"
         output = result.stdout + str(result.returncode)
