@@ -6,11 +6,18 @@
 /////////  Liveness Info
 ///////////////////////////////////////
 ///////////////////////////////////////
-
+template std::vector<Register *>
+getUses<Register::F_REGISTER>(MInstruction *ins);
+template std::vector<Register *>
+getUses<Register::I_REGISTER>(MInstruction *ins);
 template std::vector<Register *>
 getUses<Register::V_FREGISTER>(MInstruction *ins);
 template std::vector<Register *>
 getUses<Register::V_IREGISTER>(MInstruction *ins);
+template std::vector<Register *>
+getDefs<Register::F_REGISTER>(MInstruction *ins);
+template std::vector<Register *>
+getDefs<Register::I_REGISTER>(MInstruction *ins);
 template std::vector<Register *>
 getDefs<Register::V_FREGISTER>(MInstruction *ins);
 template std::vector<Register *>
@@ -773,7 +780,6 @@ vector<MInstruction *> MHIcall::generateCallSequence(
   // std::cout << "gen call call" << endl;
 
   res.push_back(new MIcall(function));
-  res.push_back(new MIaddi(Register::reg_sp, shift, Register::reg_sp));
 
   // std::cout << "gen call ret val" << endl;
   // handle returen value
@@ -802,6 +808,7 @@ vector<MInstruction *> MHIcall::generateCallSequence(
       }
     }
   }
+  res.push_back(new MIaddi(Register::reg_sp, shift, Register::reg_sp));
 
   std::vector<MInstruction *> merged;
   merged.insert(merged.end(), push_callee_saved.begin(),
