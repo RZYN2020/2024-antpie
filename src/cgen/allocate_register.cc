@@ -28,7 +28,7 @@ void printLivenessInfo(MFunction *func, LivenessInfo *liveness_ireg,
   std::cout << "Integer Register Liveness:" << std::endl;
   for (auto &pair : *liveness_ireg) {
     std::cout << "Instruction: " << *pair.first << std::endl;
-    std::cout << "   LiveIn: ";
+    std::cout << "   LiveIn (" << pair.second.size() << " regs):  ";
     for (Register *reg : pair.second) {
       std::cout << reg->getName() << " ";
     }
