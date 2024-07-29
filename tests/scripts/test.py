@@ -1,11 +1,24 @@
 import os
 import subprocess
 import sys
+from datetime import datetime
+import time
 
+log_file = "tests/log/"
 lib_dir = "tests/"
-test_dir = "tests/compiler2023/公开样例与运行时库/hidden_functional/"
+test_dir = "tests/compiler2024/testdata/performance/"
 compiler_path = "build/compiler"
 tmp_file_base = os.path.abspath(".") + "/tmp/"
+
+def print_log(case_name, message):
+    with open(log_file, 'a', encoding='utf-8') as file:
+        file.write(f"{case_name:<25}: {message}\n")
+
+def get_time_str(elapsed_time):
+    minutes = int(elapsed_time // 60)
+    seconds = int(elapsed_time % 60)
+    microseconds = int((elapsed_time - int(elapsed_time)) * 1_000_000)
+    return f"{minutes} M {seconds} S {microseconds} us"
 
 def find_and_sort_matching_files(directory):
     # 获取文件夹中的所有文件名
@@ -117,7 +130,7 @@ def run_single_test(sy_file, out_file, in_file=None):
     prefix = sy_file.split('.')[0] 
     # get riscv asm file
     asm_file = tmp_file_base + prefix + ".s"
-    gen_command = compiler_path + " -S" + " -o "+ asm_file + " " + test_dir + sy_file
+    gen_command = compiler_path + " -S" + " -o "+ asm_file + " " + test_dir + sy_file + " -O1"
     try:
         subprocess.run(gen_command, shell=True, timeout=60)
     except subprocess.TimeoutExpired:
@@ -137,13 +150,16 @@ def run_single_test(sy_file, out_file, in_file=None):
     # qemu load...
     run_command = ["qemu-riscv64", "-L", "/usr/riscv64-linux-gnu", "-s", "1024M", bin_file]
     try:
+        # start_time = time.time()
         if in_file:
             with open(test_dir + in_file, 'r') as input_file:
-                result = subprocess.run(run_command, text=True, input=input_file.read(), capture_output=True, timeout=5)
+                result = subprocess.run(run_command, text=True, input=input_file.read(), capture_output=True, timeout=300)
         else:
-            result = subprocess.run(run_command, text=True, capture_output=True, timeout=40)
-        
+            result = subprocess.run(run_command, text=True, capture_output=True, timeout=300)
+        # end_time = time.time()
+
         stdout = result.stdout
+        print_log(prefix, result.stderr.split('\n', 1)[0])
         if stdout != "" and stdout[-1] != '\n':
             result.stdout += "\n"
         output = result.stdout + str(result.returncode)
@@ -177,6 +193,13 @@ def run_all_test(sorted_files, test_fun):
 if __name__ == "__main__":
     mode = sys.argv[1]
     sorted_files = find_and_sort_matching_files(test_dir)
+
+    # prepare for log file
+    log_file += str(datetime.now().strftime("%Y%m%d%H%M%S")) + "-test-log"
+    parent_directory = os.path.dirname(log_file)
+    if not os.path.exists(parent_directory):
+        os.makedirs(parent_directory)
+
     if mode == 'RISCV':
         test_fun = run_single_test
     if mode == 'LLVM':
