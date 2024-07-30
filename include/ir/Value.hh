@@ -60,10 +60,10 @@ class Value {
   friend Use;
 
  public:
-  Value(){};
-  Value(Type* vt, ValueTag vtag) : vType(vt), vTag(vtag){};
+  Value() {};
+  Value(Type* vt, ValueTag vtag) : vType(vt), vTag(vtag) {};
   Value(Type* vt, string vn, ValueTag vtag)
-      : vType(vt), vName(vn), vTag(vtag){};
+      : vType(vt), vName(vn), vTag(vtag) {};
 
   virtual void printIR(ostream& stream) const {};
   string getName() const { return vName; }
@@ -72,13 +72,20 @@ class Value {
   void setType(Type* type) { vType = type; }
   Type* getType() const { return vType; }
   virtual string toString() const { return "%" + vName; }
-  bool isa(ValueTag vt_) { return vt_ == vTag; }
+  bool isa(ValueTag vt_) const { return vt_ == vTag; }
   bool isPointer() const;
   bool isFloat() const;
   bool isInteger() const;
   bool isArray() const;
 
   Use* getUseHead() const { return useHead; }
+  uint32_t getUserSize() const {
+    int userSize = 0;
+    for (Use* use = getUseHead(); use; use = use->next) {
+      userSize++;
+    }
+    return userSize;
+  }
   void addUser(Use* use) {
     if (useHead) useHead->pre = use;
     use->next = useHead;

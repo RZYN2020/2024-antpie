@@ -16,6 +16,7 @@
 #include "LoopUnroll.hh"
 #include "MemToReg.hh"
 #include "MergeBlock.hh"
+#include "Reassociate.hh"
 #include "StrengthReduction.hh"
 #include "TailRecursionElimination.hh"
 
@@ -294,6 +295,8 @@ void Module::irOptimize() {
   optimizations.pushBack(new LoopInvariantCodeMotion());
   optimizations.pushBack(new LoopUnroll());
   optimizations.pushBack(new DeadCodeElimination());
+  optimizations.pushBack(new MergeBlock());
+  optimizations.pushBack(new Reassociate());
   // GVM and GCM need DCE
   optimizations.pushBack(new GlobalValueNumbering());
   optimizations.pushBack(new GlobalCodeMotion());
