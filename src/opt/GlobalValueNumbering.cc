@@ -13,26 +13,23 @@ bool GlobalValueNumbering::runOnFunction(Function* func) {
   CFG* cfg = func->getCFG();
   if (!cfg) cfg = func->buildCFG();
 
-  vector<std::pair<BasicBlock*, int>> postOrder;
+  vector<BasicBlock*> postOrder;
   unordered_set<BasicBlock*> visited;
-  std::function<void(BasicBlock*, int)> postOrderDfs = [&](BasicBlock* block,
-                                                           int depth) {
+  std::function<void(BasicBlock*)> postOrderDfs = [&](BasicBlock* block) {
     for (BasicBlock* succ : *cfg->getSuccOf(block)) {
       if (!visited.count(succ)) {
         visited.insert(succ);
-        postOrderDfs(succ, depth + block->getInstructions()->getSize());
+        postOrderDfs(succ);
       }
     }
-    postOrder.emplace_back(block, depth);
+    postOrder.push_back(block);
   };
-  postOrderDfs(func->getEntry(), 0);
+  postOrderDfs(func->getEntry());
 
-  unordered_map<string, vector<std::pair<int, Instruction*>>> exprMap;
+  unordered_map<string, Instruction*> exprMap;
   for (auto it = postOrder.rbegin(); it != postOrder.rend(); it++) {
-    LinkedList<Instruction*>* instrList = it->first->getInstructions();
-    int depth = it->second;
+    LinkedList<Instruction*>* instrList = (*it)->getInstructions();
     for (auto instrIt = instrList->begin(); instrIt != instrList->end();) {
-      depth++;
       Instruction* instr = *instrIt;
       ++instrIt;
       if (!canNumbering(instr)) continue;
@@ -40,29 +37,12 @@ bool GlobalValueNumbering::runOnFunction(Function* func) {
       string hashStr = hashToString(instr);
       auto item = exprMap.find(hashStr);
       if (item != exprMap.end()) {
-        Instruction* replaceInstr = 0;
-        int preDist = INT32_MAX;
-        for (auto& [preDepth, preInstr] : item->second) {
-          if (preInstr->getParent() == instr->getParent()) {
-            replaceInstr = preInstr;
-            break;
-          }
-          int dist = std::abs(preDepth - depth);
-          if (dist <= 100 && dist < preDist) {
-            preDist = dist;
-            replaceInstr = preInstr;
-          }
-        }
-        if (replaceInstr) {
-          changed = true;
-          instr->replaceAllUsesWith(replaceInstr);
-          instr->eraseFromParent();
-          instr->deleteUseList();
-        } else {
-          item->second.emplace_back(depth, instr);
-        }
+        changed = true;
+        instr->replaceAllUsesWith(item->second);
+        instr->eraseFromParent();
+        instr->deleteUseList();
       } else {
-        exprMap[hashStr].emplace_back(depth, instr);
+        exprMap.emplace(hashStr, instr);
       }
     }
   }
