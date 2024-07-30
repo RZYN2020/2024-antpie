@@ -76,6 +76,13 @@ void scan_store_loads(MBasicBlock *bb, vector<vector<MInstruction *>> &ldsts) {
           continue;
         }
         int addr = stk_off + off;
+
+        if (reg_addr.count(reg) > 0) {
+            ldsts.push_back(tldsts[reg]);
+            tldsts[reg].clear();
+            addr_reg.erase(reg_addr[reg]);
+            reg_addr.erase(reg);
+        }
         if (addr_reg.count(addr) > 0) {
           if (addr_reg[addr] == reg) {
             if (hold_val[reg]) { // find a redudent store
@@ -89,12 +96,6 @@ void scan_store_loads(MBasicBlock *bb, vector<vector<MInstruction *>> &ldsts) {
 
           // std::cout << endl << " Overwrite store: " << *ins << endl;
           // value was overwrite
-          if (reg_addr.count(reg) > 0) {
-            ldsts.push_back(tldsts[reg]);
-            tldsts[reg].clear();
-            addr_reg.erase(reg_addr[reg]);
-            reg_addr.erase(reg);
-          }
           ldsts.push_back(tldsts[addr_reg[addr]]);
           tldsts[addr_reg[addr]].clear();
           auto erase = addr_reg[addr];
@@ -107,16 +108,7 @@ void scan_store_loads(MBasicBlock *bb, vector<vector<MInstruction *>> &ldsts) {
           reg_addr[reg] = addr;
           addr_reg[addr] = reg;
           // std::cout <<reg->getName() << " :"  << tldsts[reg].size() << endl;
-        } else if (reg_addr.count(reg) > 0) {
-          // reg store cllapse... ignore new store..
-          // std::cout << endl << reg->getName() << endl;
-          // std::cout << reg_addr[reg] << endl;
-          // std::cout << addr << endl;
-          // std::cout << *ins << endl;
-          // std::cout <<reg->getName() << " :"  << tldsts[reg].size() << endl;
-
-          assert(tldsts[reg].size() != 0);
-        } else {
+        } else if (reg_addr.count(reg) == 0) {
           // std::cout << endl << " New store: " << *ins << endl;
           // no store here  add new
           if (tldsts.find(reg) == tldsts.end()) {
