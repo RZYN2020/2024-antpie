@@ -60,7 +60,6 @@ bool Reassociate::runOnBasicBlock(BasicBlock* block) {
     }
 
     if (!flag) {
-      std::cout << "res " << op << std::endl;
       changed = true;
       std::sort(args.begin(), args.end(),
                 [&](const Value* lhs, const Value* rhs) {
