@@ -9,7 +9,7 @@ bool TailRecursionElimination::findTailRecursionBlocks(
       continue;
     }
     uint32_t size = block->getInstrSize();
-    if (size < 2) return false;
+    if (size < 2) continue;
     Instruction* preInstr = block->getInstructionAt(size - 2);
     if (CallInst* callInst = dynamic_cast<CallInst*>(preInstr)) {
       if (callInst->getFunction() == function) {
