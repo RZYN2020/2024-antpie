@@ -15,8 +15,8 @@ Function::Function(FuncType* fType, bool isExt, string name)
     setSideEffects(true);
     setPureFunction(false);
     setRecursive(false);
-    setMemRead(true);
-    setMemWrite(true);
+    setMemRead(false);
+    setMemWrite(false);
     return;
   }
   entry = new BasicBlock(name + "_entry");

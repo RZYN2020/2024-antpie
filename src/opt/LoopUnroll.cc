@@ -35,7 +35,6 @@ bool LoopUnroll::runOnModule(ANTPIE::Module* module) {
 bool LoopUnroll::runOnFunction(Function* func) {
   bool changed = false;
   LoopInfoBase* liBase = func->getLoopInfoBase();
-  liBase->analyseSimpleLoop();
   for (LoopInfo* loopInfo : liBase->loopInfos) {
     if (loopInfo->subLoops.empty()) {
       changed |= runOnLoop(loopInfo);
@@ -64,6 +63,7 @@ bool LoopUnroll::runOnLoop(LoopInfo* loopInfo) {
 
   // Too big
   if (size > MAX_LINE) return changed;
+  if (loopInfo->blocks.size() > 2) return changed;
 
   SimpleLoopInfo* simpleLoop = loopInfo->simpleLoop;
   BranchInst* brInst = simpleLoop->brInstr;
