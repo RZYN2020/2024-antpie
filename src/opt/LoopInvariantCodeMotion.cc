@@ -70,6 +70,10 @@ bool LoopInvariantCodeMotion::isMovable(Instruction* instr, LoopInfo* loopInfo,
     return false;
   };
 
+  Function* func = instr->getParent()->getParent();
+  DomTree* dt = func->getDT();
+  if (!dt) dt = func->buildDT();
+
   switch (instr->getValueTag()) {
     case VT_ALLOCA:
     case VT_BR:
@@ -84,6 +88,8 @@ bool LoopInvariantCodeMotion::isMovable(Instruction* instr, LoopInfo* loopInfo,
     }
     case VT_STORE: {
       if (mayContainLoadFrom(instr->getRValue(1))) return false;
+      if (!dt->dominates(instr->getParent(), *(loopInfo->latches.begin())))
+        return false;
       break;
     }
 

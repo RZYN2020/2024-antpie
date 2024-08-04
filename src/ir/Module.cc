@@ -5,6 +5,7 @@
 #include "ConstantFolding.hh"
 #include "DeadCodeElimination.hh"
 #include "FunctionPropAnalysis.hh"
+#include "GEPSimplify.hh"
 #include "GlobalCodeMotion.h"
 #include "GlobalValueNumbering.hh"
 #include "GlobalVariableLocalize.hh"
@@ -306,6 +307,7 @@ void Module::irOptimize() {
   optimizations.pushBack(new LoopAnalysis());
   optimizations.pushBack(new LoopSimplify(false));
   optimizations.pushBack(new LoopInvariantCodeMotion());
+  optimizations.pushBack(new GEPSimplify());
   optimizations.pushBack(new TailRecursionElimination());
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new DeadCodeElimination());

@@ -21,4 +21,5 @@ add_library(
     StrengthReduction.cc
     LoadElimination.cc
     Reassociate.cc
+    GEPSimplify.cc
 )
