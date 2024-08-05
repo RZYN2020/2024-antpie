@@ -41,7 +41,10 @@ bool LoadElimination::runOnBasicBlock(BasicBlock* bb,
       case VT_LOAD: {
         Value* mem = instr->getRValue(0);
         auto it = memToValue.find(mem);
-        if (it == memToValue.end()) continue;
+        if (it == memToValue.end()) {
+          memToValue[mem] = instr;
+          continue;
+        }
         instr->replaceAllUsesWith(it->second);
         trashLoads.insert(instr);
         break;
