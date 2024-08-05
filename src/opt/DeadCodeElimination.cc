@@ -145,12 +145,18 @@ bool DeadCodeElimination::simplifyInstruction(Function* func) {
          it != block->getInstructions()->end();) {
       Instruction* instr = *it;
       ++it;
-      if ((phiInst = dynamic_cast<PhiInst*>(instr)) &&
-          (instr->getRValueSize() == 2)) {
-        changed = true;
-        phiInst->replaceAllUsesWith(phiInst->getRValue(0));
-        phiInst->eraseFromParent();
-        phiInst->deleteUseList();
+      if (phiInst = dynamic_cast<PhiInst*>(instr)) {
+        int icSize = instr->getRValueSize() / 2;
+        unordered_set<Value*> vals;
+        for (int i = 0; i < icSize; i++) {
+          vals.insert(instr->getRValue(i * 2));
+        }
+        if (vals.size() == 1) {
+          changed = true;
+          phiInst->replaceAllUsesWith(phiInst->getRValue(0));
+          phiInst->eraseFromParent();
+          phiInst->deleteUseList();
+        }
       } else {
         break;
       }
