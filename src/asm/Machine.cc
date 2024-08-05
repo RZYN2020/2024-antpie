@@ -43,6 +43,36 @@ void MBasicBlock::setFunction(MFunction *function) {
 
 MFunction *MBasicBlock::getFunction() { return function; }
 
+MBasicBlock *getTargetOfJmp(MInstruction *ins) {
+  switch (ins->getInsTag()) {
+  case MInstruction::BEQ: {
+    auto beq = static_cast<MIbeq *>(ins);
+    return beq->getTargetBB();
+  }
+  case MInstruction::BNE: {
+    auto bne = static_cast<MIbne *>(ins);
+    return bne->getTargetBB();
+  }
+  case MInstruction::BGE: {
+    auto bge = static_cast<MIbge *>(ins);
+    return bge->getTargetBB();
+  }
+  case MInstruction::BLT: {
+    auto blt = static_cast<MIblt *>(ins);
+    return blt->getTargetBB();
+  }
+  case MInstruction::J: {
+    auto j = static_cast<MIj *>(ins);
+    return j->getTargetBB();
+  }
+  default: {
+    std::cout << ins->getInsTag() << endl;
+    std::cout << *ins << endl;
+    assert(0);
+  }
+  }
+}
+
 void MBasicBlock::pushJmp(MInstruction *ins) {
   ins->setBasicBlock(this);
   jmps->push_back(unique_ptr<MInstruction>(ins));
@@ -55,43 +85,14 @@ void MBasicBlock::pushJmp(MInstruction *ins) {
     br->getTBlock()->addIncoming(this);
     break;
   }
-  case MInstruction::BEQ: {
-    auto beq = static_cast<MIbeq *>(ins);
-    outgoing->push_back(beq->getTargetBB());
-    beq->getTargetBB()->addIncoming(this);
-    break;
-  }
-  case MInstruction::BNE: {
-    auto bne = static_cast<MIbne *>(ins);
-    outgoing->push_back(bne->getTargetBB());
-    bne->getTargetBB()->addIncoming(this);
-    break;
-  }
-  case MInstruction::BGE: {
-    auto bge = static_cast<MIbge *>(ins);
-    outgoing->push_back(bge->getTargetBB());
-    bge->getTargetBB()->addIncoming(this);
-    break;
-  }
-  case MInstruction::BLT: {
-    auto blt = static_cast<MIblt *>(ins);
-    outgoing->push_back(blt->getTargetBB());
-    blt->getTargetBB()->addIncoming(this);
-    break;
-  }
-  case MInstruction::J: {
-    auto j = static_cast<MIj *>(ins);
-    outgoing->push_back(j->getTargetBB());
-    j->getTargetBB()->addIncoming(this);
-    break;
-  }
   case MInstruction::RET:
   case MInstruction::H_RET:
     break;
   default: {
-    std::cout << ins->getInsTag() << endl;
-    std::cout << *ins << endl;
-    assert(0);
+    auto target = getTargetOfJmp(ins);
+    outgoing->push_back(target);
+    target->addIncoming(this);
+    break;
   }
   }
 }
@@ -321,7 +322,7 @@ vector<MInstruction *> MBasicBlock::getAllInstructions() {
   return res;
 }
 
-vector<MInstruction*> MBasicBlock::getJmps() {
+vector<MInstruction *> MBasicBlock::getJmps() {
   vector<MInstruction *> result;
   for (auto &innerPtr : *jmps) {
     result.push_back(innerPtr.get());
@@ -525,10 +526,26 @@ vector<MBasicBlock *> MFunction::getBasicBlocks() {
   return result;
 }
 
+void MFunction::removeBasicBlock(MBasicBlock *block) {
+  for (auto it = basicBlocks->begin(); it != basicBlocks->end(); ++it) {
+    if (it->get() == block) {
+      basicBlocks->erase(it);
+      return;
+    }
+  }
+  assert(0);
+}
+
 std::ostream &operator<<(std::ostream &os, const MFunction &obj) {
   os << obj.getName() << ":" << endl;
-  for (const auto &bb : *obj.basicBlocks) {
-    os << *bb << endl;
+  if (obj.mod->if_linearized) {
+    for (const auto &bb : *obj.ordered_blocks) {
+      os << *bb << endl;
+    }
+  } else {
+    for (const auto &bb : *obj.basicBlocks) {
+      os << *bb << endl;
+    }
   }
   return os;
 }

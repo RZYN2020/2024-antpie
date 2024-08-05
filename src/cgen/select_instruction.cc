@@ -3,6 +3,7 @@
 #include "Machine.hh"
 #include "Module.hh"
 #include <algorithm>
+#include <unordered_set>
 
 ///////// Macro Defs /////////
 // capture (res)
@@ -199,6 +200,40 @@ Register *get_vreg(MModule *m, MBasicBlock *mbb, Value *v,
   }
 }
 
+void collectLiveFunctionsRecursive(ANTPIE::Module *ir, Function *func,
+                                   vector<Function *> &funcs,
+                                   std::unordered_set<Function *> &visited) {
+  if (visited.count(func) > 0) {
+    return;
+  }
+  if (ir->getexternFunctions()->count(func) > 0) {
+    return;
+  }
+  funcs.push_back(func);
+  visited.insert(func);
+  auto callees = func->getCallees();
+  for (auto callee : callees) {
+    collectLiveFunctionsRecursive(ir, callee, funcs, visited);
+  }
+}
+
+vector<Function *> collectLiveFunctions(ANTPIE::Module *ir) {
+  Function *main = nullptr;
+  auto functions = ir->getFunctions();
+  for (auto it = functions->begin(); it != functions->end(); ++it) {
+    auto func = *it;
+    if (func->getName() == "main") {
+      main = func;
+    }
+  }
+  assert(main);
+  vector<Function *> funcs;
+  unordered_set<Function *> visited;
+  collectLiveFunctionsRecursive(ir, main, funcs, visited);
+
+  return funcs;
+}
+
 void select_instruction(MModule *res, ANTPIE::Module *ir) {
   // std::cout << "select_instruction" << endl;
   // assert ir: every block begin with phi, end with j
@@ -228,17 +263,14 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
 
   // Select Functions
   // std::cout << "Select Functions" << endl;
-  auto functions = ir->getFunctions();
-  for (auto it = functions->begin(); it != functions->end(); ++it) {
-    auto func = *it;
+  auto functions = collectLiveFunctions(ir);
+  for (auto func : functions) {
     MFunction *mfunc = res->addFunction(
         static_cast<FuncType *>(func->getType()), func->getName());
     func_map->insert({func, mfunc});
   }
 
-  for (auto it = functions->begin(); it != functions->end();
-       ++it) { // Begin Func Loop
-    auto func = *it;
+  for (auto func : functions) { // Begin Func Loop
     // std::cout << "Function " << func->getName() << endl;
     MFunction *mfunc = func_map->at(func);
     auto bb_map = make_unique<map<BasicBlock *, MBasicBlock *>>();
@@ -249,8 +281,9 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
     auto basicBlocks = func->getBasicBlocks();
     for (auto it = basicBlocks->begin(); it != basicBlocks->end(); ++it) {
       auto bb = *it;
-      if (bb->isEmpty())
+      if (bb->isEmpty()) {
         continue;
+      }
       MBasicBlock *mbb =
           mfunc->addBasicBlock(func->getName() + "." + bb->getName());
       bb_map->insert({bb, mbb});
@@ -281,10 +314,11 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
       auto bb = *it;
       if (bb->isEmpty())
         continue;
-        // std::cout << "depth of " << bb->getName() << " is " << loopinfo->getDepth(bb) << endl;
+      // std::cout << "depth of " << bb->getName() << " is " <<
+      // loopinfo->getDepth(bb) << endl;
       mlf->insert({bb_map->at(bb), loopinfo->getDepth(bb)});
     }
-    mfunc->bbDepth = unique_ptr<map<MBasicBlock*, unsigned int>>(mlf);
+    mfunc->bbDepth = unique_ptr<map<MBasicBlock *, unsigned int>>(mlf);
 
     // std::cout << "    Select every Instruction " << endl;
     // Select every Instruction
@@ -522,11 +556,18 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
               } // what if v == 1? ==> optimize it in peephole optimization...
             }
 
-            Register *index = GET_VREG(gep->getRValue(i));
-            ADD_INSTR(elesz, MIli, sz);
-            ADD_INSTR(offset, MImul, index, elesz);
-            ADD_INSTR(addr, MIadd, base, offset);
-            dest = addr;
+            if (is_constant(gep->getRValue(i))) {
+              auto index =
+                  static_cast<IntegerConstant *>(gep->getRValue(i))->getValue();
+              ADD_INSTR(addr, MIaddi, base, index * sz);
+              dest = addr;
+            } else {
+              Register *index = GET_VREG(gep->getRValue(i));
+              ADD_INSTR(elesz, MIli, sz);
+              ADD_INSTR(offset, MImul, index, elesz);
+              ADD_INSTR(addr, MIadd, base, offset);
+              dest = addr;
+            }
           }
           if (dest == base) {
             ADD_INSTR(
@@ -628,7 +669,23 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
             BINARY_OP_WITH_IMM_CASE(AND, MIand, MIandi, IntegerConstant)
             BINARY_OP_WITH_IMM_CASE(OR, MIor, MIori, IntegerConstant)
             BINARY_OP_WITH_IMM_CASE(XOR, MIxor, MIxori, IntegerConstant)
-            BINARY_OP_CASE(SUB, MIsubw)
+          case SUB: {
+            int lo = -2048;
+            int hi = 2047;
+            if (is_constant(opd2)) {
+              auto imm = -static_cast<IntegerConstant *>(opd2)->getValue();
+              if (imm < hi && imm > lo) {
+                ADD_INSTR(sub, MIaddiw, GET_VREG(opd1), imm, ins->getName());
+                instr_map->insert({ins, sub});
+              }
+              break;
+            }
+            ADD_INSTR(sub, MIsubw, GET_VREG(opd1), GET_VREG(opd2),
+                      ins->getName());
+            instr_map->insert({ins, sub});
+            break;
+          }
+
             BINARY_OP_CASE(MUL, MImulw)
             BINARY_OP_CASE(SDIV, MIdivw)
             BINARY_OP_CASE(SREM, MIremw)

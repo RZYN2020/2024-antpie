@@ -20,4 +20,6 @@ add_library(
     GlobalVariableLocalize.cc
     StrengthReduction.cc
     LoadElimination.cc
+    Reassociate.cc
+    GEPSimplify.cc
 )

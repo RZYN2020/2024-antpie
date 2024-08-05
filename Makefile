@@ -110,7 +110,7 @@ single-test:
 
 PER_DIR := /home/sprooc/compiler2024/antpie/tests/compiler2024/testdata/performance/
 per-test:
-	$(BIN_DIR)/compiler -S -o tests/test.s $(PER_DIR)$(PFILE).sy
+	$(BIN_DIR)/compiler -S -o tests/test.s $(PER_DIR)$(PFILE).sy -O1
 	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
 	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
 	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < $(PER_DIR)$(PFILE).in; echo $$?

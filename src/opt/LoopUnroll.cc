@@ -35,7 +35,6 @@ bool LoopUnroll::runOnModule(ANTPIE::Module* module) {
 bool LoopUnroll::runOnFunction(Function* func) {
   bool changed = false;
   LoopInfoBase* liBase = func->getLoopInfoBase();
-  liBase->analyseSimpleLoop();
   for (LoopInfo* loopInfo : liBase->loopInfos) {
     if (loopInfo->subLoops.empty()) {
       changed |= runOnLoop(loopInfo);
@@ -64,6 +63,7 @@ bool LoopUnroll::runOnLoop(LoopInfo* loopInfo) {
 
   // Too big
   if (size > MAX_LINE) return changed;
+  if (loopInfo->blocks.size() > 2) return changed;
 
   SimpleLoopInfo* simpleLoop = loopInfo->simpleLoop;
   BranchInst* brInst = simpleLoop->brInstr;
@@ -463,15 +463,21 @@ bool LoopUnroll::canAllUnroll(LoopInfo* loopInfo) {
       !endValue->isa(VT_INTCONST)) {
     return false;
   }
-  if (strideInstr->getOpTag() != ADD) return false;
+  if (strideInstr->getOpTag() == ADD) {
+    simpleLoop->isAsc = true;
+  } else if (strideInstr->getOpTag() != SUB) {
+    simpleLoop->isAsc = false;
+  }
   simpleLoop->init = ((IntegerConstant*)initValue)->getValue();
   simpleLoop->stride = ((IntegerConstant*)stride)->getValue();
   if (simpleLoop->stride <= 0) return false;
   OpTag op = ((IcmpInst*)condInstr)->getOpTag();
-  if (op == SLT) {
+  if (op == SLT || op == SGT || op == NE) {
     simpleLoop->end = ((IntegerConstant*)endValue)->getValue();
   } else if (op == SLE) {
     simpleLoop->end = ((IntegerConstant*)endValue)->getValue() + 1;
+  } else if (op == SGE) {
+    simpleLoop->end = ((IntegerConstant*)endValue)->getValue() - 1;
   } else {
     return false;
   }

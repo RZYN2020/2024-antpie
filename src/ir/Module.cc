@@ -5,6 +5,7 @@
 #include "ConstantFolding.hh"
 #include "DeadCodeElimination.hh"
 #include "FunctionPropAnalysis.hh"
+#include "GEPSimplify.hh"
 #include "GlobalCodeMotion.h"
 #include "GlobalValueNumbering.hh"
 #include "GlobalVariableLocalize.hh"
@@ -16,6 +17,7 @@
 #include "LoopUnroll.hh"
 #include "MemToReg.hh"
 #include "MergeBlock.hh"
+#include "Reassociate.hh"
 #include "StrengthReduction.hh"
 #include "TailRecursionElimination.hh"
 
@@ -294,6 +296,8 @@ void Module::irOptimize() {
   optimizations.pushBack(new LoopInvariantCodeMotion());
   optimizations.pushBack(new LoopUnroll());
   optimizations.pushBack(new DeadCodeElimination());
+  optimizations.pushBack(new MergeBlock());
+  optimizations.pushBack(new Reassociate());
   // GVM and GCM need DCE
   optimizations.pushBack(new GlobalValueNumbering());
   optimizations.pushBack(new GlobalCodeMotion());
@@ -303,6 +307,7 @@ void Module::irOptimize() {
   optimizations.pushBack(new LoopAnalysis());
   optimizations.pushBack(new LoopSimplify(false));
   optimizations.pushBack(new LoopInvariantCodeMotion());
+  optimizations.pushBack(new GEPSimplify());
   optimizations.pushBack(new TailRecursionElimination());
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new DeadCodeElimination());

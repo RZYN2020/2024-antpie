@@ -399,6 +399,21 @@ static void allocate(MFunction *func, map<Register *, Register *> *allocation,
 /////////   Main Entry
 ///////////////////////////////////////
 ///////////////////////////////////////
+// #include <iomanip>
+// void print_stack_layout(int callee_saved_sz, int spilled_sz, int alloca_sz) {
+//   std::cout << std::left << std::setw(20) << "Stack Layout:" << std::endl;
+//   std::cout << std::left << std::setw(20) << "16 bytes:"
+//             << "ra, sp" << std::endl;
+//   std::cout << std::left << std::setw(20)
+//             << std::to_string(callee_saved_sz) + " bytes:"
+//             << "callee saved registers" << std::endl;
+//   std::cout << std::left << std::setw(20)
+//             << std::to_string(spilled_sz) + " bytes:"
+//             << "spilled registers" << std::endl;
+//   std::cout << std::left << std::setw(20)
+//             << std::to_string(alloca_sz) + " bytes:"
+//             << "allocated memory" << std::endl;
+// }
 
 // Register Allocation on SSA Form
 void allocate_register(MModule *mod) {
@@ -431,6 +446,7 @@ void allocate_register(MModule *mod) {
     auto spill = make_unique<map<Register *, int>>();
     spill_registers(offset, spill.get(), liveness_ireg.get(),
                     liveness_freg.get(), reg_cost.get());
+    int spilled_sz = offset - 16; // debug
 
     // // step3. Allocate
     auto allocation = make_unique<map<Register *, Register *>>();
@@ -467,17 +483,31 @@ void allocate_register(MModule *mod) {
 
     // std::cout << "Spill to Memory:" << endl;
     // for (auto &[reg, offset] : *spill) {
-    //   std::cout << "  " << reg->getName() << " -> " << -offset << endl;
+    //   auto size = 4;
+    //   if (reg->getTag() == Register::V_FREGISTER ||
+    //       reg->getTag() == Register::V_IREGISTER) {
+    //     if (static_cast<VRegister *>(reg)->isPointer()) {
+    //       size = 8;
+    //     }
+    //   }
+    //   std::cout << "  " << reg->getName() << "(" << size << " bytes) -> "
+    //             << -offset << endl;
     // }
     // std::cout << endl;
 
     // step4. Rewrite program
     out_of_ssa(func, liveness_ireg.get(), liveness_freg.get(),
                allocation.get());
-    // std::cout << "endl" << endl;
+
+    // int offset_before_alloca = offset; // debug
+    lower_alloca(func, offset);
+
+    // int alloca_sz = offset - offset_before_alloca; // debug
+
+    // print_stack_layout(callee_saved_sz, spilled_sz, alloca_sz);
+
     lower_call(func, offset, allocation.get(), spill.get(), liveness_ireg.get(),
                liveness_freg.get());
-    lower_alloca(func, offset);
     add_prelude(func, allocation.get(), spill.get(), offset, &callee_saved);
     add_conclude(func, allocation.get(), spill.get(), offset, &callee_saved);
     rewrite_program_allocate(func, allocation.get());
