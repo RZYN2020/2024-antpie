@@ -311,7 +311,7 @@ void Module::irOptimize() {
   optimizations.pushBack(new GEPSimplify());
   optimizations.pushBack(new TailRecursionElimination());
   optimizations.pushBack(new MergeBlock());
-  // optimizations.pushBack(new CFGSimplify());
+  optimizations.pushBack(new CFGSimplify());
   optimizations.pushBack(new DeadCodeElimination());
 
   // run all pass

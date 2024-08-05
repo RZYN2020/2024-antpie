@@ -5,7 +5,19 @@ bool DeadCodeElimination::runOnModule(ANTPIE::Module* module) {
   for (Function* function : *module->getFunctions()) {
     changed |= runOnFunction(function);
   }
-  return changed;
+
+  // remove unuse global variable
+  auto gvList = module->getGlobalVariables();
+  vector<GlobalVariable*> trashList;
+  for (GlobalVariable* gv : *gvList) {
+    if (gv->getUseHead() == nullptr) {
+      trashList.push_back(gv);
+    }
+  }
+  for (GlobalVariable* gv : trashList) {
+    gvList->remove(gv);
+  }
+  return changed || !gvList->isEmpty();
 }
 
 bool DeadCodeElimination::runOnFunction(Function* func) {
