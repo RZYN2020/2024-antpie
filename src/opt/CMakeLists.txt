@@ -22,4 +22,5 @@ add_library(
     LoadElimination.cc
     Reassociate.cc
     GEPSimplify.cc
+    CFGSimplify.cc
 )

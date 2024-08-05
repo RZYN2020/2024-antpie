@@ -1,6 +1,7 @@
 #include "Module.hh"
 
 #include "AliasAnalysis.hh"
+#include "CFGSimplify.hh"
 #include "CommonSubexpElimination.hh"
 #include "ConstantFolding.hh"
 #include "DeadCodeElimination.hh"
@@ -310,6 +311,7 @@ void Module::irOptimize() {
   optimizations.pushBack(new GEPSimplify());
   optimizations.pushBack(new TailRecursionElimination());
   optimizations.pushBack(new MergeBlock());
+  // optimizations.pushBack(new CFGSimplify());
   optimizations.pushBack(new DeadCodeElimination());
 
   // run all pass
