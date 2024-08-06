@@ -10,13 +10,16 @@ bool StoreElimination::runOnModule(ANTPIE::Module* module) {
 
 bool StoreElimination::runOnFunction(Function* func) {
   bool changed = false;
+  AliasAnalysisResult* aaResult = func->getAliasAnalysisResult();
+  assert(aaResult);
   for (BasicBlock* block : *func->getBasicBlocks()) {
-    changed |= runOnBasicBlock(block);
+    changed |= runOnBasicBlock(block, aaResult);
   }
   return changed;
 }
 
-bool StoreElimination::runOnBasicBlock(BasicBlock* block) {
+bool StoreElimination::runOnBasicBlock(BasicBlock* block,
+                                       AliasAnalysisResult* aaResult) {
   unordered_map<Value*, Instruction*> memToStore;
   unordered_set<Instruction*> trashStores;
   for (Instruction* instr : *block->getInstructions()) {
@@ -34,7 +37,15 @@ bool StoreElimination::runOnBasicBlock(BasicBlock* block) {
       }
       case VT_LOAD: {
         Value* mem = instr->getRValue(0);
-        memToStore.erase(mem);
+        unordered_set<Value*> eraseSet;
+        for (auto& [preMem, preStore] : memToStore) {
+          if (!aaResult->isDistinct(preMem, mem)) {
+            eraseSet.insert(preMem);
+          }
+        }
+        for (auto& eraseMem : eraseSet) {
+          memToStore.erase(eraseMem);
+        }
         break;
       }
       case VT_CALL: {
