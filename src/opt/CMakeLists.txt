@@ -23,4 +23,5 @@ add_library(
     Reassociate.cc
     GEPSimplify.cc
     CFGSimplify.cc
+    StoreElimination.cc
 )

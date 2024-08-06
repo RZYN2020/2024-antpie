@@ -19,6 +19,7 @@
 #include "MemToReg.hh"
 #include "MergeBlock.hh"
 #include "Reassociate.hh"
+#include "StoreElimination.hh"
 #include "StrengthReduction.hh"
 #include "TailRecursionElimination.hh"
 
@@ -305,14 +306,17 @@ void Module::irOptimize() {
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new AliasAnalysis());
   optimizations.pushBack(new LoadElimination());
+  optimizations.pushBack(new Reassociate());
   optimizations.pushBack(new LoopAnalysis());
   optimizations.pushBack(new LoopSimplify(false));
   optimizations.pushBack(new LoopInvariantCodeMotion());
-  optimizations.pushBack(new Reassociate());
+
   optimizations.pushBack(new GEPSimplify());
   optimizations.pushBack(new TailRecursionElimination());
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new CFGSimplify());
+  optimizations.pushBack(new StoreElimination());
+  optimizations.pushBack(new GlobalCodeMotion());
   optimizations.pushBack(new DeadCodeElimination());
 
   // run all pass

@@ -67,7 +67,7 @@ bool Reassociate::runOnBasicBlock(BasicBlock* block) {
                     return true;
                   if (rhs->isa(VT_INTCONST) && !lhs->isa(VT_INTCONST))
                     return false;
-                  return lhs < rhs;
+                  return lhs > rhs;
                 });
       int constValue = 0;
       int initValue = 0;
@@ -100,6 +100,11 @@ bool Reassociate::runOnBasicBlock(BasicBlock* block) {
           }
         } else {
           if (!varInstr) {
+            if (constValue != initValue) {
+              varInstr = IntegerConstant::getConstInt(constValue);
+            }
+          }
+          if (!varInstr) {
             varInstr = arg;
           } else {
             switch (op) {
@@ -125,36 +130,10 @@ bool Reassociate::runOnBasicBlock(BasicBlock* block) {
           }
         }
       }
-      Value* constArg = IntegerConstant::getConstInt(constValue);
-
-      if (constArg && varInstr) {
-        switch (op) {
-          case ADD:
-            varInstr = new BinaryOpInst(ADD, varInstr, constArg, "re.add");
-            block->pushInstrBefore((Instruction*)varInstr, it);
-            break;
-          case MUL:
-            varInstr = new BinaryOpInst(MUL, varInstr, constArg, "re.mul");
-            block->pushInstrBefore((Instruction*)varInstr, it);
-            break;
-          case AND:
-            varInstr = new BinaryOpInst(AND, varInstr, constArg, "re.mul");
-            block->pushInstrBefore((Instruction*)varInstr, it);
-            break;
-          case OR:
-            varInstr = new BinaryOpInst(OR, varInstr, constArg, "re.mul");
-            block->pushInstrBefore((Instruction*)varInstr, it);
-            break;
-          default:
-            break;
-        }
-        instr->replaceAllUsesWith(varInstr);
-      } else if (!varInstr) {
-        instr->replaceAllUsesWith(constArg);
-      } else {
-        assert(varInstr);
-        instr->replaceAllUsesWith(varInstr);
+      if (!varInstr) {
+        varInstr = IntegerConstant::getConstInt(constValue);
       }
+      instr->replaceAllUsesWith(varInstr);
     }
   }
   return changed;
