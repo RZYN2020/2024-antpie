@@ -67,7 +67,7 @@ bool Reassociate::runOnBasicBlock(BasicBlock* block) {
                     return true;
                   if (rhs->isa(VT_INTCONST) && !lhs->isa(VT_INTCONST))
                     return false;
-                  return lhs > rhs;
+                  return lhs < rhs;
                 });
       int constValue = 0;
       int initValue = 0;

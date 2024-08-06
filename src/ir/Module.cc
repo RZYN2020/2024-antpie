@@ -317,7 +317,7 @@ void Module::irOptimize() {
   optimizations.pushBack(new CFGSimplify());
   optimizations.pushBack(new StoreElimination());
   optimizations.pushBack(new DeadCodeElimination());
-  optimizations.pushBack(new GlobalCodeMotion());
+  // optimizations.pushBack(new GlobalCodeMotion());
 
   // run all pass
   for (auto& pass : optimizations) {
