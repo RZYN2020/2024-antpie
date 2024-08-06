@@ -1071,14 +1071,12 @@ void MySysYParserVisitor::init_extern_function() {
   funcType = Type::getFuncType(i32Type, getarrayArgs);
   function = new Function(funcType, true, "getarray");
   externFunctions.push_back(function);
-  function->setMemWrite(true);
 
   // int getfarray(int[])
   vector<Argument*> getfarrayArgs = {new Argument("arr", floatPtrType)};
   funcType = Type::getFuncType(i32Type, getfarrayArgs);
   function = new Function(funcType, true, "getfarray");
   externFunctions.push_back(function);
-  function->setMemWrite(true);
 
   // void putint(int)
   vector<Argument*> putintArgs = {new Argument("i", i32Type)};
@@ -1104,7 +1102,6 @@ void MySysYParserVisitor::init_extern_function() {
   funcType = Type::getFuncType(voidType, putarrayArgs);
   function = new Function(funcType, true, "putarray");
   externFunctions.push_back(function);
-  function->setMemRead(true);
 
   // void putfarray(int,float[])
   vector<Argument*> putfarrayArgs = {new Argument("n", i32Type),
@@ -1112,7 +1109,6 @@ void MySysYParserVisitor::init_extern_function() {
   funcType = Type::getFuncType(voidType, putfarrayArgs);
   function = new Function(funcType, true, "putfarray");
   externFunctions.push_back(function);
-  function->setMemRead(true);
 
   // void putf(<format>, int, …)putf ??
 

@@ -75,14 +75,6 @@ string CommonSubexpElimination::hashToString(Instruction* instr) {
       rhs = instr->getRValue(2);
     }
     opName = "gep" + instr->getRValue(0)->toString();
-  } else if (instr->isa(VT_CALL)) {
-    CallInst* callInstr = dynamic_cast<CallInst*>(instr);
-    string hashStr = "call " + callInstr->getFunction()->getName();
-    int argSize = callInstr->getRValueSize();
-    for (int i = 0; i < argSize; i++) {
-      hashStr += callInstr->getRValue(i)->toString();
-    }
-    return hashStr;
   }
 
   if (!rhs) {
@@ -109,11 +101,8 @@ bool CommonSubexpElimination::runOnFunction(Function* func) {
   return cseDfs(func->getEntry());
 }
 
+// TODO: Call
 bool CommonSubexpElimination::isSimpleExpr(Instruction* instr) {
-  if (CallInst* callInstr = dynamic_cast<CallInst*>(instr)) {
-    Function* callee = callInstr->getFunction();
-    return callee->isPureFunction();
-  }
   return instr->isa(VT_ICMP) || instr->isa(VT_FCMP) || instr->isa(VT_BOP) ||
          instr->isa(VT_FPTOSI) || instr->isa(VT_SITOFP) ||
          instr->isa(VT_ZEXT) || instr->isa(VT_GEP);
