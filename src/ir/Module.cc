@@ -308,6 +308,7 @@ void Module::irOptimize() {
   optimizations.pushBack(new LoopAnalysis());
   optimizations.pushBack(new LoopSimplify(false));
   optimizations.pushBack(new LoopInvariantCodeMotion());
+  optimizations.pushBack(new Reassociate());
   optimizations.pushBack(new GEPSimplify());
   optimizations.pushBack(new TailRecursionElimination());
   optimizations.pushBack(new MergeBlock());
@@ -316,8 +317,9 @@ void Module::irOptimize() {
 
   // run all pass
   for (auto& pass : optimizations) {
+    // if (dynamic_cast<Reassociate*>(pass)) printIR(std::cout);
+
     pass->runOnModule(this);
-    // if (dynamic_cast<LoopUnroll*>(pass)) printIR(std::cout);
   }
 
   for (Function* func : functions) {
