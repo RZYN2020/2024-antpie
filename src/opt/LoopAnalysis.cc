@@ -1,3 +1,15 @@
+// This file includes code inspired by the LLVM Project's loop analysis implementation.
+// LLVM Project: https://llvm.org
+// GitHub Repository: https://github.com/llvm/llvm-project
+// 
+// The original code is licensed under the Apache License v2.0 with LLVM Exceptions.
+// See the LICENSE.txt file in the LLVM repository for details.
+// 
+// Modifications and extensions have been made to integrate and adapt the implementation for our project's needs.
+// 
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+// Original Copyright 2023 LLVM Project
+
 #include "LoopAnalysis.hh"
 
 bool LoopAnalysis::runOnModule(ANTPIE::Module* module) {

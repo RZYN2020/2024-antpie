@@ -1,3 +1,5 @@
+// Reference: https://oi-wiki.org/graph/dominator-tree
+
 #include "DomTree.hh"
 
 #include "Function.hh"

@@ -1,3 +1,5 @@
+ // Reference: Global code motion/global value numbering
+ //          （https://doi.org/10.1145/223428.207154）
 #include "GlobalCodeMotion.h"
 
 bool GlobalCodeMotion::runOnModule(ANTPIE::Module* module) {

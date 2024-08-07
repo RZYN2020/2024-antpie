@@ -1,3 +1,12 @@
+// This section of code is inspired by an outstanding project from last year's competition.
+// Project name: CMMC
+// Project link: https://gitlab.eduxiji.net/educg-group-17291-1894922/202314325201374-1031/-/blob/riscv/src/cmmc/Analysis/AliasAnalysis.cpp
+// Copyright 2023 CMMC Authors
+//
+// We have modified and extended the original implementation to suit our project's requirements.
+// For the original license details, please refer to http://www.apache.org/licenses/LICENSE-2.0.
+// All modifications are made in compliance with the terms of the Apache License, Version 2.0.
+
 #include "AliasAnalysis.hh"
 
 #include "AliasAnalysisResult.hh"
