@@ -284,6 +284,7 @@ void Module::irOptimize() {
   optimizations.pushBack(new MemToReg());
   optimizations.pushBack(new FunctionPropAnalysis());
   optimizations.pushBack(new LruCache());
+  optimizations.pushBack(new FunctionPropAnalysis());
   optimizations.pushBack(new Inlining());
   optimizations.pushBack(new FunctionPropAnalysis());
   optimizations.pushBack(new GlobalVariableLocalize());
