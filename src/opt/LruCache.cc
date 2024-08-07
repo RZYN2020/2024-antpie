@@ -54,7 +54,7 @@ bool LruCache::runOnModule(ANTPIE::Module* module) {
 
 bool LruCache::runOnFunction(Function* func) {
   if (func->isCacheFunction()) return false;
-  if (!func->isPureFunction()) return false;
+  if (!func->isPureFunction() || !func->isRecursive()) return false;
   FuncType* funcType = (FuncType*)func->getType();
   if (funcType->getArgSize() != 2) return false;
   Argument* args[2] = {funcType->getArgument(0), funcType->getArgument(1)};
