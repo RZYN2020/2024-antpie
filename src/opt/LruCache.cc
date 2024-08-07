@@ -1,5 +1,5 @@
 #include "LruCache.hh"
-#define CACHE_SIZE 1024
+#define CACHE_SIZE (1 << 16)
 
 bool LruCache::runOnModule(ANTPIE::Module* module) {
   bool changed = false;
@@ -79,8 +79,7 @@ bool LruCache::runOnFunction(Function* func) {
   } else {
     arrayConst->put(0, FloatConstant::getConstFloat(1));
   }
-  auto xArray =
-      module->addGlobalVariable(arrayTypex, arrayConst, func->getName() + ".x");
+  auto xArray = module->addGlobalVariable(arrayTypex, func->getName() + ".x");
   auto yArray = module->addGlobalVariable(
       new ArrayType(CACHE_SIZE, args[1]->getType()), func->getName() + ".y");
   auto vArray = module->addGlobalVariable(
