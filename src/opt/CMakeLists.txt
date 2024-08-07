@@ -24,4 +24,5 @@ add_library(
     GEPSimplify.cc
     CFGSimplify.cc
     StoreElimination.cc
+    LruCache.cc
 )

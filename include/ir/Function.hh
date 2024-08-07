@@ -20,6 +20,7 @@ class Module;
 
 class Function : public GlobalValue {
  private:
+  bool isCache = false;
   bool external = 0;
   // Basic structure
   LinkedList<BasicBlock*> basicBlocks;
@@ -111,5 +112,8 @@ class Function : public GlobalValue {
   // Loop Analysis
   LoopInfoBase* getLoopInfoBase() { return loopInfoBase; }
   void setLoopInfoBase(LoopInfoBase* LI) { loopInfoBase = LI; }
+
+  bool isCacheFunction() { return isCache; }
+  void setCacheFunction(bool c) { isCache = c; }
 };
 #endif

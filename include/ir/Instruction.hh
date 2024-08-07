@@ -121,6 +121,7 @@ class CallInst : public Instruction {
   void pushArgument(Value* value);
   void printIR(ostream& stream) const override;
   Function* getFunction() const { return function; }
+  void setFunction(Function* func) { function = func; }
   Instruction* clone() override;
 };
 

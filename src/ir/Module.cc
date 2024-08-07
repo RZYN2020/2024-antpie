@@ -16,6 +16,7 @@
 #include "LoopInvariantCodeMotion.hh"
 #include "LoopSimplify.hh"
 #include "LoopUnroll.hh"
+#include "LruCache.hh"
 #include "MemToReg.hh"
 #include "MergeBlock.hh"
 #include "Reassociate.hh"
@@ -280,9 +281,9 @@ void Module::buildCFG() {
 void Module::irOptimize() {
   LinkedList<Optimization*> optimizations;
   optimizations.pushBack(new DeadCodeElimination());
-  optimizations.pushBack(new FunctionPropAnalysis());
-
   optimizations.pushBack(new MemToReg());
+  optimizations.pushBack(new FunctionPropAnalysis());
+  optimizations.pushBack(new LruCache());
   optimizations.pushBack(new Inlining());
   optimizations.pushBack(new FunctionPropAnalysis());
   optimizations.pushBack(new GlobalVariableLocalize());

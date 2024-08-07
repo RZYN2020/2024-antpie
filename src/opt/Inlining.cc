@@ -47,7 +47,7 @@ bool Inlining::runOnFunction(Function* func) {
         if (!userInst->isa(VT_PHI)) continue;
         changedUsers.push_back(use);
       }
-      for (Use* use: changedUsers) {
+      for (Use* use : changedUsers) {
         use->replaceValue(splitBlock);
       }
 

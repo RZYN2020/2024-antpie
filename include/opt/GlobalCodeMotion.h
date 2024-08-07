@@ -1,7 +1,5 @@
 /**
  * Global Code Motion
- * Reference: Global code motion/global value numbering
- *            （https://doi.org/10.1145/223428.207154）
  */
 #ifndef _GLOBAL_CODE_MOTION_H_
 #define _GLOBAL_CODE_MOTION_H_
