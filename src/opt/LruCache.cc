@@ -58,27 +58,34 @@ bool LruCache::runOnFunction(Function* func) {
   FuncType* funcType = (FuncType*)func->getType();
   if (funcType->getArgSize() != 2) return false;
   Argument* args[2] = {funcType->getArgument(0), funcType->getArgument(1)};
-  if (!args[0]->isInteger() || !args[1]->isInteger() ||
-      funcType->getRetType()->getTypeTag() != TT_INT32)
+  if ((!args[0]->isInteger() && !args[0]->isFloat()) ||
+      (!args[1]->isInteger() && !args[1]->isFloat()))
     return false;
-  vector<Argument*> cacheArgs = {new Argument("x", Type::getInt32Type()),
-                                 new Argument("y", Type::getInt32Type())};
+  vector<Argument*> cacheArgs = {new Argument("x", args[0]->getType()),
+                                 new Argument("y", args[1]->getType())};
 
   // build cache function
-  funcType = FuncType::getFuncType(Type::getInt32Type(), cacheArgs);
+  funcType = FuncType::getFuncType(funcType->getRetType(), cacheArgs);
   auto module = func->getParent();
   Function* cacheFunc =
       module->addFunction(funcType, func->getName() + "_cache");
 
   // build cache array
 
-  ArrayType* arrayType = new ArrayType(CACHE_SIZE, Type::getInt32Type());
-  ArrayConstant* arrayConst = ArrayConstant::getConstArray(arrayType);
-  arrayConst->put(0, IntegerConstant::getConstInt(1));
+  ArrayType* arrayTypex = new ArrayType(CACHE_SIZE, args[0]->getType());
+  ArrayConstant* arrayConst = ArrayConstant::getConstArray(arrayTypex);
+  if (args[0]->isInteger()) {
+    arrayConst->put(0, IntegerConstant::getConstInt(1));
+  } else {
+    arrayConst->put(0, FloatConstant::getConstFloat(1));
+  }
   auto xArray =
-      module->addGlobalVariable(arrayType, arrayConst, func->getName() + ".x");
-  auto yArray = module->addGlobalVariable(arrayType, func->getName() + ".y");
-  auto vArray = module->addGlobalVariable(arrayType, func->getName() + ".v");
+      module->addGlobalVariable(arrayTypex, arrayConst, func->getName() + ".x");
+  auto yArray = module->addGlobalVariable(
+      new ArrayType(CACHE_SIZE, args[1]->getType()), func->getName() + ".y");
+  auto vArray = module->addGlobalVariable(
+      new ArrayType(CACHE_SIZE, funcType->getRetType()),
+      func->getName() + ".v");
 
   // build basicblocks
   BasicBlock* entryBlock = new BasicBlock("entry");
@@ -87,13 +94,28 @@ bool LruCache::runOnFunction(Function* func) {
   BasicBlock* ifEndBlock = new BasicBlock("if.end");
 
   // build instruction in entry
-  auto addBop = new BinaryOpInst(ADD, cacheArgs[0], cacheArgs[1], "add");
+  Value* lhs = cacheArgs[0];
+  Value* rhs = cacheArgs[1];
+  if (lhs->isFloat()) {
+    lhs = new FptosiInst(lhs, "f2i");
+    entryBlock->pushInstr((Instruction*)lhs);
+  }
+  if (rhs->isFloat()) {
+    rhs = new FptosiInst(rhs, "f2i");
+    entryBlock->pushInstr((Instruction*)rhs);
+  }
+  auto addBop = new BinaryOpInst(ADD, lhs, rhs, "add");
   auto andBop = new BinaryOpInst(
       AND, addBop, IntegerConstant::getConstInt(CACHE_SIZE - 1), "and");
   auto arrayidx = new GetElemPtrInst(xArray, IntegerConstant::getConstInt(0),
                                      andBop, "arrayidx");
   auto loadx = new LoadInst(arrayidx, "loadx");
-  auto cmp = new IcmpInst(EQ, loadx, cacheArgs[0], "cmp");
+  Instruction* cmp = nullptr;
+  if (loadx->isInteger()) {
+    cmp = new IcmpInst(EQ, loadx, cacheArgs[0], "cmp");
+  } else {
+    cmp = new FcmpInst(OEQ, loadx, cacheArgs[0], "cmp");
+  }
   auto entryBr = new BranchInst(cmp, lhsTrueBlock, ifEndBlock);
 
   entryBlock->pushInstr(addBop);
@@ -109,7 +131,12 @@ bool LruCache::runOnFunction(Function* func) {
   auto arrayidx2 = new GetElemPtrInst(yArray, IntegerConstant::getConstInt(0),
                                       andBop, "arrayidx");
   auto loady = new LoadInst(arrayidx2, "loady");
-  auto cmp3 = new IcmpInst(EQ, loady, cacheArgs[1], "cmp");
+  Instruction* cmp3 = nullptr;
+  if (loady->isInteger()) {
+    cmp3 = new IcmpInst(EQ, loady, cacheArgs[1], "cmp");
+  } else {
+    cmp3 = new FcmpInst(OEQ, loady, cacheArgs[1], "cmp");
+  }
   auto ltBr = new BranchInst(cmp3, ifThenBlock, ifEndBlock);
 
   Function* putint = 0;
@@ -168,7 +195,7 @@ bool LruCache::runOnFunction(Function* func) {
                                        andBop, "arrayidx");
   auto storev = new StoreInst(call, arrayidx12);
   auto ret = new ReturnInst(call);
-  
+
   ifEndBlock->pushInstr(call);
   ifEndBlock->pushInstr(storex);
   ifEndBlock->pushInstr(arrayidx9);
