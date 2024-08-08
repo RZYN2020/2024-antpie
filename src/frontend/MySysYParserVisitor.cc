@@ -958,6 +958,7 @@ void MySysYParserVisitor::setArrayInitVal(Value* arr,
     return;
   }
   // local array
+  module.pushExternFunction(memsetFunc);
   Value* addr = arr;
   std::function<void(ArrayConstant*)> arrayInitDfs =
       [&](ArrayConstant* arrayConst) {
@@ -1049,7 +1050,6 @@ void MySysYParserVisitor::init_extern_function() {
   function = new Function(funcType, true, "memset");
   externFunctions.push_back(function);
   memsetFunc = function;
-  module.pushExternFunction(memsetFunc);
 
   // int getint()
   funcType = Type::getFuncType(i32Type);

@@ -324,6 +324,7 @@ void Module::irOptimize() {
 
   optimizations.pushBack(new InductionVariableSimplify());
   optimizations.pushBack(new StoreElimination());
+  optimizations.pushBack(new StrengthReduction());
   optimizations.pushBack(new CFGSimplify());
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new DeadCodeElimination());

@@ -94,7 +94,7 @@ public:
     // FMAX_S,
     // FNMADD_S,
     // FNMSUB_S,
-    // FMV_S_X,
+    FMV_S_X,
     // FMV_X_S,
     //// Load and Store
     FLW,
@@ -364,6 +364,8 @@ DEFINE_MI_BIN_CLASS(fadd_s);
 DEFINE_MI_BIN_CLASS(fsub_s);
 DEFINE_MI_BIN_CLASS(fmul_s);
 DEFINE_MI_BIN_CLASS(fdiv_s);
+
+DEFINE_MIN_UNA_CLASS(fmvs_x);
 
 DEFINE_MIN_UNA_CLASS(fcvts_w);
 DEFINE_MIN_UNA_CLASS(fcvtw_s);

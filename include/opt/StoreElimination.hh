@@ -9,6 +9,7 @@
 class StoreElimination : public Optimization {
  private:
   bool runOnBasicBlock(BasicBlock* block, AliasAnalysisResult* aaResult);
+  bool eliminationLocalArray(Function* func);
 
  public:
   StoreElimination() {}

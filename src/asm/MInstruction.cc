@@ -675,6 +675,8 @@ IMPLEMENT_MI_BIN_CLASS(fsub_s, FSUB_S, V_FREGISTER, fsub.s, false)
 IMPLEMENT_MI_BIN_CLASS(fmul_s, FMUL_S, V_FREGISTER, fmul.s, false)
 IMPLEMENT_MI_BIN_CLASS(fdiv_s, FDIV_S, V_FREGISTER, fdiv.s, false)
 
+IMPLEMENT_MI_UNA_CLASS(fmvs_x, FMV_S_X, V_FREGISTER, fmv.s.x, false)
+
 IMPLEMENT_MI_UNA_CLASS(fcvts_w, FCVTS_W, V_FREGISTER, fcvt.s.w, false)
 // IMPLEMENT_MI_UNA_CLASS(fcvtw_s, FCVTW_S, V_IREGISTER, fcvt.w.s, false)
 
