@@ -1,6 +1,7 @@
+#include <unordered_set>
+
 #include "allocate_register.hh"
 #include "cgen.hh"
-#include <unordered_set>
 using std::unordered_set;
 
 bool is_store(MInstruction *ins) {
@@ -10,20 +11,20 @@ bool is_store(MInstruction *ins) {
 }
 int get_store_imm(MInstruction *store) {
   switch (store->getInsTag()) {
-  case MInstruction::SW: {
-    auto sw = static_cast<MIsw *>(store);
-    return sw->imm;
-  }
-  case MInstruction::SD: {
-    auto sd = static_cast<MIsd *>(store);
-    return sd->imm;
-  }
-  case MInstruction::FSW: {
-    auto fsw = static_cast<MIfsw *>(store);
-    return fsw->imm;
-  }
-  default:
-    assert(0);
+    case MInstruction::SW: {
+      auto sw = static_cast<MIsw *>(store);
+      return sw->imm;
+    }
+    case MInstruction::SD: {
+      auto sd = static_cast<MIsd *>(store);
+      return sd->imm;
+    }
+    case MInstruction::FSW: {
+      auto fsw = static_cast<MIfsw *>(store);
+      return fsw->imm;
+    }
+    default:
+      assert(0);
   }
 }
 bool is_load(MInstruction *ins) {
@@ -33,32 +34,32 @@ bool is_load(MInstruction *ins) {
 }
 int get_load_imm(MInstruction *load) {
   switch (load->getInsTag()) {
-  case MInstruction::LW: {
-    auto lw = static_cast<MIlw *>(load);
-    return lw->imm;
-  }
-  case MInstruction::LD: {
-    auto ld = static_cast<MIld *>(load);
-    return ld->imm;
-  }
-  case MInstruction::FLW: {
-    auto lfw = static_cast<MIflw *>(load);
-    return lfw->imm;
-  }
-  default:
-    assert(0);
+    case MInstruction::LW: {
+      auto lw = static_cast<MIlw *>(load);
+      return lw->imm;
+    }
+    case MInstruction::LD: {
+      auto ld = static_cast<MIld *>(load);
+      return ld->imm;
+    }
+    case MInstruction::FLW: {
+      auto lfw = static_cast<MIflw *>(load);
+      return lfw->imm;
+    }
+    default:
+      assert(0);
   }
 }
 
 void scan_store_loads(MBasicBlock *bb, vector<vector<MInstruction *>> &ldsts) {
   int stk_off = 0;
 
-  unordered_map<Register *, bool> hold_val; // if reg also hold the value?
+  unordered_map<Register *, bool> hold_val;  // if reg also hold the value?
   unordered_map<Register *, int> reg_addr;
   unordered_map<int, Register *> addr_reg;
   // invarient: addr always holds the value
   map<Register *, vector<MInstruction *>>
-      tldsts; // a list of load/stores which its value never changes
+      tldsts;  // a list of load/stores which its value never changes
 
   for (auto ins : bb->getInstructions()) {
     if (ins->getInsTag() == MInstruction::ADDI &&
@@ -67,7 +68,7 @@ void scan_store_loads(MBasicBlock *bb, vector<vector<MInstruction *>> &ldsts) {
       stk_off += imm;
       continue;
     }
-    if (stk_off == 0) { // not in call sequence
+    if (stk_off == 0) {  // not in call sequence
 
       if (is_store(ins) && ins->getReg(1) == Register::reg_sp) {
         int off = get_store_imm(ins);
@@ -78,14 +79,14 @@ void scan_store_loads(MBasicBlock *bb, vector<vector<MInstruction *>> &ldsts) {
         int addr = stk_off + off;
 
         if (reg_addr.count(reg) > 0) {
-            ldsts.push_back(tldsts[reg]);
-            tldsts[reg].clear();
-            addr_reg.erase(reg_addr[reg]);
-            reg_addr.erase(reg);
+          ldsts.push_back(tldsts[reg]);
+          tldsts[reg].clear();
+          addr_reg.erase(reg_addr[reg]);
+          reg_addr.erase(reg);
         }
         if (addr_reg.count(addr) > 0) {
           if (addr_reg[addr] == reg) {
-            if (hold_val[reg]) { // find a redudent store
+            if (hold_val[reg]) {  // find a redudent store
               // std::cout << endl << " Redudent store: " << *ins << endl;
               tldsts[reg].push_back(ins);
               // std::cout <<reg->getName() << " :"  << tldsts[reg].size() <<
@@ -104,7 +105,7 @@ void scan_store_loads(MBasicBlock *bb, vector<vector<MInstruction *>> &ldsts) {
           // std::cout << reg_addr.count(reg) << endl;
 
           tldsts[reg].push_back(ins);
-          hold_val[reg] = false; // only load will be condsidered hold value
+          hold_val[reg] = false;  // only load will be condsidered hold value
           reg_addr[reg] = addr;
           addr_reg[addr] = reg;
           // std::cout <<reg->getName() << " :"  << tldsts[reg].size() << endl;
@@ -154,9 +155,9 @@ void scan_store_loads(MBasicBlock *bb, vector<vector<MInstruction *>> &ldsts) {
 
     auto iuses = getUses<Register::I_REGISTER>(ins);
     for (auto reg : iuses) {
-      if (reg_addr.count(reg) > 0) { // the reg is in stack
-        if (hold_val[reg]) { // the value was used, then the last load can not
-                             // be deleted
+      if (reg_addr.count(reg) > 0) {  // the reg is in stack
+        if (hold_val[reg]) {  // the value was used, then the last load can not
+                              // be deleted
           // std::cout << endl << " Invalidate: " << *ins << endl;
           ldsts.push_back(tldsts[reg]);
           tldsts[reg].clear();
@@ -250,6 +251,39 @@ void peephole_optimize(MModule *mod) {
             ins->replaceWith({});
             i++;
             // std::cout << "match " << " mv a0, a0" << endl;
+            continue;
+          }
+        }
+
+        // addi a1, a0, 0 # addi arr.addr.3, arr.addr.2, 0
+        // addi a0, a1, 0 # a
+        i += 1;
+      }
+    }
+  }
+
+  for (auto func : mod->getFunctions()) {
+    for (auto bb : func->getBasicBlocks()) {
+      auto inss = bb->getAllInstructions();
+      int i = 0;
+      while (i + 1 < inss.size()) {
+        auto ins = inss[i];
+        //////////////////////////////////////
+        // li  a0, 4
+        // mul a2, a1, a0
+        // ---------------------------
+        // ==> slliw a2, a1, 2
+        //////////////////////////////////////
+        if (ins->getInsTag() == MInstruction::LI) {
+          MIli *liIns = (MIli *)ins;
+          auto nIns = inss[i + 1];
+          if (liIns->imm == 4 && nIns->getInsTag() == MInstruction::MUL &&
+              nIns->getReg(1) == ins->getTarget()) {
+            auto sllIns = new MIslliw(nIns->getReg(0), 2, nIns->getTarget());
+            ins->replaceWith({sllIns});
+            nIns->replaceWith({});
+            i++;
+            std::cout << "match " << " all" << endl;
             continue;
           }
         }
