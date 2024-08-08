@@ -48,7 +48,10 @@ class LoopInfo {
 
   bool isSimpleLoop() { return simpleLoop != nullptr; }
   void analyseSimpleLoop();
-
+  
+  bool isEmptyLoop() const;
+  void deleteLoop();
+  
   string getName() { return header->getName() + "Loop"; }
   void dump();
 };

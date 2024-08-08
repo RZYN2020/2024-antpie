@@ -1,5 +1,7 @@
 #include "LoopInfo.hh"
 
+#include "Function.hh"
+
 LoopInfo* LoopInfo::getRootLoop() {
   LoopInfo* ptr = this;
   while (ptr->parentLoop) {
@@ -33,6 +35,91 @@ void LoopInfo::addSubLoop(LoopInfo* subloop) {
 void LoopInfo::setLatches(vector<BasicBlock*>& latches_) {
   for (BasicBlock* latch : latches_) {
     latches.insert(latch);
+  }
+}
+
+bool LoopInfo::isEmptyLoop() const {
+  if (!simpleLoop) return false;
+  if (!subLoops.empty()) return false;
+  for (BasicBlock* subBlock : blocks) {
+    if (subBlock == header) continue;
+    for (Instruction* instr : *subBlock->getInstructions()) {
+      if (!(instr->isa(VT_BR) || instr->isa(VT_JUMP) ||
+            instr == simpleLoop->strideInstr)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+void LoopInfo::deleteLoop() {
+  CFG* cfg = header->getParent()->getCFG();
+
+  // modify header
+  BranchInst* brInstr = (BranchInst*)header->getTailInstr();
+  BasicBlock* exitBlock = 0;
+  BasicBlock* bodyBlock = 0;
+  if (containBlockInChildren((BasicBlock*)brInstr->getRValue(1))) {
+    exitBlock = (BasicBlock*)brInstr->getRValue(2);
+    bodyBlock = (BasicBlock*)brInstr->getRValue(1);
+  } else {
+    exitBlock = (BasicBlock*)brInstr->getRValue(1);
+    bodyBlock = (BasicBlock*)brInstr->getRValue(2);
+  }
+  brInstr->eraseFromParent();
+  brInstr->deleteUseList();
+  header->pushInstr(new JumpInst(exitBlock));
+  if (cfg) {
+    cfg->eraseEdge(header, bodyBlock);
+  }
+  // modify phi in header
+  for (Instruction* instr : *header->getInstructions()) {
+    PhiInst* phiInst = dynamic_cast<PhiInst*>(instr);
+    if (!phiInst) break;
+    int icSize = phiInst->getRValueSize() / 2;
+    for (int i = icSize - 1; i >= 0; i--) {
+      BasicBlock* icBlock = (BasicBlock*)phiInst->getRValue(i * 2 + 1);
+      if (containBlockInChildren(icBlock)) {
+        phiInst->deleteIncomingFrom(icBlock);
+      }
+    }
+  }
+
+  for (BasicBlock* block : blocks) {
+    if (block == header) continue;
+    for (auto it = block->getInstructions()->begin();
+         it != block->getInstructions()->end();) {
+      auto instr = *it;
+      ++it;
+      instr->eraseFromParent();
+      instr->deleteUseList();
+      delete instr;
+    }
+    if (cfg) {
+      cfg->eraseNode(block);
+    }
+    block->eraseFromParent();
+    delete block;
+  }
+  if (parentLoop) {
+    for (auto it = parentLoop->subLoops.begin();
+         it != parentLoop->subLoops.end(); it++) {
+      if (*it == this) {
+        parentLoop->subLoops.erase(it);
+        break;
+      }
+    }
+  }
+
+  if (liBase) {
+    for (auto it = liBase->loopInfos.begin(); it != liBase->loopInfos.end();
+         it++) {
+      if (*it == this) {
+        liBase->loopInfos.erase(it);
+        break;
+      }
+    }
   }
 }
 
