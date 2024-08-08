@@ -10,6 +10,7 @@
 #include "GlobalCodeMotion.h"
 #include "GlobalValueNumbering.hh"
 #include "GlobalVariableLocalize.hh"
+#include "InductionVariableSimplify.hh"
 #include "Inlining.hh"
 #include "LoadElimination.hh"
 #include "LoopAnalysis.hh"
@@ -20,6 +21,7 @@
 #include "MemToReg.hh"
 #include "MergeBlock.hh"
 #include "Reassociate.hh"
+#include "StoreElimination.hh"
 #include "StrengthReduction.hh"
 #include "TailRecursionElimination.hh"
 
@@ -319,7 +321,11 @@ void Module::irOptimize() {
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new LoadElimination());
   optimizations.pushBack(new ConstantFolding());
+
+  optimizations.pushBack(new InductionVariableSimplify());
+  optimizations.pushBack(new StoreElimination());
   optimizations.pushBack(new CFGSimplify());
+  optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new DeadCodeElimination());
 
   // run all pass

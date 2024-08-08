@@ -1,5 +1,5 @@
 #include "LruCache.hh"
-#define CACHE_SIZE (1 << 16)
+#define CACHE_SIZE 1024
 
 bool LruCache::runOnModule(ANTPIE::Module* module) {
   bool changed = false;

@@ -25,4 +25,5 @@ add_library(
     CFGSimplify.cc
     StoreElimination.cc
     LruCache.cc
+    InductionVariableSimplify.cc
 )

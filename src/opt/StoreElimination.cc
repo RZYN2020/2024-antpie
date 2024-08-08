@@ -49,11 +49,7 @@ bool StoreElimination::runOnBasicBlock(BasicBlock* block,
         break;
       }
       case VT_CALL: {
-        CallInst* callInst = (CallInst*)instr;
-        Function* callee = callInst->getFunction();
-        if (callee->hasMemRead()) {
-          memToStore.clear();
-        }
+        memToStore.clear();
         break;
       }
     }

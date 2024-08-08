@@ -283,7 +283,6 @@ void peephole_optimize(MModule *mod) {
             ins->replaceWith({sllIns});
             nIns->replaceWith({});
             i++;
-            std::cout << "match " << " all" << endl;
             continue;
           }
         }

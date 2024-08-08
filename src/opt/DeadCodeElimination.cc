@@ -25,6 +25,8 @@ bool DeadCodeElimination::runOnFunction(Function* func) {
   changed |= simplifyInstruction(func);
   changed |= eliminateDeadBlocks(func);
   changed |= eliminateDeadInstructions(func);
+  changed |= simplifyInstruction(func);
+
   return changed;
 }
 
