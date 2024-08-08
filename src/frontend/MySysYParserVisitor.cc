@@ -1124,8 +1124,17 @@ void MySysYParserVisitor::init_extern_function() {
   function = new Function(funcType, true, "_sysy_stoptime");
   current->put("stoptime", function);
 
+  // int antpie_multimod(int x, int y, int m)
+  vector<Argument*> mmArgs = {new Argument("x", i32Type),
+                              new Argument("y", i32Type),
+                              new Argument("m", i32Type)};
+  funcType = Type::getFuncType(i32Type, mmArgs);
+  function = new Function(funcType, true, "antpie_multimod");
+  externFunctions.push_back(function);
+  
   for (Function* function : externFunctions) {
     current->put(function->getName(), function);
+    module.addLibFunction(function);
   }
 }
 

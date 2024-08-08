@@ -15,7 +15,7 @@ class Module {
   unordered_set<Function*> externFunctions;
   LinkedList<Function*> functions;
   BasicBlock* currBasicBlock;
-
+  unordered_map<string, Function*> libFunctions;
 
  public:
   Module();
@@ -32,13 +32,15 @@ class Module {
   AllocaInst* addAllocaInst(Type* type, string name);
   BinaryOpInst* addBinaryOpInst(OpTag opType, Value* op1, Value* op2,
                                 string name);
-  BranchInst* addBranchInst(Value* cond, BasicBlock* trueBlock, BasicBlock* falseBlock);
+  BranchInst* addBranchInst(Value* cond, BasicBlock* trueBlock,
+                            BasicBlock* falseBlock);
   CallInst* addCallInst(Function* func, string name);
   CallInst* addCallInst(Function* func, vector<Value*>& params, string name);
   IcmpInst* addIcmpInst(OpTag opType, Value* op1, Value* op2, string name);
   FcmpInst* addFcmpInst(OpTag opType, Value* op1, Value* op2, string name);
   FptosiInst* addFptosiInst(Value* src, string name);
-  GetElemPtrInst* addGetElemPtrInst(Value* ptr, Value* idx1, Value* idx2, string name);
+  GetElemPtrInst* addGetElemPtrInst(Value* ptr, Value* idx1, Value* idx2,
+                                    string name);
   GetElemPtrInst* addGetElemPtrInst(Value* ptr, Value* idx1, string name);
   JumpInst* addJumpInst(BasicBlock* block);
   LoadInst* addLoadInst(Value* addr, string name);
@@ -56,7 +58,9 @@ class Module {
   LinkedList<Function*>* getFunctions() { return &functions; }
   unordered_set<Function*>* getexternFunctions() { return &externFunctions; }
 
-
+  void addLibFunction(Function* func) { libFunctions[func->getName()] = func; }
+  Function* getLibFunction(string name) { return libFunctions[name]; }
+  
   void buildCFG();
 
   void irOptimize();

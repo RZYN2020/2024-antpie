@@ -58,7 +58,11 @@ bool Reassociate::runOnBasicBlock(BasicBlock* block) {
         break;
       }
     }
-
+    unordered_map<const Value*, int> idx;
+    int i = 0;
+    for (auto arg : args) {
+      idx[arg] = i++;
+    }
     if (!flag) {
       changed = true;
       std::sort(args.begin(), args.end(),
@@ -67,7 +71,10 @@ bool Reassociate::runOnBasicBlock(BasicBlock* block) {
                     return true;
                   if (rhs->isa(VT_INTCONST) && !lhs->isa(VT_INTCONST))
                     return false;
-                  return lhs < rhs;
+                  if (lhs->isa(VT_PHI) && !rhs->isa(VT_PHI)) return false;
+                  if (!lhs->isa(VT_PHI) && rhs->isa(VT_PHI)) return true;
+
+                  return idx[lhs] < idx[rhs];
                 });
       int constValue = 0;
       int initValue = 0;

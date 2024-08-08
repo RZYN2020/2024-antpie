@@ -610,10 +610,14 @@ vector<MFunction *> MModule::getFunctions() {
 
 std::ostream &operator<<(std::ostream &os, const MModule &obj) {
   bool gen_memset = false;
+  bool gen_multimod = false;
   for (const auto &ef : *obj.externFunctions) {
     if (ef->getName() == "memset") {
       gen_memset = true;
       continue;
+    }
+    if (ef->getName() == "antpie_multimod") {
+      gen_multimod = true;
     }
     os << ".extern " << ef->getName() << endl;
   }
@@ -632,6 +636,9 @@ std::ostream &operator<<(std::ostream &os, const MModule &obj) {
   if (gen_memset) {
     os << memset_code << endl;
   }
-
+#include "multimod.hh"
+  if (gen_multimod) {
+    os << multimod_code << endl;
+  }
   return os;
 }

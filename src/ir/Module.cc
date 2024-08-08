@@ -311,9 +311,14 @@ void Module::irOptimize() {
   optimizations.pushBack(new LoopSimplify(false));
   optimizations.pushBack(new LoopInvariantCodeMotion());
   optimizations.pushBack(new Reassociate());
+
   optimizations.pushBack(new GEPSimplify());
+
+  optimizations.pushBack(new StrengthReduction());
   optimizations.pushBack(new TailRecursionElimination());
   optimizations.pushBack(new MergeBlock());
+  optimizations.pushBack(new LoadElimination());
+  optimizations.pushBack(new ConstantFolding());
   optimizations.pushBack(new CFGSimplify());
   optimizations.pushBack(new DeadCodeElimination());
 
@@ -322,6 +327,7 @@ void Module::irOptimize() {
     // if (dynamic_cast<Reassociate*>(pass)) printIR(std::cout);
 
     pass->runOnModule(this);
+    // if (dynamic_cast<Reassociate*>(pass)) printIR(std::cout);
   }
 
   for (Function* func : functions) {
