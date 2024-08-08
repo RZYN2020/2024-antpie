@@ -190,7 +190,6 @@ Register *get_vreg(MModule *m, MBasicBlock *mbb, Value *v,
     uint32_t ival = *reinterpret_cast<uint32_t*>(&fval);
     ADD_INSTR(i, MIli, ival);
     ADD_INSTR(f, MIfmvs_x, i);
-    std::cout << "daf" << std::endl;
     return f;
   }
 
