@@ -86,7 +86,7 @@ def run_single_ir_test(sy_file, out_file, in_file=None):
     ir_file = tmp_file_base + prefix + ".ll"
     gen_command = compiler_path + " -l" + " -o "+ ir_file + " " + test_dir + sy_file
     subprocess.run(gen_command, shell=True)
-    return True
+  
     # llvm ir to bitcode
     # llvm-as example.ll -o example.bc
     bc_file = tmp_file_base + prefix + ".bc"
