@@ -1,92 +1,75 @@
-# AntPIE
+# CSC2024-NJU-ANTPIE
 
-修改readm
+## 项目简介
 
-## Getting started
+该项目为`2024 年全国大学生计算机系统能力大赛编译系统设计赛`项目，实现将SysY语言编译为RISC-V汇编代码的编译器。项目主要分为三个部分：前端、中端和后端。前端负责对SysY源代码进行词法分析和语法分析，并生成中间代码。中端进行一系列优化处理。后端则负责生成高效的RISC-V汇编代码。
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## 构建与运行
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+进入项目根目录，执行：
 
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.eduxiji.net/antpie/antpie.git
-git branch -M main
-git push -uf origin main
+```bash
+make
 ```
 
-## Integrate with your tools
+项目构建产物位于目录`build`内。
 
-- [ ] [Set up project integrations](https://gitlab.eduxiji.net/antpie/antpie/-/settings/integrations)
+进入`build`目录，运行`compiler`程序可将SysY源程序编译为RISCV汇编代码（test.s）：
 
-## Collaborate with your team
+```
+./compiler -S -o test.s test.sy -O1 
+```
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+## 项目设计
 
-## Test and Deploy
+### 前端
 
-Use the built-in continuous integration in GitLab.
+- 使用`antlr4`生成`lexer`和`parser`，构建抽象语法树（AST）。
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+- 采用访问者模式遍历AST，构建中间代码（IR）。
 
-***
+### 中端
 
-# Editing this README
+#### IR设计
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+IR结构设计参考了LLVM IR的设计，基本组件包括：
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+- **Module**: Module是IR的顶级容器，用于表示一个完整的程序或翻译单元。它包含函数、全局变量和相关的元数据。    
+- **Function**: Function表示程序中的一个函数，由一系列基本块（BasicBlock）组成。每个函数在Module中唯一标识。
+- **BasicBlock**: BasicBlock是IR中的基本执行单元，由一系列指令组成。每个基本块以终结指令（如`br`或`ret`）结束，并且在执行过程中不包含控制流跳转。 
+- **Instruction**:  Instruction是IR中的操作指令，类似于机器指令。每个指令可以产生一个值，并作为其他指令的操作数。常见指令包括算术运算（如`add`、`sub`）、内存访问（如`load`、`store`）和控制流指令（如`br`、`ret`）。 
+- **Value**:  Value是IR中的数据表示，包括变量、常量和指令的结果。所有的Instruction和Constant都是Value的子类。
 
-## Name
-Choose a self-explaining name for your project.
+#### IR优化
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+中端实现了各类优化，提升了代码性能。实现的优化包括：
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+- **MemToReg**: 实现寄存器提升（Promote Memory to Register），减少内存访问。
+- **CommonSubexpElimination**: 消除公共子表达式，减少重复计算。
+- **MergeBlock**: 合并基本块以简化控制流图。
+- **Inlining**: 函数内联，减少函数调用开销。
+- **LoopSimplify**: 简化循环结构。
+- **LoopInvariantCodeMotion**: 循环不变代码外提。
+- **GlobalCodeMotion**: 全局代码移动。
+- **GlobalValueNumbering**: 全局值编号，优化冗余计算。
+- **LoopUnroll**: 循环展开，提高性能。
+- **TailRecursionElimination**: 消除尾递归。
+- **DeadCodeElimination**: 死代码消除。
+- **ConstantFolding**: 常量折叠，计算常量表达式。
+- **GlobalVariableLocalize**: 全局变量本地化，减少全局变量使用。
+- **StrengthReduction**: 强度削减，用更低代价运算代替高代价运算。
+- **LoadElimination**: 加载消除，减少不必要的内存加载。
+- **Reassociate**: 重结合运算。
+- **GEPSimplify**: 简化GEP指令。
+- **CFGSimplify**: 控制流图简化。
+- **StoreElimination.cc**: 存储消除，减少不必要的内存存储。
+- **LruCache.cc**: 缓存递归纯函数的结果，避免冗余函数调用。
+- **InductionVariableSimplify.cc**: 简化归纳变量。
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+### 后端
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- 指令选择：将中间代码转换为面向目标机器的低层IR。
+- 寄存器分配：结合活跃变量分析，实现高效的寄存器分配。
+- 窥孔优化：实施一系列小规模的代码优化，如指令合并和消除冗余指令。
+- 简化跳转
+- 基本块排序
