@@ -111,11 +111,6 @@ public:
     FLT_S,
     FLE_S,
 
-    // RV64Zba
-    // SH1ADD,
-    SH2ADD,
-    // SH3ADD,
-
     // presudo instruction: https://michaeljclark.github.io/asm.html
     CALL,
     J,
@@ -319,8 +314,6 @@ DEFINE_MI_IMM_CLASS(srliw)
 DEFINE_MI_BIN_CLASS(srlw)
 DEFINE_MI_IMM_CLASS(sraiw)
 DEFINE_MI_BIN_CLASS(sraw)
-
-DEFINE_MI_BIN_CLASS(sh2add)
 
 #define DEFINE_MI_LOAD_CLASS(NAME)                                             \
   class MI##NAME : public MInstruction {                                       \

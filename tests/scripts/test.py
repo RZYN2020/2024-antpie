@@ -138,7 +138,7 @@ def run_single_test(sy_file, out_file, in_file=None):
         return 0
     # asm to binary file
     obj_file = tmp_file_base + prefix + ".o"
-    objgen_command = ["riscv64-linux-gnu-gcc-10", "-march=rv64gc_zba_zbb", "-fPIE", "-c", asm_file, "-o", obj_file]
+    objgen_command = ["riscv64-linux-gnu-gcc-10", "-fPIE", "-c", asm_file, "-o", obj_file]
     result = subprocess.run(objgen_command, text=True, capture_output=True)
 
     # link

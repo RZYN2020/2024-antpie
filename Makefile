@@ -24,13 +24,13 @@ run:
 
 runs:
 	$(BIN_DIR)/compiler -S -o tests/test.s tests/test.sy
-	riscv64-linux-gnu-gcc-10 -march=rv64gc_zba_zbb -fPIE -c tests/test.s -o tests/test.o
+	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.s -o tests/test.o
 	riscv64-linux-gnu-gcc-10 tests/test.o -Ltests -lrvsysy -o tests/test
 	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test < tests/test.in; echo $$?
 
 runso:
 	$(BIN_DIR)/compiler -S -o tests/test.reg.s tests/test.sy -O1
-	riscv64-linux-gnu-gcc-10 -march=rv64gc_zba_zbb -fPIE -c tests/test.reg.s -o tests/test.reg.o
+	riscv64-linux-gnu-gcc-10 -fPIE -c tests/test.reg.s -o tests/test.reg.o
 	riscv64-linux-gnu-gcc-10 tests/test.reg.o -Ltests -lrvsysy -o tests/test.reg
 	qemu-riscv64 -L /usr/riscv64-linux-gnu -s 1024M tests/test.reg < tests/test.in; echo $$?
 
