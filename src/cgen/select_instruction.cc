@@ -571,10 +571,15 @@ void select_instruction(MModule *res, ANTPIE::Module *ir) {
               dest = addr;
             } else {
               Register *index = GET_VREG(gep->getRValue(i));
-              ADD_INSTR(elesz, MIli, sz);
-              ADD_INSTR(offset, MImul, index, elesz);
-              ADD_INSTR(addr, MIadd, base, offset);
-              dest = addr;
+              if (sz == 4) {
+                ADD_INSTR(addr, MIsh2add, index, base);
+                dest = addr;
+              } else {
+                ADD_INSTR(elesz, MIli, sz);
+                ADD_INSTR(offset, MImul, index, elesz);
+                ADD_INSTR(addr, MIadd, base, offset);
+                dest = addr;
+              }
             }
           }
           if (dest == base) {

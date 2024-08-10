@@ -566,6 +566,8 @@ IMPLEMENT_MI_BIN_CLASS(srlw, SRLW, V_IREGISTER, srlw, true)
 IMPLEMENT_MI_IMM_CLASS(sraiw, SRAIW, V_IREGISTER, sraiw, true)
 IMPLEMENT_MI_BIN_CLASS(sraw, SRAW, V_IREGISTER, sraw, true)
 
+IMPLEMENT_MI_BIN_CLASS(sh2add, SH2ADD, V_IREGISTER, sh2add, true)
+
 #define IMPLEMENT_MI_LOAD_CLASS(NAME, INS_TAG, REG_TAG, IS_POINTER)            \
   MI##NAME::MI##NAME(MGlobal *global)                                          \
       : MInstruction(MInstruction::INS_TAG, RegTag::REG_TAG, IS_POINTER),      \

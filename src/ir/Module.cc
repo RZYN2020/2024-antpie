@@ -325,13 +325,15 @@ void Module::irOptimize() {
   optimizations.pushBack(new InductionVariableSimplify());
   optimizations.pushBack(new StoreElimination());
   optimizations.pushBack(new StrengthReduction());
+  optimizations.pushBack(new Reassociate());
+  optimizations.pushBack(new ConstantFolding());
   optimizations.pushBack(new CFGSimplify());
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new DeadCodeElimination());
 
   // run all pass
   for (auto& pass : optimizations) {
-    // if (dynamic_cast<Reassociate*>(pass)) printIR(std::cout);
+    // if (dynamic_cast<GEPSimplify*>(pass)) printIR(std::cout);
 
     pass->runOnModule(this);
     // if (dynamic_cast<Reassociate*>(pass)) printIR(std::cout);

@@ -1,4 +1,9 @@
-// int multimod(int x, int y, int m)
+// A fast way to calcute multimod:
+// int64_t multimod_fast(int64_t a, int64_t b, int64_t m) {
+//  return (a * b - (int64_t)((double)a * b / m) * m + m) % m;
+// }
+// Reference: https://www.acwing.com/solution/content/1431/
+// However, the original source cannot be verified.
 
 #include <string>
 
