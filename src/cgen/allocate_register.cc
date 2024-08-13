@@ -35,7 +35,7 @@ void printLivenessInfo(MFunction *func, LivenessInfo *liveness_ireg,
   std::cout << "Integer Register Liveness:" << std::endl;
   for (auto &pair : *liveness_ireg) {
     std::cout << "Instruction: " << *pair.first << std::endl;
-    std::cout << "   LiveIn (" << pair.second.size() << " regs):  ";
+    std::cout << "   LiveOut (" << pair.second.size() << " regs):  ";
     for (Register *reg : pair.second) {
       std::cout << reg->getName() << " ";
     }
@@ -46,7 +46,7 @@ void printLivenessInfo(MFunction *func, LivenessInfo *liveness_ireg,
   std::cout << "Floating-Point Register Liveness:" << std::endl;
   for (auto &pair : *liveness_freg) {
     std::cout << "Instruction: " << *pair.first << std::endl;
-    std::cout << "   LiveIn: ";
+    std::cout << "   LiveOut: ";
     for (Register *reg : pair.second) {
       std::cout << reg->getName() << " ";
     }
@@ -598,6 +598,9 @@ void lower_call(MFunction *func, int &stack_offset,
         std::set<Register *> all_live;
         all_live.insert(live_iregs.begin(), live_iregs.end());
         all_live.insert(live_fregs.begin(), live_fregs.end());
+        if (all_live.count(call->getTarget()) != 0) {
+          all_live.erase(call->getTarget());
+        }
         auto caller_saved =
             getActuallCallerSavedRegisters(allocation, all_live);
         // todo: delete?

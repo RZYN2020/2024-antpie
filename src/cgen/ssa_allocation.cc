@@ -19,6 +19,9 @@ static void scan_back(Register *r, MBasicBlock *bb,
     if ((*liveness)[ins].find(r) != (*liveness)[ins].end()) {
       return;
     }
+
+    (*liveness)[ins].insert(r);
+
     // std::cout << "  check def or " << *ins << endl;
     vector<Register *> defRegs = get_defs(ins);
     for (auto defReg : defRegs) {
@@ -27,7 +30,6 @@ static void scan_back(Register *r, MBasicBlock *bb,
         return;
       }
     }
-    (*liveness)[ins].insert(r);
   }
   vector<Register *> phiDefs = get_phis(bb);
   for (auto phiDef : phiDefs) {
@@ -135,8 +137,8 @@ static void spillRegisters(std::map<Register *, int> *spilled,
         regs.push_back(reg);
       }
     }
-    // todo: we should use <= actually...
-    if (regs.size() < MAX_REG_NUM) {
+
+    if (regs.size() <= MAX_REG_NUM) {
       continue;
     }
     auto cmp = RegisterComparator();
@@ -226,7 +228,7 @@ static void spill_registers(int &stk_offset, std::map<Register *, int> *spilled,
   spillRegisters<MAX_I_REG_NUM>(spilled, liveness_ireg, stk_offset, reg_cost);
 }
 
-static void setUsedtoLiveIn(MInstruction *ins, set<Register *> *used,
+static void setUsedtoLiveOut(MInstruction *ins, set<Register *> *used,
                             map<Register *, Register *> *allocation,
                             LivenessInfo *liveness_ireg,
                             LivenessInfo *liveness_freg,
@@ -313,7 +315,7 @@ void allocatePhis(MBasicBlock *bb, map<Register *, Register *> *allocation,
                   map<Register *, int> *spill) {
   auto first = bb->getAllInstructions().at(0);
   set<Register *> used;
-  setUsedtoLiveIn(first, &used, allocation, liveness_ireg, liveness_freg,
+  setUsedtoLiveOut(first, &used, allocation, liveness_ireg, liveness_freg,
                   spill);
   set<MHIphi *> phis;
   for (auto phi : bb->getPhis()) {
@@ -349,13 +351,12 @@ void allocateOtherInstruction(MBasicBlock *bb,
         spill->find(instr->getTarget()) == spill->end()) {
       // todo: we should use LiveOut for normal Instruction, but LiveIn for phi
       // Instruction... but for simplity, we just use LiveIn here...
-      setUsedtoLiveIn(instr, &used, allocation, liveness_ireg, liveness_freg,
+      setUsedtoLiveOut(instr, &used, allocation, liveness_ireg, liveness_freg,
                       spill);
-      // std::cout << "  Used Registers before " << *instr << endl;
+      // std::cout << "  Used Registers after " << *instr << endl;
       // for (auto u : used) {
       //   std::cout << "    " << u->getName() << endl;
       // }
-      // todo:!!!!! why usedin if forever empty????
       allocatTheRegister(instr->getTarget(), allocation, used);
     }
   }
@@ -381,6 +382,23 @@ static void allocate(MFunction *func, map<Register *, Register *> *allocation,
   allocateParameters(func, allocation, spill, liveness_ireg, liveness_freg);
   allocateInstructions(func, allocation, spill, liveness_ireg, liveness_freg);
 }
+
+
+
+static void clear_dead_assign_to_call(MFunction* func, LivenessInfo *liveness_ireg,
+                     LivenessInfo *liveness_freg) {
+  for (auto bb : func->getBasicBlocks()) {
+    for (auto ins : bb->getInstructions()) {
+      if (ins->getInsTag() == MInstruction::H_CALL) {
+        auto target = ins->getTarget();
+        if (liveness_freg->at(ins).count(target) == 0 && liveness_ireg->at(ins).count(target) == 0) {
+          ins->setTarget(nullptr);
+        }
+      }
+    }
+  }
+
+} 
 
 ///////////////////////////////////////
 ///////////////////////////////////////
@@ -410,6 +428,8 @@ void allocate_register(MModule *mod) {
     auto liveness_ireg = make_unique<LivenessInfo>();
     auto liveness_freg = make_unique<LivenessInfo>();
     ssa_liveness_analysis(func, liveness_ireg.get(), liveness_freg.get());
+    clear_dead_assign_to_call(func, liveness_ireg.get(), liveness_freg.get());
+
     // std::cout << "Function: " << func->getName() << endl;
 
     // printLivenessInfo(func, liveness_ireg.get(), liveness_freg.get());

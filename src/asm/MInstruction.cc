@@ -25,7 +25,9 @@ void MInstruction::setTarget(Register *reg) {
     target = nullptr;
   }
   target = reg;
-  target->addUse(this);
+  if (target != nullptr) {
+    target->addUse(this);
+  }
 }
 
 Register *MInstruction::getTarget() { return target; }
