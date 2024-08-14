@@ -255,8 +255,15 @@ void peephole_optimize(MModule *mod) {
           }
         }
 
-        // addi a1, a0, 0 # addi arr.addr.3, arr.addr.2, 0
-        // addi a0, a1, 0 # a
+        // addi a0, a0, 0 # addi arr.addr.3, arr.addr.2, 0
+        if (ins->getInsTag() == MInstruction::ADDI) {
+          if (ins->getTarget() == ins->getReg(0) && static_cast<MIaddi*>(ins)->imm == 0) {
+            ins->replaceWith({});
+            i++;
+            // std::cout << "match " << " addi a0, a0, 0" << endl;
+            continue;
+          }
+        }
         i += 1;
       }
     }
