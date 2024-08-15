@@ -1,10 +1,32 @@
 #include "Inlining.hh"
 
+#include <functional>
+
 bool Inlining::runOnModule(ANTPIE::Module* module) {
   bool changed = false;
+  unordered_set<Function*> visited;
+  vector<Function*> sortlist;
+  Function* mainFunc = 0;
   for (Function* func : *module->getFunctions()) {
-    // TODO: check if function can be inline
-    changed |= runOnFunction(func);
+    if (func->getName() == "main") {
+      mainFunc = func;
+      break;
+    }
+  }
+  assert(mainFunc);
+  std::function<void(Function*)> dfs = [&](Function* func) {
+    if (visited.count(func)) return;
+    visited.insert(func);
+    sortlist.push_back(func);
+    for (Function* callee : func->getCallees()) {
+      dfs(callee);
+    }
+    return;
+  };
+  dfs(mainFunc);
+
+  for (auto it = sortlist.rbegin(); it != sortlist.rend(); it++) {
+    changed |= runOnFunction(*it);
   }
   return changed;
 }
