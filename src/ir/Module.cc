@@ -14,6 +14,7 @@
 #include "Inlining.hh"
 #include "LoadElimination.hh"
 #include "LoopAnalysis.hh"
+#include "LoopIdvSimplify.hh"
 #include "LoopInvariantCodeMotion.hh"
 #include "LoopSimplify.hh"
 #include "LoopUnroll.hh"
@@ -298,6 +299,7 @@ void Module::irOptimize() {
   optimizations.pushBack(new LoopAnalysis());
   optimizations.pushBack(new LoopSimplify(false));
   optimizations.pushBack(new AliasAnalysis());
+  optimizations.pushBack(new LoopIdvSimplify());
   optimizations.pushBack(new LoopInvariantCodeMotion());
   optimizations.pushBack(new LoopUnroll());
   optimizations.pushBack(new DeadCodeElimination());
@@ -324,9 +326,11 @@ void Module::irOptimize() {
 
   optimizations.pushBack(new InductionVariableSimplify());
   optimizations.pushBack(new StoreElimination());
+  optimizations.pushBack(new Reassociate());
   optimizations.pushBack(new ConstantFolding());
   optimizations.pushBack(new CFGSimplify());
   optimizations.pushBack(new MergeBlock());
+
   optimizations.pushBack(new DeadCodeElimination());
 
   // run all pass

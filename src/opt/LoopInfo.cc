@@ -122,6 +122,11 @@ void LoopInfo::deleteLoop() {
     }
   }
 }
+bool LoopInfo::isInvariant(Value* value) {
+  Instruction* instr = dynamic_cast<Instruction*>(value);
+  if (!instr) return true;
+  return !containBlockInChildren(instr->getParent());
+}
 
 void LoopInfo::dump() {
   std::cout << "Header: " << header->getName() << std::endl;

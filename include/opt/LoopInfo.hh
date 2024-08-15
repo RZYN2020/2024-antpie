@@ -51,6 +51,8 @@ class LoopInfo {
   
   bool isEmptyLoop() const;
   void deleteLoop();
+
+  bool isInvariant(Value* value);
   
   string getName() { return header->getName() + "Loop"; }
   void dump();

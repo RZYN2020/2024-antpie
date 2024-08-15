@@ -26,4 +26,5 @@ add_library(
     StoreElimination.cc
     LruCache.cc
     InductionVariableSimplify.cc
+    LoopIdvSimplify.cc
 )
