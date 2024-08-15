@@ -52,7 +52,8 @@ bool LoopIdvSimplify::runOnLoop(LoopInfo* loopInfo) {
   for (Instruction* instr : *trueBlock->getInstructions()) {
     BinaryOpInst* bopInstr = dynamic_cast<BinaryOpInst*>(instr);
     if (!bopInstr || bopInstr == strideInst) continue;
-    if (bopInstr->getRValue(1) == counter) {
+    if (bopInstr->getRValue(1) == counter &&
+        (bopInstr->getOpTag() == ADD || bopInstr->getOpTag() == MUL)) {
       bopInstr->swapRValueAt(0, 1);
     }
     if (bopInstr->getRValue(0) != counter) continue;
@@ -130,5 +131,5 @@ bool LoopIdvSimplify::runOnLoop(LoopInfo* loopInfo) {
         continue;
     }
   }
-  return true;
+  return changed;
 }
