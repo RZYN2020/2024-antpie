@@ -61,6 +61,7 @@ void printLivenessInfo(MFunction *func, LivenessInfo *liveness_ireg,
 ///////////////////////////////////////
 ///////////////////////////////////////
 
+// todo!!!!!!! use better algorithms!!!!!
 vector<MInstruction *> solveParallelAssignment(vector<MInstruction *> instrs) {
   // ignore t0, t1, t2, ft0, ft1, ft2
   // store the registers used which could be write latter to stack
@@ -962,7 +963,8 @@ void add_conclude(MFunction *func, map<Register *, Register *> *allocation,
   auto load_fp = new MIld(Register::reg_sp, stack_sz - 16, Register::reg_s0);
   auto add_sp = new MIaddi(Register::reg_sp, stack_sz, Register::reg_sp);
   auto ret = new MIret();
-  exit->pushInstrs({load_ra, load_fp, add_sp, ret});
+  exit->pushInstrs({load_ra, load_fp, add_sp});
+  exit->pushJmp(ret);
 
   for (auto bb : func->getBasicBlocks()) {
     if (bb == exit)

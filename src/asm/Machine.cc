@@ -201,6 +201,16 @@ void MBasicBlock::replacePhiIncoming(MBasicBlock *oldbb, MBasicBlock *newbb) {
 vector<MBasicBlock *> &MBasicBlock::getIncomings() { return *incoming; }
 vector<MBasicBlock *> &MBasicBlock::getOutgoings() { return *outgoing; }
 
+vector<MInstruction*> MBasicBlock::removeAllInstructions() {
+  vector<MInstruction*> res;
+  for (int i = 0; i < instructions->size(); i++) {
+    res.push_back(instructions->at(i).release());
+  }
+  instructions->clear();
+  assert(instructions->size() == 0);
+  return res;
+}
+
 unique_ptr<MInstruction> MBasicBlock::removeInstruction(MInstruction *ins) {
   for (auto it = instructions->begin(); it != instructions->end();) {
     if (it->get() == ins) {

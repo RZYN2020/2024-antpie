@@ -43,6 +43,7 @@ public:
   vector<MBasicBlock *> &getIncomings();
   vector<MBasicBlock *> &getOutgoings();
 
+  vector<MInstruction*> removeAllInstructions();
   unique_ptr<MInstruction> removeInstruction(MInstruction *ins);
   unique_ptr<MInstruction>
   replaceInstructionWith(MInstruction *ins, vector<MInstruction *> instrs);
