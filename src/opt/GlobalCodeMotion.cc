@@ -172,7 +172,7 @@ Instruction* GlobalCodeMotion::scheduleLate(Instruction* instr, DomTree* dt,
   // Move instruction
   unordered_set<Instruction*> sameBlockInstrs;
   infoMap[instr]->latestBlock = bestBlock;
-  if (bestBlock == instr->getParent()) return instr;
+  // if (bestBlock == instr->getParent()) return instr;
   for (Use* use = instr->getUseHead(); use; use = use->next) {
     Instruction* userInstr = use->instr;
     if (userInstr->getParent() == bestBlock && !userInstr->isa(VT_PHI)) {

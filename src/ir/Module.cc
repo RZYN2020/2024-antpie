@@ -309,6 +309,12 @@ void Module::irOptimize() {
   optimizations.pushBack(new DeadCodeElimination());
   optimizations.pushBack(new MergeBlock());
   optimizations.pushBack(new Reassociate());
+
+  optimizations.pushBack(new LoopAnalysis());
+  optimizations.pushBack(new LoopSimplify(false));
+  optimizations.pushBack(new LoopInvariantCodeMotion());
+  optimizations.pushBack(new MergeBlock());
+
   // GVM and GCM need DCE
   optimizations.pushBack(new GlobalValueNumbering());
   optimizations.pushBack(new GlobalCodeMotion());
@@ -336,6 +342,7 @@ void Module::irOptimize() {
   optimizations.pushBack(new MergeBlock());
 
   optimizations.pushBack(new DeadCodeElimination());
+  optimizations.pushBack(new GlobalCodeMotion());
 
   // run all pass
   for (auto& pass : optimizations) {
