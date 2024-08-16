@@ -85,6 +85,37 @@ bool DeadCodeElimination::eliminateDeadInstructions(Function* func) {
         // No user
         worklist.pushBack(instr);
       }
+      if (instr->getUserSize() == 1 &&
+          instr->getUseHead()->instr->isa(VT_PHI)) {
+        Instruction* userPtr = instr->getUseHead()->instr;
+        bool flag = false;
+        unordered_set<Instruction*> visited;
+        visited.insert(instr);
+        while (isComputeInstruction(userPtr)) {
+          if (visited.count(userPtr)) {
+            // Find a ring
+            int opSize = userPtr->getRValueSize();
+            for (int i = 0; i < opSize; i++) {
+              Instruction* op =
+                  dynamic_cast<Instruction*>(userPtr->getRValue(i));
+              if (op && isComputeInstruction(op)) {
+                worklist.pushBack(op);
+              }
+            }
+            userPtr->deleteUseList();
+            break;
+          }
+          visited.insert(userPtr);
+          if (userPtr->getUserSize() != 1) {
+            flag = true;
+            break;
+          }
+          userPtr = userPtr->getUseHead()->instr;
+        }
+        if (!flag) {
+          worklist.pushBack(instr);
+        }
+      }
     }
   }
   bool changed = !worklist.isEmpty();

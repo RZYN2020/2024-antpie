@@ -288,6 +288,10 @@ void Module::irOptimize() {
   optimizations.pushBack(new FunctionPropAnalysis());
   optimizations.pushBack(new LruCache());
   optimizations.pushBack(new FunctionPropAnalysis());
+  optimizations.pushBack(new CommonSubexpElimination());
+  optimizations.pushBack(new AliasAnalysis());
+  optimizations.pushBack(new LoadElimination());
+  optimizations.pushBack(new CommonSubexpElimination());
   optimizations.pushBack(new Inlining());
   optimizations.pushBack(new FunctionPropAnalysis());
   optimizations.pushBack(new GlobalVariableLocalize());
