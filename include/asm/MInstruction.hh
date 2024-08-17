@@ -46,12 +46,12 @@ public:
     ORI,
     XORI,
 
-    SLLW,
-    SRAW,
-    SRLW,
-    SLLIW,
-    SRAIW,
-    SRLIW,
+    SLL,
+    SRA,
+    SRL,
+    SLLI,
+    SRAI,
+    SRLI,
     // LUI,
     // AUIPC,
     SLT,
@@ -308,12 +308,12 @@ DEFINE_MI_BIN_CLASS(sltu)
 DEFINE_MI_IMM_CLASS(sltiu)
 
 // shifts
-DEFINE_MI_IMM_CLASS(slliw)
-DEFINE_MI_BIN_CLASS(sllw)
-DEFINE_MI_IMM_CLASS(srliw)
-DEFINE_MI_BIN_CLASS(srlw)
-DEFINE_MI_IMM_CLASS(sraiw)
-DEFINE_MI_BIN_CLASS(sraw)
+DEFINE_MI_IMM_CLASS(slli)
+DEFINE_MI_BIN_CLASS(sll)
+DEFINE_MI_IMM_CLASS(srli)
+DEFINE_MI_BIN_CLASS(srl)
+DEFINE_MI_IMM_CLASS(srai)
+DEFINE_MI_BIN_CLASS(sra)
 
 #define DEFINE_MI_LOAD_CLASS(NAME)                                             \
   class MI##NAME : public MInstruction {                                       \

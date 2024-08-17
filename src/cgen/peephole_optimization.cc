@@ -302,7 +302,7 @@ void peephole_optimize(MModule *mod) {
           auto nIns = inss[i + 1];
           if (liIns->imm == 4 && nIns->getInsTag() == MInstruction::MUL &&
               nIns->getReg(1) == ins->getTarget()) {
-            auto sllIns = new MIslliw(nIns->getReg(0), 2, nIns->getTarget());
+            auto sllIns = new MIslli(nIns->getReg(0), 2, nIns->getTarget());
             ins->replaceWith({sllIns});
             nIns->replaceWith({});
             i++;

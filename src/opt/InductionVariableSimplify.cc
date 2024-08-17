@@ -1,6 +1,9 @@
 #include "InductionVariableSimplify.hh"
 
 #include "ConstantFolding.hh"
+
+bool isPowerOfTwo(int x);
+
 bool InductionVariableSimplify::runOnModule(ANTPIE::Module* module) {
   bool changed = false;
   vector<Function*> changedFunc;
@@ -148,7 +151,13 @@ bool InductionVariableSimplify::runOnLoop(LoopInfo* loopInfo) {
     if (!isInvariant(loopInfo, strideValue)) continue;
 
     OpTag op = strideBop->getOpTag();
-    if (!(op == ADD || op == SUB)) continue;
+    if (!(op == ADD || op == SUB || op == MUL || op == SDIV)) continue;
+
+    if (op == MUL || op == SDIV) {
+      IntegerConstant* op1Int =
+          dynamic_cast<IntegerConstant*>(strideBop->getRValue(1));
+      if (!op1Int || !isPowerOfTwo(op1Int->getValue())) continue;
+    }
 
     IndVar* indVar = new IndVar();
     *indVar = {.phiInst = phiInst,
@@ -263,6 +272,56 @@ bool InductionVariableSimplify::runOnLoop(LoopInfo* loopInfo) {
           mul->moveBefore(brInst);
           break;
         }
+        case MUL: {
+          IntegerConstant* strideInt = (IntegerConstant*)indVar->strideValue;
+          int log2Int = log2(strideInt->getValue());
+          BinaryOpInst* shiftValue =
+              new BinaryOpInst(MUL, IntegerConstant::getConstInt(log2Int),
+                               loopTime, "idv.shift");
+          shiftValue->moveBefore(brInst);
+          replaceValue =
+              new BinaryOpInst(SHL, indVar->initValue, shiftValue, "idv.ret");
+          break;
+        }
+        case SDIV: {
+          IntegerConstant* strideInt = (IntegerConstant*)indVar->strideValue;
+          int log2Int = log2(strideInt->getValue());
+          BinaryOpInst* shiftValue =
+              new BinaryOpInst(MUL, IntegerConstant::getConstInt(log2Int),
+                               loopTime, "idv.shift");
+          shiftValue->moveBefore(brInst);
+
+          // x / 2^n =>
+          // (x +
+          //    (x >> 31) & (1 << n - 1)
+          // ) >> n
+          //
+          // Note that left and right shift operations must be 64-bit
+          // operations; otherwise, in 32-bit mode, x >> 32 = x >> 0 = x, which
+          // is incorrect.
+          //
+          // To address this issue, we adopted a somewhat pragmatic solution:
+          // the backend translates all shift operations to 64-bit operations.
+          BinaryOpInst* shr1 = new BinaryOpInst(
+              ASHR, indVar->initValue, IntegerConstant::getConstInt(31), "shr");
+          BinaryOpInst* shl1 = new BinaryOpInst(
+              SHL, IntegerConstant::getConstInt(1), shiftValue, "shl");
+          BinaryOpInst* sub = new BinaryOpInst(
+              SUB, shl1, IntegerConstant::getConstInt(1), "sub");
+          BinaryOpInst* andInst = new BinaryOpInst(AND, shr1, sub, "and");
+          BinaryOpInst* add =
+              new BinaryOpInst(ADD, indVar->initValue, andInst, "add");
+          BinaryOpInst* shr2 = new BinaryOpInst(ASHR, add, shiftValue, "shr");
+          shr1->moveBefore(brInst);
+          shl1->moveBefore(brInst);
+          sub->moveBefore(brInst);
+          andInst->moveBefore(brInst);
+          add->moveBefore(brInst);
+          shr2->moveBefore(brInst);
+          replaceValue = shr2;
+          break;
+        }
+
         default:
           assert(0);
       }

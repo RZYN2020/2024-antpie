@@ -281,69 +281,74 @@ void Module::buildCFG() {
   }
 }
 
+#define RUN_OPT(opt_class)                \
+  ([&]() -> decltype(auto) {              \
+    opt_class* obj = new opt_class();     \
+    auto result = obj->runOnModule(this); \
+    delete obj;                           \
+    return result;                        \
+  })()
+
 void Module::irOptimize() {
   LinkedList<Optimization*> optimizations;
-  optimizations.pushBack(new DeadCodeElimination());
-  optimizations.pushBack(new MemToReg());
-  optimizations.pushBack(new FunctionPropAnalysis());
-  optimizations.pushBack(new LruCache());
-  optimizations.pushBack(new FunctionPropAnalysis());
-  optimizations.pushBack(new CommonSubexpElimination());
-  optimizations.pushBack(new AliasAnalysis());
-  optimizations.pushBack(new LoadElimination());
-  optimizations.pushBack(new CommonSubexpElimination());
-  optimizations.pushBack(new Inlining());
-  optimizations.pushBack(new FunctionPropAnalysis());
-  optimizations.pushBack(new GlobalVariableLocalize());
-  optimizations.pushBack(new ConstantFolding());
-  optimizations.pushBack(new StrengthReduction());
-  optimizations.pushBack(new DeadCodeElimination());
-  optimizations.pushBack(new MergeBlock());
-  optimizations.pushBack(new CommonSubexpElimination());
-  optimizations.pushBack(new LoopAnalysis());
-  optimizations.pushBack(new LoopSimplify(false));
-  optimizations.pushBack(new AliasAnalysis());
-  optimizations.pushBack(new LoopIdvSimplify());
-  optimizations.pushBack(new LoopInvariantCodeMotion());
-  optimizations.pushBack(new LoopUnroll());
-  optimizations.pushBack(new DeadCodeElimination());
-  optimizations.pushBack(new MergeBlock());
-  optimizations.pushBack(new Reassociate());
+  RUN_OPT(DeadCodeElimination);
+  RUN_OPT(MemToReg);
+  RUN_OPT(FunctionPropAnalysis);
+  RUN_OPT(LruCache);
+  RUN_OPT(FunctionPropAnalysis);
+  RUN_OPT(CommonSubexpElimination);
+  RUN_OPT(AliasAnalysis);
+  RUN_OPT(LoadElimination);
+  RUN_OPT(CommonSubexpElimination);
+  RUN_OPT(Inlining);
+  RUN_OPT(FunctionPropAnalysis);
+  RUN_OPT(GlobalVariableLocalize);
+  RUN_OPT(LoopAnalysis);
+  RUN_OPT(LoopSimplify);
+  RUN_OPT(InductionVariableSimplify);
+  RUN_OPT(ConstantFolding);
+  RUN_OPT(StrengthReduction);
+  RUN_OPT(DeadCodeElimination);
+  RUN_OPT(MergeBlock);
+  RUN_OPT(CommonSubexpElimination);
+  RUN_OPT(LoopAnalysis);
+  RUN_OPT(LoopSimplify);
+  RUN_OPT(AliasAnalysis);
+  RUN_OPT(LoopIdvSimplify);
+  RUN_OPT(LoopInvariantCodeMotion);
+  RUN_OPT(LoopUnroll);
+  RUN_OPT(DeadCodeElimination);
+  RUN_OPT(MergeBlock);
+  RUN_OPT(Reassociate);
   // GVM and GCM need DCE
-  optimizations.pushBack(new GlobalValueNumbering());
-  optimizations.pushBack(new GlobalCodeMotion());
-  optimizations.pushBack(new MergeBlock());
-  optimizations.pushBack(new AliasAnalysis());
-  optimizations.pushBack(new LoadElimination());
-  optimizations.pushBack(new LoopAnalysis());
-  optimizations.pushBack(new LoopSimplify(false));
-  optimizations.pushBack(new LoopInvariantCodeMotion());
-  optimizations.pushBack(new Reassociate());
+  RUN_OPT(GlobalValueNumbering);
+  RUN_OPT(GlobalCodeMotion);
+  RUN_OPT(MergeBlock);
+  RUN_OPT(AliasAnalysis);
+  RUN_OPT(LoadElimination);
+  RUN_OPT(LoopAnalysis);
+  RUN_OPT(LoopSimplify);
+  RUN_OPT(LoopInvariantCodeMotion);
+  RUN_OPT(Reassociate);
 
-  optimizations.pushBack(new GEPSimplify());
+  RUN_OPT(GEPSimplify);
 
-  optimizations.pushBack(new StrengthReduction());
-  optimizations.pushBack(new TailRecursionElimination());
-  optimizations.pushBack(new MergeBlock());
-  optimizations.pushBack(new LoadElimination());
-  optimizations.pushBack(new ConstantFolding());
+  RUN_OPT(StrengthReduction);
+  RUN_OPT(TailRecursionElimination);
+  RUN_OPT(MergeBlock);
+  RUN_OPT(LoadElimination);
+  RUN_OPT(ConstantFolding);
 
-  optimizations.pushBack(new InductionVariableSimplify());
-  optimizations.pushBack(new StoreElimination());
-  optimizations.pushBack(new Reassociate());
-  optimizations.pushBack(new ConstantFolding());
-  optimizations.pushBack(new CFGSimplify());
-  optimizations.pushBack(new MergeBlock());
+  RUN_OPT(InductionVariableSimplify);
+  RUN_OPT(StoreElimination);
+  RUN_OPT(Reassociate);
+  RUN_OPT(ConstantFolding);
+  RUN_OPT(StrengthReduction);
+  RUN_OPT(CFGSimplify);
+  RUN_OPT(MergeBlock);
 
-  optimizations.pushBack(new DeadCodeElimination());
-
-  // run all pass
-  for (auto& pass : optimizations) {
-    // if (dynamic_cast<GEPSimplify*>(pass)) printIR(std::cout);
-
-    pass->runOnModule(this);
-    // if (dynamic_cast<Reassociate*>(pass)) printIR(std::cout);
-  }
+  RUN_OPT(DeadCodeElimination);
+  RUN_OPT(GlobalCodeMotion);
 
   for (Function* func : functions) {
     func->buildCFG();

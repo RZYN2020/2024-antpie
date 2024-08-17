@@ -233,6 +233,34 @@ bool StrengthReduction::runOnFunction(Function* func) {
           changed = true;
           continue;
         }
+        case AND: {
+          Value* lhs = bopInstr->getRValue(0);
+          Value* rhs = bopInstr->getRValue(1);
+          // 0 & x (x & 0) => 0
+          if (lhs->isa(VT_INTCONST) &&
+              ((IntegerConstant*)lhs)->getValue() == 0) {
+            bopInstr->replaceAllUsesWith(IntegerConstant::getConstInt(0));
+          } else if (rhs->isa(VT_INTCONST) &&
+                     ((IntegerConstant*)rhs)->getValue() == 0) {
+            bopInstr->replaceAllUsesWith(IntegerConstant::getConstInt(0));
+          }
+          changed = true;
+          continue;
+        }
+        case OR: {
+          Value* lhs = bopInstr->getRValue(0);
+          Value* rhs = bopInstr->getRValue(1);
+          // 0 | x (x | 0) => x
+          if (lhs->isa(VT_INTCONST) &&
+              ((IntegerConstant*)lhs)->getValue() == 0) {
+            bopInstr->replaceAllUsesWith(rhs);
+          } else if (rhs->isa(VT_INTCONST) &&
+                     ((IntegerConstant*)rhs)->getValue() == 0) {
+            bopInstr->replaceAllUsesWith(lhs);
+          }
+          changed = true;
+          continue;
+        }
         default:
           break;
       }

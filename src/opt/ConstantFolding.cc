@@ -11,8 +11,7 @@ bool ConstantFolding::runOnModule(ANTPIE::Module *module) {
 bool ConstantFolding::runOnFunction(Function *func) {
   bool changed = false;
   DomTree *dt = func->getDT();
-  if (!dt)
-    dt = func->buildDT();
+  if (!dt) dt = func->buildDT();
   return constantFoldingDFS(func->getEntry(), dt);
 }
 
@@ -44,23 +43,22 @@ Value *ConstantFolding::instructionSimplify(Instruction *instr) {
         vt == VT_SITOFP || vt == VT_ZEXT)) {
     return nullptr;
   }
-  if (!constantOperand(instr))
-    return nullptr;
+  if (!constantOperand(instr)) return nullptr;
   switch (instr->getValueTag()) {
-  case VT_BOP:
-    return simplifyBOP((BinaryOpInst *)instr);
-  case VT_ICMP:
-    return simplifyICMP((IcmpInst *)instr);
-  case VT_FCMP:
-    return simplifyFCMP((FcmpInst *)instr);
-  case VT_FPTOSI:
-    return simplifyFPTOSI((FptosiInst *)instr);
-  case VT_SITOFP:
-    return simplifySITOFP((SitofpInst *)instr);
-  case VT_ZEXT:
-    return simplifyZEXT((ZextInst *)instr);
-  default:
-    return nullptr;
+    case VT_BOP:
+      return simplifyBOP((BinaryOpInst *)instr);
+    case VT_ICMP:
+      return simplifyICMP((IcmpInst *)instr);
+    case VT_FCMP:
+      return simplifyFCMP((FcmpInst *)instr);
+    case VT_FPTOSI:
+      return simplifyFPTOSI((FptosiInst *)instr);
+    case VT_SITOFP:
+      return simplifySITOFP((SitofpInst *)instr);
+    case VT_ZEXT:
+      return simplifyZEXT((ZextInst *)instr);
+    default:
+      return nullptr;
   }
 }
 
@@ -68,8 +66,7 @@ Value *ConstantFolding::instructionSimplify(Instruction *instr) {
 bool ConstantFolding::constantOperand(Instruction *instr) {
   int rValSize = instr->getRValueSize();
   for (int i = 0; i < rValSize; i++) {
-    if (!dynamic_cast<Constant *>(instr->getRValue(i)))
-      return false;
+    if (!dynamic_cast<Constant *>(instr->getRValue(i))) return false;
   }
   return true;
 }
@@ -77,104 +74,104 @@ bool ConstantFolding::constantOperand(Instruction *instr) {
 Value *ConstantFolding::simplifyBOP(BinaryOpInst *instr) {
   Value *newValue = 0;
   switch (instr->getOpTag()) {
-  case ADD: {
-    int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
-    int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-    newValue = IntegerConstant::getConstInt(lhs + rhs);
-    break;
-  }
-  case FADD: {
-    float lhs = ((FloatConstant *)instr->getRValue(0))->getValue();
-    float rhs = ((FloatConstant *)instr->getRValue(1))->getValue();
-    newValue = FloatConstant::getConstFloat(lhs + rhs);
-    break;
-  }
-  case SUB: {
-    int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
-    int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-    newValue = IntegerConstant::getConstInt(lhs - rhs);
-    break;
-  }
-  case FSUB: {
-    float lhs = ((FloatConstant *)instr->getRValue(0))->getValue();
-    float rhs = ((FloatConstant *)instr->getRValue(1))->getValue();
-    newValue = FloatConstant::getConstFloat(lhs - rhs);
-    break;
-  }
-  case MUL: {
-    int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
-    int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-    newValue = IntegerConstant::getConstInt(lhs * rhs);
-    break;
-  }
-  case FMUL: {
-    float lhs = ((FloatConstant *)instr->getRValue(0))->getValue();
-    float rhs = ((FloatConstant *)instr->getRValue(1))->getValue();
-    newValue = FloatConstant::getConstFloat(lhs * rhs);
-    break;
-  }
-  case SDIV: {
-    int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
-    int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-    newValue = IntegerConstant::getConstInt(lhs / rhs);
-    break;
-  }
-  case FDIV: {
-    float lhs = ((FloatConstant *)instr->getRValue(0))->getValue();
-    float rhs = ((FloatConstant *)instr->getRValue(1))->getValue();
-    newValue = FloatConstant::getConstFloat(lhs / rhs);
-    break;
-  }
-  case SREM: {
-    int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
-    int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-    newValue = IntegerConstant::getConstInt(lhs % rhs);
-    break;
-  }
-  case FREM: {
-    float lhs = ((FloatConstant *)instr->getRValue(0))->getValue();
-    float rhs = ((FloatConstant *)instr->getRValue(1))->getValue();
-    newValue = FloatConstant::getConstFloat(std::fmod(lhs, rhs));
-    break;
-  }
-  case AND: {
-    int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
-    int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-    newValue = IntegerConstant::getConstInt(lhs & rhs);
-    break;
-  }
-  case OR: {
-    int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
-    int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-    newValue = IntegerConstant::getConstInt(lhs | rhs);
-    break;
-  }
-  case XOR: {
-    int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
-    int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-    newValue = IntegerConstant::getConstInt(lhs ^ rhs);
-    break;
-  }
-  case LSHR: {
-    unsigned int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
-    int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-    newValue = IntegerConstant::getConstInt(lhs >> rhs);
-    break;
-  }
-  case ASHR: {
-    int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
-    int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-    newValue = IntegerConstant::getConstInt(lhs >> rhs);
-    break;
-  }
-  case SHL: {
-    int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
-    int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-    newValue = IntegerConstant::getConstInt(lhs << rhs);
-    break;
-  }
-  default:
-    assert(0);
+    case ADD: {
+      int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
+      int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
+      newValue = IntegerConstant::getConstInt(lhs + rhs);
+      break;
+    }
+    case FADD: {
+      float lhs = ((FloatConstant *)instr->getRValue(0))->getValue();
+      float rhs = ((FloatConstant *)instr->getRValue(1))->getValue();
+      newValue = FloatConstant::getConstFloat(lhs + rhs);
+      break;
+    }
+    case SUB: {
+      int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
+      int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
+      newValue = IntegerConstant::getConstInt(lhs - rhs);
+      break;
+    }
+    case FSUB: {
+      float lhs = ((FloatConstant *)instr->getRValue(0))->getValue();
+      float rhs = ((FloatConstant *)instr->getRValue(1))->getValue();
+      newValue = FloatConstant::getConstFloat(lhs - rhs);
+      break;
+    }
+    case MUL: {
+      int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
+      int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
+      newValue = IntegerConstant::getConstInt(lhs * rhs);
+      break;
+    }
+    case FMUL: {
+      float lhs = ((FloatConstant *)instr->getRValue(0))->getValue();
+      float rhs = ((FloatConstant *)instr->getRValue(1))->getValue();
+      newValue = FloatConstant::getConstFloat(lhs * rhs);
+      break;
+    }
+    case SDIV: {
+      int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
+      int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
+      newValue = IntegerConstant::getConstInt(lhs / rhs);
+      break;
+    }
+    case FDIV: {
+      float lhs = ((FloatConstant *)instr->getRValue(0))->getValue();
+      float rhs = ((FloatConstant *)instr->getRValue(1))->getValue();
+      newValue = FloatConstant::getConstFloat(lhs / rhs);
+      break;
+    }
+    case SREM: {
+      int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
+      int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
+      newValue = IntegerConstant::getConstInt(lhs % rhs);
+      break;
+    }
+    case FREM: {
+      float lhs = ((FloatConstant *)instr->getRValue(0))->getValue();
+      float rhs = ((FloatConstant *)instr->getRValue(1))->getValue();
+      newValue = FloatConstant::getConstFloat(std::fmod(lhs, rhs));
+      break;
+    }
+    case AND: {
+      int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
+      int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
+      newValue = IntegerConstant::getConstInt(lhs & rhs);
+      break;
+    }
+    case OR: {
+      int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
+      int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
+      newValue = IntegerConstant::getConstInt(lhs | rhs);
+      break;
+    }
+    case XOR: {
+      int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
+      int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
+      newValue = IntegerConstant::getConstInt(lhs ^ rhs);
+      break;
+    }
+    case LSHR: {
+      unsigned int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
+      int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
+      newValue = IntegerConstant::getConstInt(lhs >> rhs);
+      break;
+    }
+    case ASHR: {
+      int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
+      int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
+      newValue = IntegerConstant::getConstInt(lhs >> rhs);
+      break;
+    }
+    case SHL: {
+      int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
+      int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
+      newValue = IntegerConstant::getConstInt((long long)lhs << rhs);
+      break;
+    }
+    default:
+      assert(0);
   }
   return newValue;
 }
@@ -183,32 +180,32 @@ Value *ConstantFolding::simplifyICMP(IcmpInst *instr) {
   int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
   Value *newValue = 0;
   switch (instr->getOpTag()) {
-  case EQ: {
-    newValue = BoolConstant::getConstBool(lhs == rhs);
-    break;
-  }
-  case NE: {
-    newValue = BoolConstant::getConstBool(lhs != rhs);
-    break;
-  }
-  case SLE: {
-    newValue = BoolConstant::getConstBool(lhs <= rhs);
-    break;
-  }
-  case SGE: {
-    newValue = BoolConstant::getConstBool(lhs >= rhs);
-    break;
-  }
-  case SLT: {
-    newValue = BoolConstant::getConstBool(lhs < rhs);
-    break;
-  }
-  case SGT: {
-    newValue = BoolConstant::getConstBool(lhs > rhs);
-    break;
-  }
-  default:
-    assert(0);
+    case EQ: {
+      newValue = BoolConstant::getConstBool(lhs == rhs);
+      break;
+    }
+    case NE: {
+      newValue = BoolConstant::getConstBool(lhs != rhs);
+      break;
+    }
+    case SLE: {
+      newValue = BoolConstant::getConstBool(lhs <= rhs);
+      break;
+    }
+    case SGE: {
+      newValue = BoolConstant::getConstBool(lhs >= rhs);
+      break;
+    }
+    case SLT: {
+      newValue = BoolConstant::getConstBool(lhs < rhs);
+      break;
+    }
+    case SGT: {
+      newValue = BoolConstant::getConstBool(lhs > rhs);
+      break;
+    }
+    default:
+      assert(0);
   }
   return newValue;
 }
@@ -217,32 +214,32 @@ Value *ConstantFolding::simplifyFCMP(FcmpInst *instr) {
   float rhs = ((FloatConstant *)instr->getRValue(1))->getValue();
   Value *newValue = 0;
   switch (instr->getOpTag()) {
-  case OEQ: {
-    newValue = BoolConstant::getConstBool(lhs == rhs);
-    break;
-  }
-  case ONE: {
-    newValue = BoolConstant::getConstBool(lhs != rhs);
-    break;
-  }
-  case OLE: {
-    newValue = BoolConstant::getConstBool(lhs <= rhs);
-    break;
-  }
-  case OGE: {
-    newValue = BoolConstant::getConstBool(lhs >= rhs);
-    break;
-  }
-  case OLT: {
-    newValue = BoolConstant::getConstBool(lhs < rhs);
-    break;
-  }
-  case OGT: {
-    newValue = BoolConstant::getConstBool(lhs > rhs);
-    break;
-  }
-  default:
-    assert(0);
+    case OEQ: {
+      newValue = BoolConstant::getConstBool(lhs == rhs);
+      break;
+    }
+    case ONE: {
+      newValue = BoolConstant::getConstBool(lhs != rhs);
+      break;
+    }
+    case OLE: {
+      newValue = BoolConstant::getConstBool(lhs <= rhs);
+      break;
+    }
+    case OGE: {
+      newValue = BoolConstant::getConstBool(lhs >= rhs);
+      break;
+    }
+    case OLT: {
+      newValue = BoolConstant::getConstBool(lhs < rhs);
+      break;
+    }
+    case OGT: {
+      newValue = BoolConstant::getConstBool(lhs > rhs);
+      break;
+    }
+    default:
+      assert(0);
   }
   return newValue;
 }
