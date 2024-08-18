@@ -26,6 +26,7 @@ class Function : public GlobalValue {
   LinkedList<BasicBlock*> basicBlocks;
   BasicBlock *entry, *exit;
   ANTPIE::Module* module;
+  unordered_set<CallInst*> callSites;
 
   // Analysis result structure
   CFG* cfg = 0;
@@ -115,5 +116,9 @@ class Function : public GlobalValue {
 
   bool isCacheFunction() { return isCache; }
   void setCacheFunction(bool c) { isCache = c; }
+
+  void addCallSite(CallInst* callInst) { callSites.insert(callInst); }
+  void deleteCallSite(CallInst* callInst) { callSites.erase(callInst); }
+  unordered_set<CallInst*>* getCallSites() { return &callSites; }
 };
 #endif

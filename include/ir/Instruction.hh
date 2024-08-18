@@ -73,6 +73,8 @@ class Instruction : public Value {
                     vector<Use*>* fromUseList);
   vector<Use*>* getUseList() { return useList.get(); }
   void moveBefore(Instruction* instr);
+  bool mayReadFromMemory();
+  bool mayWriteToMemory();
 };
 
 class AllocaInst : public Instruction {

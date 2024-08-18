@@ -110,6 +110,7 @@ class FuncType : public Type {
   Type* getRetType() const { return retType; }
   int getArgSize() const { return arguments->size(); }
   Argument* getArgument(int idx) { return arguments->at(idx).get(); }
+  void deleteArgumentAt(int loc) { arguments->erase(arguments->begin() + loc); }
 };
 
 class PointerType : public Type {

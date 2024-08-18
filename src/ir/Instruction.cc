@@ -32,6 +32,10 @@ void Instruction::deleteUseList() {
     delete use;
   }
   useList->clear();
+  if (isa(VT_CALL)) {
+    CallInst* callInst = (CallInst*)this;
+    callInst->getFunction()->deleteCallSite(callInst);
+  }
 }
 
 bool BranchInst::replaceDestinationWith(BasicBlock* oldBlock,
@@ -100,6 +104,30 @@ bool Instruction::deleteRValueAt(int idx) {
   use->removeFromValue();
   useList->erase(useList->begin() + idx);
   return true;
+}
+
+bool Instruction::mayWriteToMemory() {
+  if (isa(VT_STORE)) {
+    return true;
+  }
+  if (CallInst* callInst = dynamic_cast<CallInst*>(this)) {
+    if (callInst->getFunction()->hasMemWrite()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool Instruction::mayReadFromMemory() {
+  if (isa(VT_LOAD)) {
+    return true;
+  }
+  if (CallInst* callInst = dynamic_cast<CallInst*>(this)) {
+    if (callInst->getFunction()->hasMemRead()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 Value* PhiInst::deleteIncomingFrom(BasicBlock* block) {
@@ -177,11 +205,13 @@ CallInst::CallInst(Function* func, vector<Value*>& params, string name)
   for (Value* param : params) {
     pushValue(param);
   }
+  func->addCallSite(this);
 }
 
 CallInst::CallInst(Function* func, string name)
     : Instruction(name, VT_CALL), function(func) {
   setType(((FuncType*)func->getType())->getRetType());
+  func->addCallSite(this);
 }
 
 void CallInst::pushArgument(Value* value) { pushValue(value); }

@@ -4,6 +4,7 @@
 #include "CFGSimplify.hh"
 #include "CommonSubexpElimination.hh"
 #include "ConstantFolding.hh"
+#include "DeadArgumentElimination.hh"
 #include "DeadCodeElimination.hh"
 #include "FunctionPropAnalysis.hh"
 #include "GEPSimplify.hh"
@@ -25,6 +26,7 @@
 #include "StoreElimination.hh"
 #include "StrengthReduction.hh"
 #include "TailRecursionElimination.hh"
+
 
 using ANTPIE::Module;
 
@@ -300,6 +302,8 @@ void Module::irOptimize() {
   RUN_OPT(AliasAnalysis);
   RUN_OPT(LoadElimination);
   RUN_OPT(CommonSubexpElimination);
+  RUN_OPT(DeadArgumentElimination);
+  RUN_OPT(DeadCodeElimination);
   RUN_OPT(Inlining);
   RUN_OPT(FunctionPropAnalysis);
   RUN_OPT(GlobalVariableLocalize);

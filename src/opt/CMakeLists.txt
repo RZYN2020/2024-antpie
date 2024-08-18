@@ -27,4 +27,5 @@ add_library(
     LruCache.cc
     InductionVariableSimplify.cc
     LoopIdvSimplify.cc
+    DeadArgumentElimination.cc
 )
