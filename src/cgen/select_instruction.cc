@@ -178,19 +178,19 @@ Register *get_vreg(MModule *m, MBasicBlock *mbb, Value *v,
   }
 
   if (v->getValueTag() == VT_FLOATCONST) {
-    // auto fc = static_cast<FloatConstant *>(v);
-    // auto fg = m->addGlobalFloat(fc);
-    // ADD_INSTR(faddr, MIla, fg);
-    // ADD_INSTR(i, MIflw, faddr, 0);
-    // return i;
+    auto fc = static_cast<FloatConstant *>(v);
+    auto fg = m->addGlobalFloat(fc);
+    ADD_INSTR(faddr, MIla, fg);
+    ADD_INSTR(i, MIflw, faddr, 0);
+    return i;
     
     // Try load float imm without memory read
-    auto fc = static_cast<FloatConstant*>(v);
-    float fval = fc->getValue();
-    uint32_t ival = *reinterpret_cast<uint32_t*>(&fval);
-    ADD_INSTR(i, MIli, ival);
-    ADD_INSTR(f, MIfmvs_x, i);
-    return f;
+    // auto fc = static_cast<FloatConstant*>(v);
+    // float fval = fc->getValue();
+    // uint32_t ival = *reinterpret_cast<uint32_t*>(&fval);
+    // ADD_INSTR(i, MIli, ival);
+    // ADD_INSTR(f, MIfmvs_x, i);
+    // return f;
   }
 
   if (v->getValueTag() == VT_GLOBALVAR) {
