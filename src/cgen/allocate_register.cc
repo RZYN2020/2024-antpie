@@ -79,6 +79,7 @@ vector<MInstruction *> solveParallelAssignment(vector<MInstruction *> instrs) {
   set<Register *> defs;
   set<Register *> uses;
 
+  // todo: just store registers which def is ahead of use
   for (auto instr : instrs) {
     for (int i = 0; i < instr->getRegNum(); i++) {
       Register *reg = instr->getReg(i);
@@ -680,7 +681,7 @@ vector<MInstruction *> MHIcall::generateCallSequence(
         res.push_back(new MIla(g, Register::reg_t2));
         res.push_back(new MIflw(Register::reg_t2, 0, Register::reg_ft0));
         res.push_back(
-            new MIfsw(Register::reg_ft2, para->getOffset(), Register::reg_sp));
+            new MIfsw(Register::reg_ft0, para->getOffset(), Register::reg_sp));
         break;
       }
       case MIOprandTp::Int: {

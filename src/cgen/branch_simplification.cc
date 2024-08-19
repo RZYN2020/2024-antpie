@@ -19,7 +19,7 @@ void thread_jmp(MFunction *func) {
           incomings.push_back(prev);
         }
         for (auto prev : incomings) {
-          target->removeIncoming(bb);
+          target->removeIncoming(bb); // can be commented?
           prev->replaceOutgoing(bb, target);
         }
         // todo: remove dead bb
