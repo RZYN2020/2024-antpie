@@ -155,13 +155,13 @@ Value *ConstantFolding::simplifyBOP(BinaryOpInst *instr) {
     case LSHR: {
       unsigned int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
       int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-      newValue = IntegerConstant::getConstInt(lhs >> rhs);
+      newValue = IntegerConstant::getConstInt((long long)lhs >> rhs);
       break;
     }
     case ASHR: {
       int lhs = ((IntegerConstant *)instr->getRValue(0))->getValue();
       int rhs = ((IntegerConstant *)instr->getRValue(1))->getValue();
-      newValue = IntegerConstant::getConstInt(lhs >> rhs);
+      newValue = IntegerConstant::getConstInt((long long)lhs >> rhs);
       break;
     }
     case SHL: {

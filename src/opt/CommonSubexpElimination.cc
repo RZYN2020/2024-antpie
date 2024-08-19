@@ -110,10 +110,10 @@ bool CommonSubexpElimination::runOnFunction(Function* func) {
 }
 
 bool CommonSubexpElimination::isSimpleExpr(Instruction* instr) {
-  if (CallInst* callInstr = dynamic_cast<CallInst*>(instr)) {
-    Function* callee = callInstr->getFunction();
-    return callee->isPureFunction();
-  }
+  // if (CallInst* callInstr = dynamic_cast<CallInst*>(instr)) {
+  //   Function* callee = callInstr->getFunction();
+  //   return callee->isPureFunction();
+  // }
   return instr->isa(VT_ICMP) || instr->isa(VT_FCMP) || instr->isa(VT_BOP) ||
          instr->isa(VT_FPTOSI) || instr->isa(VT_SITOFP) ||
          instr->isa(VT_ZEXT) || instr->isa(VT_GEP);

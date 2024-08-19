@@ -344,7 +344,7 @@ void Module::irOptimize() {
   RUN_OPT(ConstantFolding);
 
   RUN_OPT(InductionVariableSimplify);
-  RUN_OPT(StoreElimination);
+  // RUN_OPT(StoreElimination);
   RUN_OPT(Reassociate);
   RUN_OPT(ConstantFolding);
   RUN_OPT(StrengthReduction);
