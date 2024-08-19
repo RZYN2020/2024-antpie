@@ -77,33 +77,20 @@ vector<MInstruction *> solveParallelAssignment(vector<MInstruction *> instrs) {
   };
 
   set<Register *> defs;
-  set<Register *> uses;
+  set<Register *> needStoreRegs;
 
-  // todo: just store registers which def is ahead of use
   for (auto instr : instrs) {
     for (int i = 0; i < instr->getRegNum(); i++) {
       Register *reg = instr->getReg(i);
       if (temp_registers.find(reg) != temp_registers.end()) {
         continue;
       }
-      // move to itself is not considered as use, because def would never
-      // confict wich this use.
-      if ((instr->getInsTag() == MInstruction::MV ||
-           instr->getInsTag() == MInstruction::FMV_S) &&
-          instr->getTarget() == reg) {
-        continue;
+      if (defs.find(reg) != defs.end()) {
+        needStoreRegs.insert(reg);
       }
-      uses.insert(reg);
     }
     if (instr->getTarget() != nullptr) {
       defs.insert(instr->getTarget());
-    }
-  }
-
-  set<Register *> needStoreRegs;
-  for (auto reg : defs) {
-    if (uses.find(reg) != uses.end()) {
-      needStoreRegs.insert(reg);
     }
   }
 
