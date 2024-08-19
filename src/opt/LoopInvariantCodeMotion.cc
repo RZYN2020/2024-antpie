@@ -83,10 +83,12 @@ bool LoopInvariantCodeMotion::isMovable(Instruction* instr, LoopInfo* loopInfo,
       return false;
 
     case VT_LOAD: {
+      return false;
       if (mayContainStoreTo(instr->getRValue(0))) return false;
       break;
     }
     case VT_STORE: {
+      return false;
       if (mayContainLoadFrom(instr->getRValue(1))) return false;
       if (!dt->dominates(instr->getParent(), *(loopInfo->latches.begin())))
         return false;

@@ -300,7 +300,7 @@ void Module::irOptimize() {
   RUN_OPT(FunctionPropAnalysis);
   RUN_OPT(CommonSubexpElimination);
   RUN_OPT(AliasAnalysis);
-  RUN_OPT(LoadElimination);
+  // RUN_OPT(LoadElimination);
   RUN_OPT(CommonSubexpElimination);
   RUN_OPT(DeadArgumentElimination);
   RUN_OPT(DeadCodeElimination);
@@ -329,7 +329,7 @@ void Module::irOptimize() {
   RUN_OPT(GlobalCodeMotion);
   RUN_OPT(MergeBlock);
   RUN_OPT(AliasAnalysis);
-  RUN_OPT(LoadElimination);
+  // RUN_OPT(LoadElimination);
   RUN_OPT(LoopAnalysis);
   RUN_OPT(LoopSimplify);
   RUN_OPT(LoopInvariantCodeMotion);
@@ -340,7 +340,7 @@ void Module::irOptimize() {
   RUN_OPT(StrengthReduction);
   RUN_OPT(TailRecursionElimination);
   RUN_OPT(MergeBlock);
-  RUN_OPT(LoadElimination);
+  // RUN_OPT(LoadElimination);
   RUN_OPT(ConstantFolding);
 
   RUN_OPT(InductionVariableSimplify);

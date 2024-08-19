@@ -79,6 +79,7 @@ bool JumpInst::replaceDestinationWith(BasicBlock* oldBlock,
 
   // Modify cfg
   BasicBlock* block = getParent();
+  if (!block->getParent()) return true;
   CFG* cfg = block->getParent()->getCFG();
   if (cfg) {
     cfg->eraseEdge(block, oldBlock);
