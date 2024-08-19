@@ -45,11 +45,11 @@ bool FunctionPropAnalysis::runOnFunction(Function* func) {
           func->setPureFunction(false);
           changed = true;
         }
-        if (!func->hasMemRead() && !callee->hasMemRead()) {
+        if (!func->hasMemRead() && callee->hasMemRead()) {
           func->setMemRead(true);
           changed = true;
         }
-        if (!func->hasMemWrite() && !callee->hasMemWrite()) {
+        if (!func->hasMemWrite() && callee->hasMemWrite()) {
           func->setMemWrite(true);
           changed = true;
         }
