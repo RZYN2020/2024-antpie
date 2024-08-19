@@ -92,30 +92,6 @@ struct ScheduleEle {
   uint priority;
 };
 
-bool is_mem_read(MInstruction *ins) {
-  switch (ins->getInsTag()) {
-  case MInstruction::LD:
-  case MInstruction::LW:
-  case MInstruction::FLD:
-  case MInstruction::FLW:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool is_mem_write(MInstruction *ins) {
-  switch (ins->getInsTag()) {
-  case MInstruction::SD:
-  case MInstruction::SW:
-  case MInstruction::FSD:
-  case MInstruction::FSW:
-    return true;
-  default:
-    return false;
-  }
-}
-
 void buildDependenceGraph(
     std::vector<MInstruction *> &instrs,
     unordered_map<MInstruction *, set<MInstruction *>> &successor,
@@ -188,7 +164,7 @@ void buildDependenceGraph(
         reads[write_reg].clear();
         writes[write_reg] = ins;
       }
-      
+
       if (previous[ins].size() == 0) {
         leaves.insert(ins);
       }
@@ -253,6 +229,53 @@ struct ScheduleInsPriorityCompare {
   }
 };
 
+bool can_issue_together(MInstruction *i1, MInstruction *i2) {
+  // • At most one instruction accesses data memory.
+  if (is_mem_op(i1) && is_mem_op(i2)) {
+    return false;
+  }
+  // • At most one instruction is a branch or jump. (we only issue non-control
+  // ops here)
+  // • At most one instruction is a floating-point arithmetic
+  // operation.
+  if (is_float_op(i1) && is_float_op(i2)) {
+    return false;
+  }
+  // • At most one instruction is an integer multiplication or division
+  // operation.
+
+  if (is_mul_div(i1) && is_mul_div(i2)) {
+    return false;
+  }
+  // • Neither instruction explicitly accesses a CSR. (No access to CSR in
+  // user-level program)
+  return true;
+}
+
+vector<MInstruction *>
+issue_instrs(std::priority_queue<ScheduleEle, std::vector<ScheduleEle>,
+                                 ScheduleInsPriorityCompare> &ready) {
+  vector<MInstruction *> res = {};
+  MInstruction *ins = ready.top().ins;
+  ready.pop();
+  res.push_back(ins);
+  // try to issue another instr
+  vector<ScheduleEle> can_not_issue = {};
+  while (ready.size() != 0) {
+    auto ins2 = ready.top();
+    ready.pop();
+    if (can_issue_together(ins, ins2.ins)) {
+      res.push_back(ins2.ins);
+      break;
+    }
+    can_not_issue.push_back(ins2);
+  }
+  for (auto ins : can_not_issue) {
+    ready.push(ins);
+  }
+  return res;
+}
+
 vector<MInstruction *>
 scheduleInstrs(std::priority_queue<ScheduleEle, std::vector<ScheduleEle>,
                                    ScheduleInsPriorityCompare> &ready,
@@ -305,12 +328,13 @@ scheduleInstrs(std::priority_queue<ScheduleEle, std::vector<ScheduleEle>,
     }
 
     if (ready.size() != 0) {
-      // todo: dual issue!!
-      MInstruction *ins = ready.top().ins;
-      ready.pop();
-      // std::cout << "Issue " << *ins << endl;
-      start[ins] = cycle;
-      active.insert(ins);
+
+      vector<MInstruction *> inss = issue_instrs(ready);
+      for (auto ins : inss) {
+        start[ins] = cycle;
+        active.insert(ins);
+        // std::cout << "Issue " << *ins << endl;
+      }
     }
     cycle++;
   }

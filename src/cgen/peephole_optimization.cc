@@ -4,11 +4,7 @@
 #include "cgen.hh"
 using std::unordered_set;
 
-bool is_store(MInstruction *ins) {
-  return ins->getInsTag() == MInstruction::SW ||
-         ins->getInsTag() == MInstruction::SD ||
-         ins->getInsTag() == MInstruction::FSW;
-}
+
 int get_store_imm(MInstruction *store) {
   switch (store->getInsTag()) {
   case MInstruction::SW: {
@@ -23,15 +19,15 @@ int get_store_imm(MInstruction *store) {
     auto fsw = static_cast<MIfsw *>(store);
     return fsw->imm;
   }
+  case MInstruction::FSD: {
+    auto fsd = static_cast<MIfsd *>(store);
+    return fsd->imm;
+  }
   default:
     assert(0);
   }
 }
-bool is_load(MInstruction *ins) {
-  return ins->getInsTag() == MInstruction::LW ||
-         ins->getInsTag() == MInstruction::LD ||
-         ins->getInsTag() == MInstruction::FLW;
-}
+
 int get_load_imm(MInstruction *load) {
   switch (load->getInsTag()) {
   case MInstruction::LW: {
@@ -45,6 +41,10 @@ int get_load_imm(MInstruction *load) {
   case MInstruction::FLW: {
     auto lfw = static_cast<MIflw *>(load);
     return lfw->imm;
+  }
+  case MInstruction::FLD: {
+    auto lfd = static_cast<MIfld *>(load);
+    return lfd->imm;
   }
   default:
     assert(0);
@@ -70,7 +70,7 @@ void scan_store_loads(MBasicBlock *bb, vector<vector<MInstruction *>> &ldsts) {
     }
     if (stk_off == 0) { // not in call sequence
 
-      if (is_store(ins) && ins->getReg(1) == Register::reg_sp) {
+      if (is_mem_write(ins) && ins->getReg(1) == Register::reg_sp) {
         int off = get_store_imm(ins);
         auto reg = ins->getReg(0);
         if (reg == Register::reg_ra || reg == Register::reg_s0) {
@@ -123,7 +123,7 @@ void scan_store_loads(MBasicBlock *bb, vector<vector<MInstruction *>> &ldsts) {
           // std::cout <<reg->getName() << " :"  << tldsts[reg].size() << endl;
         }
         continue;
-      } else if (is_load(ins) && ins->getReg(0) == Register::reg_sp) {
+      } else if (is_mem_read(ins) && ins->getReg(0) == Register::reg_sp) {
         auto reg = ins->getTarget();
         auto off = get_load_imm(ins);
         if (reg == Register::reg_ra || reg == Register::reg_s0) {
@@ -236,7 +236,7 @@ void peephole_optimize(MModule *mod) {
         int num = ldsts.size();
         int last_ld = -1;
         for (int i = num - 1; i >= 1; i--) {
-          if (is_load(ldsts[i])) {
+          if (is_mem_read(ldsts[i])) {
             last_ld = i;
             break;
           }
