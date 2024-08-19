@@ -91,6 +91,7 @@ void orderBasicBlocksRecursive(MBasicBlock *bb,
   }
 }
 
+// todo: https://arxiv.org/pdf/1809.04676
 void orderBasicBlocks(MFunction *func) {
   func->ordered_blocks = make_unique<vector<MBasicBlock *>>();
   unordered_set<MBasicBlock *> visited;
