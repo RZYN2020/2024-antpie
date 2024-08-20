@@ -221,6 +221,7 @@ bool StrengthReduction::runOnFunction(Function* func) {
           break;
         }
         case SREM: {
+          continue;
           Value* lhs = bopInstr->getRValue(0);
           Value* rhs = bopInstr->getRValue(1);
           if (!rhs->isa(VT_INTCONST)) continue;
