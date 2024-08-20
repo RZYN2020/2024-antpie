@@ -319,11 +319,11 @@ void Module::irOptimize() {
   RUN_OPT(LoopSimplify);
   RUN_OPT(AliasAnalysis);
   RUN_OPT(LoopIdvSimplify);
-  RUN_OPT(LoopInvariantCodeMotion);
+  // RUN_OPT(LoopInvariantCodeMotion);
   RUN_OPT(LoopUnroll);
   RUN_OPT(DeadCodeElimination);
   RUN_OPT(MergeBlock);
-  RUN_OPT(Reassociate);
+  // RUN_OPT(Reassociate);
   // GVM and GCM need DCE
   RUN_OPT(GlobalValueNumbering);
   RUN_OPT(GlobalCodeMotion);
@@ -332,8 +332,8 @@ void Module::irOptimize() {
   RUN_OPT(LoadElimination);
   RUN_OPT(LoopAnalysis);
   RUN_OPT(LoopSimplify);
-  RUN_OPT(LoopInvariantCodeMotion);
-  RUN_OPT(Reassociate);
+  // RUN_OPT(LoopInvariantCodeMotion);
+  // RUN_OPT(Reassociate);
 
   RUN_OPT(GEPSimplify);
 
@@ -345,7 +345,7 @@ void Module::irOptimize() {
 
   RUN_OPT(InductionVariableSimplify);
   RUN_OPT(StoreElimination);
-  RUN_OPT(Reassociate);
+  // RUN_OPT(Reassociate);
   RUN_OPT(ConstantFolding);
   RUN_OPT(StrengthReduction);
   RUN_OPT(CFGSimplify);
