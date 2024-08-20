@@ -53,7 +53,6 @@ bool LoopUnroll::runOnFunction(Function* func) {
 
 bool LoopUnroll::runOnLoop(LoopInfo* loopInfo) {
   bool changed = false;
-
   if (!loopInfo->isSimpleLoop()) return changed;
 
   if (canAllUnroll(loopInfo) && allUnroll(loopInfo)) return true;
@@ -453,6 +452,7 @@ bool LoopUnroll::constantOrInvariant(Value* value, LoopInfo* loopInfo) {
 bool LoopUnroll::canAllUnroll(LoopInfo* loopInfo) {
   SimpleLoopInfo* simpleLoop = loopInfo->simpleLoop;
   if (!simpleLoop) return false;
+  if (loopInfo->blocks.size() > 2) return false;
   BranchInst* brInst = simpleLoop->brInstr;
   Value* initValue = simpleLoop->initValue;
   BinaryOpInst* strideInstr = simpleLoop->strideInstr;
