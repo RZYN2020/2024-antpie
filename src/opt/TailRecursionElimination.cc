@@ -30,7 +30,6 @@ bool TailRecursionElimination::runOnModule(ANTPIE::Module* module) {
 bool TailRecursionElimination::runOnFunction(Function* func) {
   vector<CallInst*> tailRecurCalls;
   if (!findTailRecursionBlocks(func, tailRecurCalls)) return false;
-
   // Create a new phi block for argument
   BasicBlock* phiBlock = new BasicBlock(LabelManager::getLabel("phi_bb"));
   func->pushBasicBlock(phiBlock);
@@ -48,6 +47,15 @@ bool TailRecursionElimination::runOnFunction(Function* func) {
     phiBlock->pushInstr(phiInst);
     arg->replaceAllUsesWith(phiInst);
     phiInst->pushIncoming(arg, entry);
+  }
+
+  Instruction* tailInstr = entry->getTailInstr();
+  vector<BasicBlock*> succs;
+  if (JumpInst* jumpInst = dynamic_cast<JumpInst*>(tailInstr)) {
+    succs.push_back((BasicBlock*)jumpInst->getRValue(0));
+  } else if (BranchInst* brInst = dynamic_cast<BranchInst*>(tailInstr)) {
+    succs.push_back((BasicBlock*)brInst->getRValue(1));
+    succs.push_back((BasicBlock*)brInst->getRValue(2));
   }
 
   // Move instruction except alloca from entry to phi
@@ -79,6 +87,21 @@ bool TailRecursionElimination::runOnFunction(Function* func) {
       cfg->addEdge(tailBlock, phiBlock);
     }
   }
+
+  // modify phi in suss of entry
+
+  for (BasicBlock* succ : succs) {
+    for (Instruction* instr : *succ->getInstructions()) {
+      if (PhiInst* phiInst = dynamic_cast<PhiInst*>(instr)) {
+        int icSize = phiInst->getRValueSize() / 2;
+        for (int i = 0; i < icSize; i++) {
+          if ((BasicBlock*)phiInst->getRValue(i * 2 + 1) == entry) {
+            phiInst->replaceRValueAt(i * 2 + 1, phiBlock);
+          }
+        }
+      }
+    }
+  }
   // Modify control flow:
   // entry -> phinode
   // phinode -> succ(entry)
@@ -93,6 +116,7 @@ bool TailRecursionElimination::runOnFunction(Function* func) {
     callInst->deleteUseList();
     tailBlock->pushInstr(new JumpInst(phiBlock));
   }
+
   func->resetDT();
   return true;
 }
